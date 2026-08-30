@@ -56,11 +56,7 @@ export function speciesIcon(species: CatalogSpecies, generation = 5): string {
 }
 
 export function effectiveChapter(species: CatalogSpecies, game: GameConfig): number {
-  const family = getFamily(game)
-  const availability = getAvailability(species, game)
-  const level = Math.max(...generationLineage(species, game.generation).map((stage) => stage.evolution?.minLevel ?? 0))
-  const evolutionChapter = level ? Math.ceil(level / (60 / family.chapters.length)) : 1
-  return Math.max(availability.chapter, evolutionChapter)
+  return getAvailability(species, game).finalChapter
 }
 
 function legalMovesForLineage(species: CatalogSpecies, game: GameConfig, includeAncestors = true): {
@@ -480,6 +476,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
           obtainable: true,
           preChampion: true,
           chapter: 1,
+          finalChapter: 1,
           storyOrder: 1_000,
           location: '시작 마을 · 데이터 수정 스타팅',
           level: 'Lv.5',

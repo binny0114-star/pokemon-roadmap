@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 
 import './App.css'
 import { guides } from './data'
 import { getPlan as getCuratedPlan } from './data/integrity'
-import { catalogSource, getAvailability, loadCatalog, searchSpecies, speciesByDex, speciesCatalog } from './planner/catalog'
+import { catalogSource, evolutionText, getAvailability, loadCatalog, searchSpecies, speciesByDex, speciesCatalog } from './planner/catalog'
 import {
   challengeCandidateCount,
   challengeTypeOrder,
@@ -676,11 +676,12 @@ function App() {
                   <span className="picker-badges">
                     {selectingChallengeStarter && !challengeMismatch && !futureGeneration
                       ? <b className="modified-starter">Lv.5 개조 스타팅</b>
-                      : availability.obtainable && <b>{availability.postgameOnly ? '엔딩 후' : `${availability.chapter}장`}</b>}
+                      : availability.obtainable && <b>{availability.postgameOnly ? '엔딩 후' : availability.finalChapter > availability.chapter ? `${availability.chapter}장 합류 · 최종 ${availability.finalChapter}장` : `${availability.chapter}장`}</b>}
                     {!selectingChallengeStarter && availability.tradeRequired && <b className="trade">교환</b>}
                     {(species.legendary || species.mythical) && <b className="legendary">전설</b>}
                     {availability.sourceKind === 'starter' && <b>스타터</b>}
                     {availability.sourceKind === 'fossil' && <b>화석</b>}
+                    {availability.sourceKind === 'gift' && <b>선물</b>}
                     {availability.versionExclusive && <b>버전 한정</b>}
                     {!selectingChallengeStarter && !availability.obtainable && <b className="unavailable">입수 불가</b>}
                   </span>
@@ -760,8 +761,8 @@ function App() {
                         <div className="member-flags"><span>{member.challengeStarter ? 'Lv.5 개조 스타팅' : member.required ? '필수 선택' : '자동 추천'}</span><b>{member.role}</b><i>점수 {Math.round(member.score)}</i></div>
                         <p className="recommend-reason"><strong>추천 이유</strong>{member.reason}</p>
                         <dl>
-                          <div><dt>합류</dt><dd>{member.availability.chapter}장 · {member.availability.location} {member.availability.level}</dd></div>
-                          <div><dt>진화</dt><dd>{member.species.evolution ? member.species.evolution.trigger === 'trade' ? '통신교환 필요' : member.species.evolution.minLevel ? `Lv.${member.species.evolution.minLevel}` : '특수 조건' : '진화 정보 없음'}</dd></div>
+                          <div><dt>합류</dt><dd>{member.availability.chapter}장 · {member.availability.location}{member.availability.method ? ` · ${member.availability.method}` : ''} {member.availability.level}{member.availability.sourceSpeciesName ? ` · ${member.availability.sourceSpeciesName}부터 육성` : ''}</dd></div>
+                          <div><dt>진화</dt><dd>{evolutionText(member.species, game)}</dd></div>
                         </dl>
                         <div className="generated-moves">
                           {member.moves.map((move) => <span key={move.name}><b>{move.name}</b><small>{typeKo[move.type]} · {move.category}</small><em>{move.source}</em>{move.quality === 'inferred' && <i>시점 추론</i>}</span>)}
@@ -810,7 +811,7 @@ function App() {
 
               {activeTab === 'hm' && (
                 <>
-                  <div className="panel-heading"><div><span className="eyebrow">FIELD MOVE MATRIX</span><h2>{game.generation}세대 필드기 배치</h2><p>버전별 목록만 사용하며, 호환성은 타입·예외 규칙 기반 추정입니다.</p></div></div>
+                  <div className="panel-heading"><div><span className="eyebrow">FIELD MOVE MATRIX</span><h2>{game.generation}세대 필드기 배치</h2><p>버전별 실제 HM 목록과 해당 버전의 포켓몬별 호환 데이터를 사용합니다.</p></div></div>
                   <div className="hm-table-wrap"><table className="hm-table"><thead><tr><th>필드기</th>{plan.members.map((member) => <th key={member.species.dex}>{member.species.name}</th>)}<th>진행 필수</th></tr></thead><tbody>
                     {family.fieldMoves.map((move) => <tr key={move.id}><th>{move.name}</th>{plan.members.map((member) => <td key={member.species.dex}>{member.fieldMoves.includes(move.id) ? <span className="hm-check">✓</span> : '·'}</td>)}<td>{move.required ? '필수' : '선택'}</td></tr>)}
                   </tbody></table></div>
@@ -842,9 +843,9 @@ function App() {
         <details className="methodology">
           <summary>데이터 및 추천 방법론 <span>DATA / METHODOLOGY</span></summary>
           <div>
-            <section><h3>정적 데이터 출처</h3><p>{catalogSource}. {learnsetSource()}. 전국도감 #001–649의 종·진화·조우와 버전별 자력기·TM/HM·기술가르침 호환 데이터를 빌드 전에 정규화했습니다. 브라우저는 외부 API를 호출하지 않습니다.</p></section>
+            <section><h3>정적 데이터 출처</h3><p>{catalogSource}. {learnsetSource()}. 전국도감 #001–649의 종·진화와 조우 장소·세부 구역·방식·조건, 버전별 자력기·TM/HM·기술가르침 호환 데이터를 빌드 전에 정규화했습니다. 브라우저는 외부 API를 호출하지 않습니다.</p></section>
             <section><h3>결정론 점수</h3><p>스토리 합류 시점, 남은 관장·사천왕 상성, 새 공격 타입, 종족값·역할, 공통 약점 감점, 버전별 필드기 기여를 합산합니다. 단일 타입 모드는 해당 타입을 공유하는 진화 계열 안에서만 같은 점수를 적용합니다.</p></section>
-            <section><h3>한계와 품질 표시</h3><p>자력기 레벨과 TM/HM·가르침 호환은 버전별 정적 원본으로 검증됩니다. 자력기는 로드맵 권장 레벨 구간에 정확히 배치합니다. 일반 TM과 가르침 기술은 정확한 호환은 검증되지만 개별 입수 장소 데이터가 없으므로 보수적인 장에 “시점 추론”으로 표시합니다.</p></section>
+            <section><h3>한계와 품질 표시</h3><p>낚싯대·파도타기·바위깨기·박치기와 엔딩 후 조건은 실제 조우 방식의 해금 시점보다 앞당기지 않습니다. 시간대·계절·대량발생·포켓트레·라디오 같은 조건도 입수 안내에 표시합니다. 특수 심볼의 세부 이벤트나 일반 TM·기술가르침의 지도상 획득 시점을 완전히 확정할 수 없는 경우에는 “시점 추론”으로 구분합니다.</p></section>
           </div>
         </details>
       </main>

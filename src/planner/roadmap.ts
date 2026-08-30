@@ -61,10 +61,12 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
           quality: member.availability.quality,
           text: member.challengeStarter
             ? `${member.species.name} 스타팅 합류 — 시작 데이터의 포켓몬을 직접 교체, Lv.5`
-            : `${member.species.name} 합류 — ${member.availability.location}, ${member.availability.level}${member.availability.sourceKind === 'evolution' ? '의 진화 전 형태부터 육성' : ''}`,
+            : member.availability.sourceSpeciesName
+              ? `${member.species.name} 준비 — ${member.availability.sourceSpeciesName} 포획: ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}`
+              : `${member.species.name} 합류 — ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}`,
         })
       }
-      if (member.availability.sourceKind === 'evolution') {
+      if (member.availability.sourceSpeciesName) {
         for (const stage of generationLineage(member.species, game.generation).slice(1)) {
           const evolutionAt = effectiveChapter(stage, game)
           if (evolutionAt !== number || evolutionAt < member.availability.chapter) continue

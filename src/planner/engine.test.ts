@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
-import { canLearnFieldMove, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, speciesTypes, validateRequired } from './engine'
+import { canLearnFieldMove, effectiveChapter, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, speciesTypes, validateRequired } from './engine'
 import { families, games, getFamily, getGame } from './games'
 import { getLegalMoves } from './learnsets'
 import { composeRoadmap, roadmapReferencesAreAvailable } from './roadmap'
@@ -59,8 +59,18 @@ describe('획득 제약', () => {
 
   it('긴 루트 번호를 앞자리 루트의 챕터로 오인하지 않는다', () => {
     const red = getGame('red')
-    expect(getAvailability(speciesByDex.get(17)!, red).chapter).toBe(5)
+    expect(getAvailability(speciesByDex.get(132)!, red).chapter).toBe(5)
     expect(getAvailability(speciesByDex.get(84)!, red).chapter).toBe(5)
+  })
+
+  it('야생 진화형보다 빠른 진화 전 형태가 있으면 실제 최종 진화 시점을 비교한다', () => {
+    const pidgeotto = getAvailability(speciesByDex.get(17)!, getGame('red'))
+    expect(pidgeotto).toMatchObject({
+      chapter: 1,
+      finalChapter: 3,
+      location: '1번도로',
+      sourceSpeciesName: '구구',
+    })
   })
 
   it('레드의 3번도로를 달맞이산보다 먼저 배치한다', () => {
@@ -112,6 +122,62 @@ describe('획득 제약', () => {
     expect(actions.join(' ')).not.toMatch(/푸푸린|피츄|핑복/)
     expect(actions.some((text) => text.startsWith('삐 →'))).toBe(false)
     expect(actions.some((text) => text.includes('푸린') && text.includes('푸크린 진화'))).toBe(true)
+  })
+
+  it('조우 방식 해금 전의 이른 장소를 입수 시기로 오인하지 않는다', () => {
+    const fireRedPoliwrath = getAvailability(speciesByDex.get(62)!, getGame('firered'))
+    expect(fireRedPoliwrath).toMatchObject({
+      chapter: 5,
+      location: '연분홍시티',
+      method: '좋은낚싯대',
+      sourceSpeciesName: '발챙이',
+      postgameOnly: false,
+    })
+
+    expect(getAvailability(speciesByDex.get(60)!, getGame('gold'))).toMatchObject({
+      chapter: 2,
+      method: '낡은낚싯대',
+    })
+    expect(getAvailability(speciesByDex.get(299)!, getGame('ruby'))).toMatchObject({
+      chapter: 3,
+      method: '바위깨기',
+    })
+  })
+
+  it('후반 해금·외부 카트리지 조건을 기본 입수 경로로 사용하지 않는다', () => {
+    expect(getAvailability(speciesByDex.get(29)!, getGame('diamond'))).toMatchObject({
+      postgameOnly: true,
+      method: '풀숲·동굴 · 포켓트레',
+    })
+    expect(getAvailability(speciesByDex.get(10)!, getGame('diamond'))).toMatchObject({
+      obtainable: false,
+      sourceKind: 'unknown',
+    })
+    expect(getAvailability(speciesByDex.get(263)!, getGame('heartgold')).postgameOnly).toBe(true)
+    expect(getAvailability(speciesByDex.get(60)!, getGame('black')).postgameOnly).toBe(true)
+    expect(getAvailability(speciesByDex.get(39)!, getGame('black-2')).postgameOnly).toBe(true)
+  })
+
+  it('진화 도구와 장소가 열리기 전에 최종 진화형을 사용하지 않는다', () => {
+    expect(effectiveChapter(speciesByDex.get(26)!, getGame('red'))).toBe(4)
+    expect(effectiveChapter(speciesByDex.get(470)!, getGame('diamond'))).toBeGreaterThanOrEqual(2)
+    expect(effectiveChapter(speciesByDex.get(471)!, getGame('diamond'))).toBeGreaterThanOrEqual(6)
+    expect(effectiveChapter(speciesByDex.get(470)!, getGame('black-2'))).toBe(9)
+  })
+
+  it('버전 안에서 불가능한 진화는 다른 버전 교환이 필요하다고 표시한다', () => {
+    expect(validateRequired([26], getGame('yellow'), defaults).errors.join(' ')).toContain('통신교환')
+    expect(validateRequired([196], getGame('firered'), defaults).errors.join(' ')).toContain('통신교환')
+    expect(validateRequired([462], getGame('heartgold'), defaults).errors.join(' ')).toContain('통신교환')
+    expect(getAvailability(speciesByDex.get(470)!, getGame('black-2')).postgameOnly).toBe(true)
+  })
+
+  it('배포 장소와 다른 지방의 오염된 조우를 일반 입수로 사용하지 않는다', () => {
+    expect(getAvailability(speciesByDex.get(386)!, getGame('emerald')).obtainable).toBe(false)
+    expect(getAvailability(speciesByDex.get(491)!, getGame('diamond')).obtainable).toBe(false)
+    expect(getAvailability(speciesByDex.get(494)!, getGame('black')).obtainable).toBe(false)
+    expect(getAvailability(speciesByDex.get(380)!, getGame('ruby')).obtainable).toBe(false)
+    expect(getAvailability(speciesByDex.get(101)!, getGame('ruby')).location).toBe('뉴보라')
   })
 
   it('상호 배타 스타터를 동시에 허용하지 않는다', () => {

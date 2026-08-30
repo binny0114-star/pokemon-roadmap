@@ -2,6 +2,15 @@ import { mkdir, writeFile } from 'node:fs/promises'
 
 const endpoint = 'https://beta.pokeapi.co/graphql/v1beta'
 const versionIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21, 22]
+const allowedRegionIds = {
+  1: [1], 2: [1], 3: [1],
+  4: [1, 2], 5: [1, 2], 6: [1, 2],
+  7: [3], 8: [3], 9: [3],
+  10: [1], 11: [1],
+  12: [4], 13: [4], 14: [4],
+  15: [1, 2], 16: [1, 2],
+  17: [5], 18: [5], 21: [5], 22: [5],
+}
 
 async function query(source) {
   const response = await fetch(endpoint, {
@@ -43,6 +52,13 @@ const [speciesData, encounterData, typeData] = await Promise.all([
         name
         pokemon_v2_location { name region_id }
       }
+      pokemon_v2_encounterslot {
+        slot rarity
+        pokemon_v2_encountermethod { name }
+      }
+      pokemon_v2_encounterconditionvaluemaps {
+        pokemon_v2_encounterconditionvalue { name }
+      }
     }
   }`),
   query(`query {
@@ -65,8 +81,28 @@ for (const encounter of encounterData.pokemon_v2_encounter) {
   const location = encounter.pokemon_v2_locationarea?.pokemon_v2_location?.name
     ?? encounter.pokemon_v2_locationarea?.name
     ?? 'unknown'
-  if (!list.some((item) => item.location === location)) {
-    list.push({ location, minLevel: encounter.min_level, maxLevel: encounter.max_level })
+  const area = encounter.pokemon_v2_locationarea?.name ?? location
+  const regionId = encounter.pokemon_v2_locationarea?.pokemon_v2_location?.region_id ?? null
+  if (regionId && !allowedRegionIds[encounter.version_id]?.includes(regionId)) continue
+  const method = encounter.pokemon_v2_encounterslot?.pokemon_v2_encountermethod?.name ?? 'unknown'
+  const chance = encounter.pokemon_v2_encounterslot?.rarity ?? null
+  const slot = encounter.pokemon_v2_encounterslot?.slot ?? null
+  const conditions = encounter.pokemon_v2_encounterconditionvaluemaps
+    .map((entry) => entry.pokemon_v2_encounterconditionvalue.name)
+    .sort()
+  const existing = list.find((item) =>
+    item.location === location
+    && item.area === area
+    && item.regionId === regionId
+    && item.method === method
+    && item.slot === slot
+    && item.conditions.join('|') === conditions.join('|'),
+  )
+  if (existing) {
+    existing.minLevel = Math.min(existing.minLevel, encounter.min_level)
+    existing.maxLevel = Math.max(existing.maxLevel, encounter.max_level)
+  } else {
+    list.push({ location, area, regionId, minLevel: encounter.min_level, maxLevel: encounter.max_level, method, chance, slot, conditions })
   }
   encountersBySpecies.set(key, list)
 }
@@ -97,7 +133,7 @@ const species = speciesData.pokemon_v2_pokemonspecies.map((entry) => {
     } : null,
     encounters: Object.fromEntries(versionIds.flatMap((versionId) => {
       const values = encountersBySpecies.get(`${versionId}:${entry.id}`)
-      return values ? [[String(versionId), values.slice(0, 5)]] : []
+      return values ? [[String(versionId), values]] : []
     })),
   }
 })

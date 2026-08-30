@@ -83,9 +83,9 @@ Supabase를 구성하면 이메일 매직 링크 기반 **온라인 동기화**�
 
 ## 데이터 구조
 
-- `src/generated/species.json`: 전국도감 #001–649, 한국어 이름, 현재 타입/종족값, 진화 조건, 지원 버전 조우 스냅샷
+- `src/generated/species.json`: 전국도감 #001–649, 한국어 이름, 현재 타입/종족값, 진화 조건, 지원 버전별 조우 장소·세부 구역·방식·확률·조건 스냅샷
 - `src/generated/learnsets.json`: 12개 지원 버전 그룹, 649종의 자력기·TM/HM·기술가르침 호환과 기술 변경 이력
-- `src/planner/catalog.ts`: 버전별 획득 가능성, 조우 장, 엔딩 전/후, 교환·스타터·화석 판정
+- `src/planner/catalog.ts`: 장소와 낚싯대·필드기·특수 조건 해금을 결합한 버전별 획득 가능성, 엔딩 전/후, 교환·스타터·화석 판정
 - `src/planner/games.ts`: 21개 버전과 8개 공유 스토리 패밀리, 보스, 필드기
 - `src/planner/engine.ts`: 세대 타입 보정, 제약 검증, 결정론 점수, 잠금·대안, 커버리지
 - `src/planner/roadmap.ts`: 선택 파티별 포획·진화·기술·보스 액션 합성
@@ -97,6 +97,8 @@ Supabase를 구성하면 이메일 매직 링크 기반 **온라인 동기화**�
 ## 출처와 한계
 
 정적 종·진화·조우 스냅샷은 [PokéAPI](https://pokeapi.co/) GraphQL 데이터에서 생성했습니다. 스토리·보스·HM 차이는 [pret/pokered](https://github.com/pret/pokered), [pret/pokecrystal](https://github.com/pret/pokecrystal), [pret/pokeemerald](https://github.com/pret/pokeemerald), [pret/pokeplatinum](https://github.com/pret/pokeplatinum), [pret/pokeheartgold](https://github.com/pret/pokeheartgold), [pret/pokeblack](https://github.com/pret/pokeblack), Bulbapedia와 Serebii의 버전별 자료를 교차 참고했습니다.
+
+조우 스냅샷은 장소만이 아니라 세부 구역, 풀숲·낚싯대·파도타기·바위깨기·박치기·선물·고정 심볼 같은 방식, 출현 확률과 시간대·계절·대량발생·포켓트레·라디오·스토리 조건을 보존합니다. 입수 시점은 장소 진입 장과 해당 도구/필드기/조건 해금 장 중 늦은 쪽으로 계산합니다. 더블슬롯이나 이벤트 배포가 필요한 경로는 일반 입수로 취급하지 않으며, 엔딩 후 구역과 전국도감 조건은 엔딩 전 추천에서 제외합니다. 특수 심볼의 세부 이벤트 순서를 정적 원본만으로 완전히 확정할 수 없는 경우에는 `시점 추론`으로 표시합니다.
 
 기술 스냅샷은 지원 버전별 실제 자력기 레벨, TM/HM 번호, 기술가르침 호환과 기술 변경 이력을 포함합니다. 따라서 구세대 미등장 기술이나 해당 포켓몬이 배울 수 없는 기술은 추천하지 않으며, 1–3세대 타입 기반 물리/특수 분류와 당시의 기술 타입·위력을 적용합니다. 자력기는 정확한 레벨에 배치하지만 일반 TM과 기술가르침의 지도상 획득 위치는 아직 별도 스냅샷이 없어 보수적인 스토리 장에 `시점 추론`으로 표시합니다. 위치 토큰을 한국어로 확정하지 못한 경우 영문 원본 위치를 숨기지 않고 그대로 노출합니다. 그린은 별도 PokéAPI 버전이 없어 계보가 가까운 Blue 조우 스냅샷을 사용하며 이를 화면에 표시합니다.
 

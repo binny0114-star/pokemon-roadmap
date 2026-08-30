@@ -8,8 +8,14 @@ export type PlannerGameId =
 
 export interface CatalogEncounter {
   location: string
+  area: string
+  regionId: number | null
   minLevel: number
   maxLevel: number
+  method: string
+  chance: number | null
+  slot: number | null
+  conditions: string[]
 }
 
 export interface CatalogEvolution {
@@ -98,13 +104,18 @@ export interface Availability {
   obtainable: boolean
   preChampion: boolean
   chapter: number
+  finalChapter: number
   storyOrder: number
   location: string
   level: string
   tradeRequired: boolean
   postgameOnly: boolean
   versionExclusive: boolean
-  sourceKind: 'wild' | 'starter' | 'fossil' | 'static' | 'evolution' | 'unknown'
+  sourceKind: 'wild' | 'starter' | 'fossil' | 'gift' | 'static' | 'evolution' | 'unknown'
+  method?: string
+  methodId?: string
+  sourceSpeciesName?: string
+  conditions?: string[]
   mutuallyExclusiveGroup?: string
   reason?: string
   quality: DataQuality

@@ -20,64 +20,64 @@ const kantoChapters = [
   chapter('kan-4', '돌산터널 → 무지개시티', '로켓단 게임코너', 'Lv.26–32', ['route-7', 'route-8', 'route-9', 'route-10', 'rock-tunnel', 'lavender', 'celadon'], ['돌산터널 통과', '민화 격파', '로켓단 아지트 소탕'], ['공중날기', '플래시']),
   chapter('kan-5', '포켓몬타워 → 연분홍시티', '피리와 사파리존', 'Lv.30–38', ['pokemon-tower', 'route-12', 'route-13', 'route-14', 'route-15', 'route-16', 'route-17', 'route-18', 'fuchsia', 'safari'], ['포켓몬타워 구출', '독수 격파', '사파리존에서 파도타기·괴력 획득'], ['파도타기', '괴력']),
   chapter('kan-6', '노랑시티', '실프주식회사와 초련', 'Lv.35–43', ['saffron', 'silph'], ['실프주식회사 로켓단 격퇴', '초련 격파']),
-  chapter('kan-7', '쌍둥이섬 → 홍련섬', '포켓몬저택과 강연', 'Lv.40–47', ['route-19', 'route-20', 'route-21', 'seafoam', 'cinnabar', 'pokemon-mansion'], ['홍련체육관 열쇠 획득', '강연 격파']),
+  chapter('kan-7', '쌍둥이섬 → 홍련섬', '포켓몬저택과 강연', 'Lv.40–47', ['route-19', 'route-20', 'route-21', 'seafoam', 'cinnabar', 'pokemon-mansion', 'one-island', 'two-island', 'three-island'], ['홍련체육관 열쇠 획득', '강연 격파']),
   chapter('kan-8', '상록시티 → 포켓몬리그', '마지막 배지와 챔피언', 'Lv.45–60', ['route-23', 'victory-road', 'indigo', 'viridian'], ['비주기 격파', '챔피언로드 돌파', '사천왕과 챔피언 격파']),
 ]
 
 const johtoChapters = [
-  chapter('joh-1', '연두마을 → 도라지시티', '첫 배지와 모다피의탑', 'Lv.5–12', ['new-bark', 'route-29', 'route-30', 'route-31', 'violet', 'sprout'], ['스타터 선택', '비상 격파'], ['플래시']),
-  chapter('joh-2', '연결동굴 → 고동마을', '야돈우물과 너도밤나무숲', 'Lv.12–18', ['route-32', 'union-cave', 'azalea', 'slowpoke', 'ilex'], ['호일 격파', '풀베기 획득'], ['풀베기']),
+  chapter('joh-1', '연두마을 → 도라지시티', '첫 배지와 모다피의탑', 'Lv.5–12', ['new-bark', 'route-29', 'route-30', 'route-31', 'route-46', 'violet', 'sprout'], ['스타터 선택', '비상 격파'], ['플래시']),
+  chapter('joh-2', '연결동굴 → 고동마을', '야돈우물과 너도밤나무숲', 'Lv.12–18', ['route-32', 'route-33', 'union-cave', 'azalea', 'slowpoke', 'ilex'], ['호일 격파', '풀베기 획득'], ['풀베기']),
   chapter('joh-3', '금빛시티', '꼭두와 자연공원', 'Lv.18–24', ['route-34', 'goldenrod', 'route-35', 'national-park', 'route-36'], ['꼭두 격파', '꼬부기물뿌리개 획득']),
   chapter('joh-4', '인주시티', '불탄탑과 유빈', 'Lv.22–28', ['route-37', 'ecruteak', 'burned-tower', 'bell-tower'], ['전설의 포켓몬 해방', '유빈 격파', '파도타기 획득'], ['파도타기']),
   chapter('joh-5', '담청·진청시티', '등대와 비전신약', 'Lv.27–34', ['route-38', 'route-39', 'olivine', 'route-40', 'route-41', 'cianwood'], ['사도 격파', '암페어 치료', '규리 격파'], ['공중날기', '괴력']),
   chapter('joh-6', '분노의호수 → 라디오타워', '로켓단 최종 소탕', 'Lv.30–38', ['route-42', 'mahogany', 'lake-of-rage', 'route-43', 'rocket-hideout', 'radio-tower'], ['붉은 갸라도스 조사', '류옹 격파', '라디오타워 탈환'], ['소용돌이']),
-  chapter('joh-7', '얼음샛길 → 검은먹시티', '드래곤 배지', 'Lv.36–42', ['route-44', 'ice-path', 'blackthorn', 'dragons-den'], ['이향 격파', '용의굴 시험'], ['폭포오르기']),
+  chapter('joh-7', '얼음샛길 → 검은먹시티', '드래곤 배지', 'Lv.36–42', ['route-44', 'route-45', 'ice-path', 'blackthorn', 'dragons-den'], ['이향 격파', '용의굴 시험'], ['폭포오르기']),
   chapter('joh-8', '동성폭포 → 성도리그', '사천왕과 목호', 'Lv.40–50', ['route-26', 'route-27', 'tohjo', 'victory-road', 'indigo'], ['챔피언로드 돌파', '사천왕과 목호 격파']),
 ]
 
 const hoennChapters = [
-  chapter('hoe-1', '미로마을 → 금탄시티', '첫 파트너와 데봉 사건', 'Lv.5–15', ['littleroot', 'route-101', 'route-102', 'route-104', 'petalburg-woods', 'rustboro'], ['스타터 선택', '원규 격파', '데봉화물 회수'], ['풀베기']),
-  chapter('hoe-2', '무로마을 → 잿빛시티', '바위동굴과 해양박물관', 'Lv.15–20', ['dewford', 'granite-cave', 'route-109', 'slateport'], ['철구 격파', '성호에게 편지 전달'], ['플래시']),
-  chapter('hoe-3', '보라시티', '라이벌과 전기 배지', 'Lv.20–25', ['route-110', 'mauville', 'new-mauville'], ['암페어 격파'], ['바위깨기']),
-  chapter('hoe-4', '유성폭포 → 용암마을', '굴뚝산 사건', 'Lv.24–30', ['route-111', 'route-112', 'fiery-path', 'meteor-falls', 'mt-chimney', 'jagged-pass', 'lavaridge'], ['악당 조직의 운석 계획 저지', '연돌 격파']),
+  chapter('hoe-1', '미로마을 → 금탄시티', '첫 파트너와 데봉 사건', 'Lv.5–15', ['littleroot', 'route-101', 'route-102', 'route-103', 'route-104', 'petalburg', 'petalburg-woods', 'route-116', 'rusturf-tunnel', 'rustboro'], ['스타터 선택', '원규 격파', '데봉화물 회수'], ['풀베기']),
+  chapter('hoe-2', '무로마을 → 잿빛시티', '바위동굴과 해양박물관', 'Lv.15–20', ['route-105', 'route-106', 'dewford', 'granite-cave', 'route-107', 'route-108', 'route-109', 'slateport'], ['철구 격파', '성호에게 편지 전달'], ['플래시']),
+  chapter('hoe-3', '보라시티', '라이벌과 전기 배지', 'Lv.20–25', ['route-110', 'mauville', 'route-117', 'verdanturf', 'new-mauville'], ['암페어 격파'], ['바위깨기']),
+  chapter('hoe-4', '유성폭포 → 용암마을', '굴뚝산 사건', 'Lv.24–30', ['route-111', 'route-112', 'route-113', 'route-114', 'route-115', 'fiery-path', 'meteor-falls', 'fallarbor', 'mt-chimney', 'jagged-pass', 'lavaridge'], ['악당 조직의 운석 계획 저지', '연돌 격파']),
   chapter('hoe-5', '등화시티', '아버지와의 체육관전', 'Lv.28–33', ['petalburg', 'rusturf-tunnel'], ['종길 격파', '파도타기 획득', '시다케터널 개통'], ['파도타기', '괴력']),
   chapter('hoe-6', '119번도로 → 검방울시티', '날씨연구소와 공중날기', 'Lv.30–36', ['route-118', 'route-119', 'weather-institute', 'fortree', 'route-120'], ['날씨연구소 구출', '은송 격파'], ['공중날기']),
-  chapter('hoe-7', '송화산 → 해안시티', '악당 조직 아지트', 'Lv.34–40', ['route-121', 'safari-zone', 'mt-pyre', 'lilycove', 'magma-hideout', 'aqua-hideout'], ['송화산 사건 해결', '아지트 돌파']),
-  chapter('hoe-8', '이끼시티 → 해저동굴', '더블 배지와 다이빙', 'Lv.38–45', ['mossdeep', 'route-124', 'route-125', 'seafloor-cavern'], ['풍과 란 격파', '해저동굴 추격'], ['다이빙']),
-  chapter('hoe-9', '루네시티', '초고대 포켓몬과 마지막 배지', 'Lv.42–47', ['sootopolis', 'cave-of-origin', 'sky-pillar'], ['초고대 포켓몬 사건 해결', '8번째 관장 격파'], ['폭포오르기']),
+  chapter('hoe-7', '송화산 → 해안시티', '악당 조직 아지트', 'Lv.34–40', ['route-121', 'route-122', 'route-123', 'safari-zone', 'mt-pyre', 'lilycove', 'magma-hideout', 'aqua-hideout'], ['송화산 사건 해결', '아지트 돌파']),
+  chapter('hoe-8', '이끼시티 → 해저동굴', '더블 배지와 다이빙', 'Lv.38–45', ['mossdeep', 'route-124', 'route-125', 'route-126', 'route-127', 'route-128', 'shoal-cave', 'seafloor-cavern'], ['풍과 란 격파', '해저동굴 추격'], ['다이빙']),
+  chapter('hoe-9', '루네시티', '초고대 포켓몬과 마지막 배지', 'Lv.42–47', ['route-129', 'route-130', 'route-131', 'pacifidlog', 'sootopolis', 'cave-of-origin', 'sky-pillar'], ['초고대 포켓몬 사건 해결', '8번째 관장 격파'], ['폭포오르기']),
   chapter('hoe-10', '챔피언로드 → 호연리그', '사천왕과 챔피언', 'Lv.46–58', ['ever-grande', 'victory-road', 'pokemon-league'], ['챔피언로드 돌파', '사천왕과 챔피언 격파']),
 ]
 
 const sinnohChapters = [
-  chapter('sin-1', '떡잎마을 → 무쇠시티', '첫 파트너와 석탄 배지', 'Lv.5–15', ['twinleaf', 'route-201', 'route-202', 'oreburgh'], ['스타터 선택', '강석 격파'], ['바위깨기']),
-  chapter('sin-2', '꽃향기마을 → 영원시티', '갤럭시단과 숲의 배지', 'Lv.15–24', ['floaroma', 'eterna-forest', 'eterna'], ['갤럭시단 발전소 사건', '유채 격파'], ['풀베기']),
-  chapter('sin-3', '연고시티 → 장막시티', '콘테스트 도시와 격투 배지', 'Lv.22–32', ['hearthome', 'solaceon', 'veilstone'], ['멜리사/자두 진행', '갤럭시단 창고 조사'], ['공중날기']),
-  chapter('sin-4', '들판시티', '대습초원과 물 배지', 'Lv.28–36', ['pastoria', 'great-marsh', 'route-212'], ['맥실러 격파', '갤럭시단 조무래기 추격'], ['안개제거']),
-  chapter('sin-5', '봉신마을 → 운하시티', '고대 벽화와 강철 배지', 'Lv.34–41', ['celestic', 'canalave', 'iron-island'], ['봉신마을 유적 조사', '동관 격파'], ['파도타기', '괴력']),
-  chapter('sin-6', '선단시티', '눈길과 얼음 배지', 'Lv.38–45', ['route-216', 'route-217', 'snowpoint'], ['무청 격파'], ['락클라임']),
+  chapter('sin-1', '떡잎마을 → 무쇠시티', '첫 파트너와 석탄 배지', 'Lv.5–15', ['twinleaf', 'route-201', 'route-202', 'route-203', 'jubilife', 'oreburgh-gate', 'oreburgh'], ['스타터 선택', '강석 격파'], ['바위깨기']),
+  chapter('sin-2', '꽃향기마을 → 영원시티', '갤럭시단과 숲의 배지', 'Lv.15–24', ['route-204', 'floaroma', 'valley-windworks', 'route-205', 'eterna-forest', 'eterna', 'old-chateau'], ['갤럭시단 발전소 사건', '유채 격파'], ['풀베기']),
+  chapter('sin-3', '연고시티 → 장막시티', '콘테스트 도시와 격투 배지', 'Lv.22–32', ['route-206', 'wayward-cave', 'route-207', 'mt-coronet', 'route-208', 'hearthome', 'route-209', 'solaceon', 'route-210', 'route-215', 'veilstone', 'route-214'], ['멜리사/자두 진행', '갤럭시단 창고 조사'], ['공중날기']),
+  chapter('sin-4', '들판시티', '대습초원과 물 배지', 'Lv.28–36', ['route-212', 'pastoria', 'great-marsh', 'route-213', 'valor-lakefront'], ['맥실러 격파', '갤럭시단 조무래기 추격'], ['안개제거']),
+  chapter('sin-5', '봉신마을 → 운하시티', '고대 벽화와 강철 배지', 'Lv.34–41', ['celestic', 'route-211', 'route-218', 'canalave', 'iron-island', 'fuego-ironworks'], ['봉신마을 유적 조사', '동관 격파'], ['파도타기', '괴력']),
+  chapter('sin-6', '선단시티', '눈길과 얼음 배지', 'Lv.38–45', ['route-216', 'route-217', 'acuity-lakefront', 'snowpoint'], ['무청 격파'], ['락클라임']),
   chapter('sin-7', '갤럭시단 본부 → 창기둥', '전설의 포켓몬 사건', 'Lv.42–49', ['veilstone', 'mt-coronet', 'spear-pillar', 'distortion-world'], ['갤럭시단 본부 돌파', '창기둥 사건 해결'], ['폭포오르기']),
-  chapter('sin-8', '물가시티 → 신오리그', '마지막 배지와 챔피언', 'Lv.46–62', ['sunnyshore', 'route-223', 'victory-road', 'pokemon-league'], ['전진 격파', '챔피언로드 돌파', '사천왕과 난천 격파']),
+  chapter('sin-8', '물가시티 → 신오리그', '마지막 배지와 챔피언', 'Lv.46–62', ['route-222', 'sunnyshore', 'route-223', 'victory-road', 'pokemon-league'], ['전진 격파', '챔피언로드 돌파', '사천왕과 난천 격파']),
 ]
 
 const unovaChapters = [
-  chapter('uno-1', '마름꽃마을 → 성신시티', '첫 파트너와 타입 수업', 'Lv.5–15', ['nuvema', 'route-1', 'striaton', 'dreamyard'], ['스타터 선택', '성신체육관 격파'], ['풀베기']),
+  chapter('uno-1', '마름꽃마을 → 성신시티', '첫 파트너와 타입 수업', 'Lv.5–15', ['nuvema', 'route-1', 'accumula', 'route-2', 'striaton', 'dreamyard'], ['스타터 선택', '성신체육관 격파'], ['풀베기']),
   chapter('uno-2', '칠보시티', '박물관과 플라스마단', 'Lv.15–22', ['route-3', 'wellspring', 'nacrene'], ['알로에 격파', '드래곤 뼈 회수']),
   chapter('uno-3', '구름시티', '사막과 벌레 배지', 'Lv.20–28', ['pinwheel', 'castelia', 'desert-resort'], ['플라스마단 추적', '아티 격파']),
-  chapter('uno-4', '뇌문시티', '배틀서브웨이와 전기 배지', 'Lv.26–34', ['route-4', 'nimbasa', 'lostlorn'], ['카밀레 격파'], ['공중날기']),
-  chapter('uno-5', '물풍경시티 → 궐수시티', '냉동창고와 공항', 'Lv.31–40', ['driftveil', 'cold-storage', 'chargestone', 'mistralton'], ['야콘 격파', '풍란 격파'], ['파도타기']),
-  chapter('uno-6', '태엽산 → 설화시티', '용의 나선탑', 'Lv.38–44', ['twist-mountain', 'icirrus', 'dragonspiral'], ['담죽 격파', '전설의 포켓몬 사건']),
-  chapter('uno-7', '쌍용시티', '마지막 드래곤 배지', 'Lv.41–48', ['route-8', 'opelucid'], ['아이리스/사간 격파']),
+  chapter('uno-4', '뇌문시티', '배틀서브웨이와 전기 배지', 'Lv.26–34', ['route-4', 'nimbasa', 'route-5', 'route-16', 'lostlorn'], ['카밀레 격파'], ['공중날기']),
+  chapter('uno-5', '물풍경시티 → 궐수시티', '냉동창고와 공항', 'Lv.31–40', ['driftveil', 'cold-storage', 'route-6', 'chargestone', 'mistralton', 'celestial-tower'], ['야콘 격파', '풍란 격파'], ['파도타기']),
+  chapter('uno-6', '태엽산 → 설화시티', '용의 나선탑', 'Lv.38–44', ['route-7', 'twist-mountain', 'icirrus', 'dragonspiral'], ['담죽 격파', '전설의 포켓몬 사건']),
+  chapter('uno-7', '쌍용시티', '마지막 드래곤 배지', 'Lv.41–48', ['route-8', 'moor-of-icirrus', 'route-9', 'shopping-mall', 'opelucid'], ['아이리스/사간 격파']),
   chapter('uno-8', '챔피언로드 → N의 성', '사천왕과 최종 결전', 'Lv.45–55', ['route-10', 'victory-road', 'pokemon-league', 'n-castle'], ['사천왕 돌파', 'N과 게치스 격파'], ['괴력', '폭포오르기', '다이빙']),
 ]
 
 const unova2Chapters = [
-  chapter('un2-1', '부채시티 → 모란만시티', '체렌과 보미카', 'Lv.5–18', ['asperita', 'floccesy', 'virbank'], ['스타터 선택', '체렌·보미카 격파'], ['풀베기']),
-  chapter('un2-2', '구름시티', '포켓우드와 하수도', 'Lv.18–26', ['castelia', 'castelia-sewers'], ['아티 격파', '플라스마단 추적']),
-  chapter('un2-3', '뇌문시티', '전기 배지', 'Lv.25–33', ['route-4', 'nimbasa'], ['카밀레 격파'], ['공중날기']),
-  chapter('un2-4', '물풍경시티', 'PWT와 플라스마단', 'Lv.31–38', ['driftveil', 'pokemon-world-tournament'], ['야콘 격파', 'PWT 참가'], ['파도타기']),
-  chapter('un2-5', '궐수시티 → 산로마을', '공항과 리버스마운틴', 'Lv.36–43', ['mistralton', 'reversal-mountain', 'lentimas'], ['풍란 격파', '플라스마단 추적']),
-  chapter('un2-6', '쌍용시티', '드래곤 배지와 DNA 스플라이서', 'Lv.40–48', ['opelucid', 'marine-tube'], ['사간 격파', '플라스마 프리깃 추적'], ['괴력']),
-  chapter('un2-7', '기하시티 → 자이언트홀', '마지막 배지와 큐레무', 'Lv.45–53', ['humilau', 'seaside-cave', 'giant-chasm'], ['시즈 격파', '큐레무 사건 해결'], ['폭포오르기', '다이빙']),
+  chapter('un2-1', '부채시티 → 모란만시티', '체렌과 보미카', 'Lv.5–18', ['asperita', 'route-19', 'floccesy', 'route-20', 'virbank', 'virbank-complex'], ['스타터 선택', '체렌·보미카 격파'], ['풀베기']),
+  chapter('un2-2', '구름시티', '포켓우드와 하수도', 'Lv.18–26', ['castelia', 'castelia-sewers', 'relic-passage'], ['아티 격파', '플라스마단 추적']),
+  chapter('un2-3', '뇌문시티', '전기 배지', 'Lv.25–33', ['route-4', 'desert-resort', 'nimbasa', 'route-5', 'route-16', 'lostlorn'], ['카밀레 격파'], ['공중날기']),
+  chapter('un2-4', '물풍경시티', 'PWT와 플라스마단', 'Lv.31–38', ['driftveil', 'route-6', 'chargestone', 'pokemon-world-tournament'], ['야콘 격파', 'PWT 참가'], ['파도타기']),
+  chapter('un2-5', '궐수시티 → 산로마을', '공항과 리버스마운틴', 'Lv.36–43', ['route-7', 'celestial-tower', 'mistralton', 'reversal-mountain', 'lentimas', 'strange-house', 'undella'], ['풍란 격파', '플라스마단 추적']),
+  chapter('un2-6', '쌍용시티', '드래곤 배지와 DNA 스플라이서', 'Lv.40–48', ['route-11', 'village-bridge', 'route-12', 'lacunosa', 'route-13', 'route-14', 'route-9', 'opelucid', 'marine-tube'], ['사간 격파', '플라스마 프리깃 추적'], ['괴력']),
+  chapter('un2-7', '기하시티 → 자이언트홀', '마지막 배지와 큐레무', 'Lv.45–53', ['humilau', 'route-21', 'seaside-cave', 'route-22', 'giant-chasm', 'plasma-frigate'], ['시즈 격파', '큐레무 사건 해결'], ['폭포오르기', '다이빙']),
   chapter('un2-8', '챔피언로드 → 하나리그', '사천왕과 아이리스', 'Lv.50–60', ['route-23', 'victory-road', 'pokemon-league'], ['챔피언로드 돌파', '사천왕과 아이리스 격파']),
 ]
 
@@ -174,7 +174,7 @@ const fields = {
     { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 5, required: true },
     { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 5, required: true },
     { id: 'flash', name: '플래시', type: 'electric', unlockChapter: 4, required: false },
-    { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 8, required: false },
+    { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 7, required: false },
     { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 8, required: false },
   ],
   sinnoh: [
@@ -186,7 +186,7 @@ const fields = {
   hgss: [
     { id: 'cut', name: '풀베기', type: 'normal', unlockChapter: 2, required: true }, { id: 'fly', name: '공중날기', type: 'flying', unlockChapter: 5, required: false },
     { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 4, required: true }, { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 5, required: true },
-    { id: 'whirlpool', name: '소용돌이', type: 'water', unlockChapter: 6, required: true }, { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 3, required: false },
+    { id: 'whirlpool', name: '소용돌이', type: 'water', unlockChapter: 6, required: true }, { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 1, required: false },
     { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 7, required: true }, { id: 'rock-climb', name: '락클라임', type: 'normal', unlockChapter: 8, required: false },
   ],
   unova: [
