@@ -1,0 +1,19 @@
+:root {
+  font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', 'Segoe UI', sans-serif;
+  color: #edf2ef;
+  background: #070908;
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: #070908; }
+button, input { font: inherit; }
+button { color: inherit; }
+button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible {
+  outline: 3px solid #f2bb32;
+  outline-offset: 3px;
+}
