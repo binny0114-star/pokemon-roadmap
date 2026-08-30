@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import './App.css'
 import { guides } from './data'
 import { getPlan as getCuratedPlan } from './data/integrity'
@@ -15,12 +15,15 @@ import {
 import { games, getBosses, getFamily, getGame } from './planner/games'
 import { composeRoadmap } from './planner/roadmap'
 import { learnsetSource } from './planner/learnsets'
+import { createAccount, getActiveAccount, login, logout } from './planner/auth'
 import {
   clearPlanSession,
   loadBuilderState,
   loadPlanSession,
   loadPlanProgress,
+  loadClearRecords,
   saveBuilderState,
+  saveClearRecord,
   savePlanSession,
   savePlanProgress,
 } from './planner/storage'
@@ -97,6 +100,14 @@ function App() {
   const [completed, setCompleted] = useState<Set<string>>(new Set())
   const [roadmapQuery, setRoadmapQuery] = useState('')
   const [catalogReady, setCatalogReady] = useState(false)
+  const [account] = useState(getActiveAccount)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [authName, setAuthName] = useState('')
+  const [authPin, setAuthPin] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authMessage, setAuthMessage] = useState('')
+  const [clearRecords, setClearRecords] = useState(loadClearRecords)
 
   const game = getGame(builder.gameId)
   const family = getFamily(game)
@@ -300,11 +311,25 @@ function App() {
 
   const toggleProgress = (id: string) => {
     if (!plan) return
-    const next = new Set(completed)
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    setCompleted(next)
-    savePlanProgress(game.id, plan.id, next)
+    setCompleted((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      savePlanProgress(game.id, plan.id, next)
+      if (roadmapActions.length > 0 && roadmapActions.every((action) => next.has(action.id))) {
+        setClearRecords(saveClearRecord({
+          id: `${game.id}:${plan.id}`,
+          gameId: game.id,
+          gameName: game.name,
+          planId: plan.id,
+          challengeType: plan.challengeType,
+          memberNames: plan.members.map((member) => member.species.name),
+          completedAt: new Date().toISOString(),
+          totalActions: roadmapActions.length,
+        }))
+      }
+      return next
+    })
   }
 
   const resetProgress = () => {
@@ -345,12 +370,38 @@ function App() {
     )
     .slice(0, query.trim() ? 48 : 24)
 
+  const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setAuthBusy(true)
+    setAuthMessage('')
+    try {
+      if (authMode === 'register') await createAccount(authName, authPin)
+      else await login(authName, authPin)
+      window.location.reload()
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : '계정 처리를 완료하지 못했습니다.')
+      setAuthBusy(false)
+    }
+  }
+
+  const signOut = () => {
+    logout()
+    window.location.reload()
+  }
+
   return (
     <div className="app planner-app" style={{ '--accent': game.accent, '--accent-soft': `${game.accent}18` } as CSSProperties}>
       <header className="planner-hero">
         <nav className="topbar">
           <a className="brand" href="#top"><span className="brand-mark"><i /></span><span>POKÉ <b>ROUTE</b></span></a>
-          <span className="offline-badge"><i /> 정적 오프라인 엔진</span>
+          <div className="topbar-actions">
+            <span className="offline-badge"><i /> 정적 오프라인 엔진</span>
+            <button className="account-button" onClick={() => setAccountOpen(true)}>
+              <span>{account ? '●' : '○'}</span>
+              <b>{account?.name ?? '로그인'}</b>
+              {account && <small>{clearRecords.length}회 클리어</small>}
+            </button>
+          </div>
         </nav>
         <div className="builder-intro" id="top">
           <div>
@@ -366,6 +417,63 @@ function App() {
           </div>
         </div>
       </header>
+
+      {accountOpen && (
+        <div className="account-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setAccountOpen(false)
+        }}>
+          <section className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title">
+            <button className="dialog-close" onClick={() => setAccountOpen(false)} aria-label="계정 창 닫기">×</button>
+            {account ? (
+              <>
+                <div className="account-heading">
+                  <span className="eyebrow">LOCAL TRAINER PROFILE</span>
+                  <h2 id="account-title">{account.name} 트레이너</h2>
+                  <p>이 브라우저에서 파티, 진행률과 클리어 기록을 계정별로 저장합니다.</p>
+                </div>
+                <div className="account-summary">
+                  <span><b>{clearRecords.length}</b><small>클리어</small></span>
+                  <span><b>{plan ? `${progress}%` : '—'}</b><small>현재 진행</small></span>
+                </div>
+                <div className="clear-history">
+                  <div className="clear-history-title"><h3>클리어 목록</h3><small>CLEAR ARCHIVE</small></div>
+                  {clearRecords.length ? clearRecords.map((record) => (
+                    <article key={record.id}>
+                      <span className="clear-medal">★</span>
+                      <div>
+                        <strong>{record.gameName}</strong>
+                        <small>{record.challengeType ? `${typeKo[record.challengeType]} 타입 챌린지` : '밸런스 파티'} · {new Date(record.completedAt).toLocaleDateString('ko-KR')}</small>
+                        <p>{record.memberNames.join(' · ')}</p>
+                      </div>
+                    </article>
+                  )) : <p className="empty-history">로드맵의 모든 파티 액션을 완료하면 여기에 기록됩니다.</p>}
+                </div>
+                <button className="logout-button" onClick={signOut}>로그아웃하고 게스트로 전환</button>
+                <p className="local-account-note">로컬 계정은 서버로 전송되지 않으며 이 브라우저에만 존재합니다. 다른 기기와 자동 동기화되지는 않습니다.</p>
+              </>
+            ) : (
+              <>
+                <div className="account-heading">
+                  <span className="eyebrow">OFFLINE ACCOUNT</span>
+                  <h2 id="account-title">트레이너 로그인</h2>
+                  <p>닉네임과 PIN으로 이 브라우저 안에서 진행 기록을 분리하세요.</p>
+                </div>
+                <div className="auth-tabs">
+                  <button className={authMode === 'login' ? 'selected' : ''} onClick={() => { setAuthMode('login'); setAuthMessage('') }}>로그인</button>
+                  <button className={authMode === 'register' ? 'selected' : ''} onClick={() => { setAuthMode('register'); setAuthMessage('') }}>새 계정</button>
+                </div>
+                <form className="auth-form" onSubmit={submitAuth}>
+                  <label><span>닉네임</span><input value={authName} onChange={(event) => setAuthName(event.target.value)} minLength={2} maxLength={16} autoComplete="username" required /></label>
+                  <label><span>PIN</span><input value={authPin} onChange={(event) => setAuthPin(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" minLength={4} maxLength={12} type="password" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} required /></label>
+                  {authMessage && <p className="auth-error" role="alert">{authMessage}</p>}
+                  <button type="submit" disabled={authBusy}>{authBusy ? '처리 중…' : authMode === 'register' ? '계정 만들기' : '로그인'}</button>
+                </form>
+                <p className="local-account-note">처음 계정을 만들면 현재 게스트의 파티와 진행률을 가져옵니다. PIN은 PBKDF2로 해시되어 저장됩니다.</p>
+              </>
+            )}
+          </section>
+        </div>
+      )}
 
       <main>
         <section className="builder-section">
@@ -603,7 +711,7 @@ function App() {
                         <div className="dynamic-chapter-body">
                           <div className="base-objectives"><span className="eyebrow">STORY</span>{chapter.objectives.map((objective) => <p key={objective}>□ {objective}</p>)}</div>
                           <div className="dynamic-actions"><span className="eyebrow">YOUR PARTY ACTIONS</span>{chapter.actions.map((action) => (
-                            <label key={action.id} className={`${action.kind} ${completed.has(action.id) ? 'done' : ''}`}>
+                            <label key={action.id} data-action-id={action.id} className={`${action.kind} ${completed.has(action.id) ? 'done' : ''}`}>
                               <input type="checkbox" checked={completed.has(action.id)} onChange={() => toggleProgress(action.id)} />
                               <span className="action-kind">{action.kind === 'capture' ? '포획' : action.kind === 'evolution' ? '진화' : action.kind === 'move' ? '기술' : action.kind === 'boss' ? '보스' : '주의'}</span>
                               <span>{action.text}</span>
@@ -661,7 +769,7 @@ function App() {
       <footer>
         <div className="brand footer-brand"><span className="brand-mark"><i /></span><span>POKÉ <b>ROUTE</b></span></div>
         <p>팬이 만든 비공식 공략 콘텐츠입니다. Nintendo, Game Freak, Pokémon Company와 제휴하거나 승인을 받지 않았습니다.</p>
-        <span>모든 설정과 진행률은 이 브라우저에만 저장됩니다.</span>
+        <span>계정, 설정과 진행률은 이 브라우저에만 저장됩니다.</span>
       </footer>
     </div>
   )
