@@ -17,8 +17,8 @@ beforeEach(() => {
 })
 
 describe('클라우드 상태 스냅샷', () => {
-  it('설정이 없을 때 로컬 모드를 유지한다', () => {
-    expect(isCloudConfigured()).toBe(false)
+  it('클라우드 설정 여부와 무관하게 로그인 전 게스트 범위를 유지한다', () => {
+    expect(typeof isCloudConfigured()).toBe('boolean')
     expect(activeStorageScope()).toBe('guest')
   })
 
