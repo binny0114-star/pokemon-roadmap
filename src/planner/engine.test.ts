@@ -234,7 +234,7 @@ describe('결정론 추천 엔진', () => {
         expect(member.moves.map((move) => move.quality)).not.toContain('review')
       }
     }
-  }, 20_000)
+  })
 
   it('1세대 기술의 당시 타입 변경 이력을 적용한다', () => {
     const bite = getLegalMoves(speciesByDex.get(58)!, getGame('red')).find((move) => move.id === 'bite')
@@ -341,7 +341,7 @@ describe('결정론 추천 엔진', () => {
     expect(canLearnFieldMove(speciesByDex.get(263)!, strength)).toBe(false)
     expect(canLearnFieldMove(speciesByDex.get(264)!, strength)).toBe(true)
     expect(getFamily(getGame('black')).fieldMoves.map((move) => move.id)).not.toContain('rock-smash')
-  })
+  }, 20_000)
 })
 
 describe('세대별 단일 타입 챌린지', () => {
@@ -449,5 +449,50 @@ describe('동적 로드맵과 저장 격리', () => {
     const roadmap = composeRoadmap(game, plan)
     expect(roadmap[0].actions.some((action) => action.id.includes(':challenge:ground'))).toBe(true)
     expect(roadmapReferencesAreAvailable(game, plan, roadmap)).toBe(true)
+  })
+
+  it('이미 선택한 스타터·화석과 양립할 수 없는 임시 카운터를 추천하지 않는다', () => {
+    for (const game of games) {
+      for (const choiceDex of [...game.starters, ...game.fossils.flat()]) {
+        const preferences = { ...defaults, allowPostgame: true, allowLegendary: true }
+        const validation = validateRequired([choiceDex], game, preferences, null)
+        if (validation.errors.length) continue
+        const plan = generateParty(game, preferences, { requiredDexes: [choiceDex] })
+        const selectedGroups = new Set(
+          plan.members
+            .map((member) => getAvailability(member.species, game).mutuallyExclusiveGroup)
+            .filter(Boolean),
+        )
+        const forbiddenNames = speciesCatalog
+          .filter((species) => {
+            const group = getAvailability(species, game).mutuallyExclusiveGroup
+            return group && selectedGroups.has(group) && !plan.members.some((member) => member.species.chainId === species.chainId)
+          }, 20_000)
+          .map((species) => species.name)
+        const roadmapText = composeRoadmap(game, plan)
+          .flatMap((chapter) => chapter.actions.map((action) => action.text))
+          .join('\n')
+        for (const name of forbiddenNames) {
+          expect(roadmapText, `${game.id} #${choiceDex} -> ${name}`)
+            .not.toContain(`${name}(`)
+        }
+      }
+    }
+  }, 20_000)
+
+  it('개조 스타팅은 원래 스타터 선택만 소비하고 해당 포켓몬의 자연 입수 선택지는 소비하지 않는다', () => {
+    const game = getGame('ruby')
+    const plan = generateParty(
+      game,
+      defaults,
+      { requiredDexes: [347], challengeType: 'rock' },
+    )
+    const roadmapText = composeRoadmap(game, plan)
+      .flatMap((chapter) => chapter.actions.map((action) => action.text))
+      .join('\n')
+    expect(roadmapText).toContain('릴링(')
+    for (const starterDex of game.starters) {
+      expect(roadmapText).not.toContain(`${speciesByDex.get(starterDex)!.name}(`)
+    }
   })
 })

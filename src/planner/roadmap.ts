@@ -19,11 +19,20 @@ function temporaryCounter(
   challengeType: string | null,
 ): string | null {
   const ownedChains = new Set(members.map((member) => member.species.chainId))
+  const consumedChoiceGroups = new Set(
+    members
+      .map((member) => member.challengeStarter ? 'starter' : member.availability.mutuallyExclusiveGroup)
+      .filter((group): group is string => Boolean(group)),
+  )
   const candidate = speciesCatalog
     .filter((species) => !ownedChains.has(species.chainId))
     .filter((species) => {
       const availability = getAvailability(species, game)
-      return availability.obtainable && !availability.postgameOnly && availability.chapter <= chapter && !availability.tradeRequired
+      return availability.obtainable
+        && !availability.postgameOnly
+        && availability.chapter <= chapter
+        && !availability.tradeRequired
+        && (!availability.mutuallyExclusiveGroup || !consumedChoiceGroups.has(availability.mutuallyExclusiveGroup))
     })
     .filter((species) => !challengeType || speciesTypes(species, game.generation).includes(challengeType))
     .filter((species) => speciesTypes(species, game.generation).some((type) => bossTypes.some((bossType) => isStrongAgainst(type, bossType))))
