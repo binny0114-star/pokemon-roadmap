@@ -189,23 +189,46 @@ function chapterForLevel(level: number, game: GameConfig): number {
   return index >= 0 ? index + 1 : family.chapters.length
 }
 
-function generatedMoves(
+export function generatedMoves(
   species: CatalogSpecies,
   game: GameConfig,
   acquisitionChapter = getAvailability(species, game).chapter,
   includeAncestors = true,
 ): GeneratedMove[] {
   const family = getFamily(game)
+  const directlyAcquired = !getAvailability(species, game).sourceSpeciesName
+  const evolvedStages = new Set(generationLineage(species, game.generation).slice(1).map((stage) => stage.dex))
+  const isReminderOnly = (move: LegalMove, learnedBy: CatalogSpecies) =>
+    includeAncestors
+    && move.method === 'level'
+    && move.level <= 1
+    && evolvedStages.has(learnedBy.dex)
+    && !(directlyAcquired && learnedBy.dex === species.dex)
+  const levelChapter = (move: LegalMove, learnedBy: CatalogSpecies) =>
+    Math.max(
+      acquisitionChapter,
+      chapterForLevel(move.level, game),
+      isReminderOnly(move, learnedBy) ? effectiveChapter(species, game) : 1,
+      isReminderOnly(move, learnedBy) ? family.moveReminder?.chapter ?? 1 : 1,
+    )
   const legal = legalMovesForLineage(species, game, includeAncestors)
-    .filter(({ move }) => move.generation <= game.generation && !excludedStoryMoves.has(move.id))
+    .filter(({ move, learnedBy }) => {
+      const reminderOnly = isReminderOnly(move, learnedBy)
+      return move.generation <= game.generation
+        && !excludedStoryMoves.has(move.id)
+        && (!reminderOnly || Boolean(family.moveReminder))
+    })
   const bestSource = new Map<string, (typeof legal)[number]>()
   const sourceRank = { level: 3, machine: 2, tutor: 1 }
   for (const entry of legal) {
     const current = bestSource.get(entry.move.id)
+    const bothLevelMoves = entry.move.method === 'level' && current?.move.method === 'level'
     if (
       !current
-      || sourceRank[entry.move.method] > sourceRank[current.move.method]
-      || (entry.move.method === current.move.method && entry.move.level < current.move.level)
+      || (bothLevelMoves && levelChapter(entry.move, entry.learnedBy) < levelChapter(current.move, current.learnedBy))
+      || (bothLevelMoves && levelChapter(entry.move, entry.learnedBy) === levelChapter(current.move, current.learnedBy) && entry.move.level < current.move.level)
+      || (!bothLevelMoves && sourceRank[entry.move.method] > sourceRank[current.move.method])
+      || (!bothLevelMoves && entry.move.method === current.move.method && entry.move.level < current.move.level)
     ) bestSource.set(entry.move.id, entry)
   }
   const candidates = [...bestSource.values()]
@@ -236,17 +259,15 @@ function generatedMoves(
     if (!selected.some((current) => current.move.id === entry.move.id)) selected.push(entry)
   }
   return selected.slice(0, 4).map(({ move, learnedBy }) => {
-    const learnedByEvolution = learnedBy.dex === species.dex && Boolean(species.evolvesFrom)
+    const reminderOnly = isReminderOnly(move, learnedBy)
     const availableChapter = move.method === 'level'
-      ? Math.max(
-          acquisitionChapter,
-          chapterForLevel(move.level, game),
-          learnedByEvolution && move.level <= 1 ? effectiveChapter(species, game) : 1,
-        )
+      ? levelChapter(move, learnedBy)
       : Math.max(acquisitionChapter, Math.ceil(family.chapters.length * .7))
     const source = move.method === 'level'
       ? move.level <= 1
-        ? learnedByEvolution ? `${learnedBy.name} 진화 직후·기술 떠올리기` : `${learnedBy.name} Lv.1 기술 목록`
+        ? reminderOnly
+          ? `${family.moveReminder!.location} 기술 떠올리기 · ${family.moveReminder!.cost}`
+          : `${learnedBy.name} Lv.1 기술 목록`
         : `${learnedBy.name} Lv.${move.level} 자력 습득${learnedBy.dex !== species.dex ? ' 후 유지' : ''}`
       : move.method === 'machine'
         ? `${move.machine ?? '기술머신'} 호환 확인됨`

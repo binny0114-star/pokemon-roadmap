@@ -42,6 +42,28 @@ export function loadPlanProgress(gameId: PlannerGameId, planId: string): Set<str
   }
 }
 
+function actionIdentity(id: string): string {
+  const kind = id.split(':', 2)[1]
+  return ['capture', 'evolve', 'move'].includes(kind)
+    ? id.slice(id.indexOf(':') + 1)
+    : id
+}
+
+export function reconcilePlanProgress(saved: Set<string>, currentActionIds: string[]): Set<string> {
+  const completedIdentities = new Set([...saved].map(actionIdentity))
+  return new Set(currentActionIds.filter((id) => saved.has(id) || completedIdentities.has(actionIdentity(id))))
+}
+
+export function mergePlanProgress(
+  saved: Set<string>,
+  currentActionIds: string[],
+  completed: Set<string>,
+): Set<string> {
+  const currentIdentities = new Set(currentActionIds.map(actionIdentity))
+  const unmatched = [...saved].filter((id) => !currentIdentities.has(actionIdentity(id)))
+  return new Set([...unmatched, ...completed])
+}
+
 export function savePlanProgress(gameId: PlannerGameId, planId: string, values: Set<string>): void {
   localStorage.setItem(planProgressKey(gameId, planId), JSON.stringify([...values]))
   queueCloudSync()

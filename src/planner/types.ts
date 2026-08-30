@@ -71,6 +71,12 @@ export interface FieldMove {
   required: boolean
 }
 
+export interface MoveReminder {
+  chapter: number
+  location: string
+  cost: string
+}
+
 export interface FamilyConfig {
   id: FamilyId
   generation: number
@@ -78,6 +84,7 @@ export interface FamilyConfig {
   chapters: StoryChapter[]
   bosses: PlannerBoss[]
   fieldMoves: FieldMove[]
+  moveReminder?: MoveReminder
   postgame: string[]
 }
 

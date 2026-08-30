@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
-import { canLearnFieldMove, effectiveChapter, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, speciesTypes, validateRequired } from './engine'
+import { canLearnFieldMove, effectiveChapter, generatedMoves, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, speciesTypes, validateRequired } from './engine'
 import { families, games, getFamily, getGame } from './games'
 import { getLegalMoves } from './learnsets'
 import { composeRoadmap, roadmapReferencesAreAvailable } from './roadmap'
-import { planProgressKey } from './storage'
+import { mergePlanProgress, planProgressKey, reconcilePlanProgress } from './storage'
 import type { PlannerPreferences } from './types'
 
 const defaults: PlannerPreferences = {
@@ -250,6 +250,60 @@ describe('결정론 추천 엔진', () => {
     }
   })
 
+  it('파이어레드 갸라도스의 난동부리기는 2섬 이후에만 안내한다', () => {
+    const thrash = generatedMoves(speciesByDex.get(130)!, getGame('firered'))
+      .find((move) => move.name === '난동부리기')
+    expect(thrash?.availableChapter).toBe(7)
+    expect(thrash?.source).toBe('2섬 기술 떠올리기 · 작은버섯 2개 또는 큰버섯 1개')
+  })
+
+  it('기술 떠올리기가 없는 1·2세대에는 떠올리기 전용 기술을 제안하지 않는다', () => {
+    for (const gameId of ['red', 'crystal'] as const) {
+      const moves = generatedMoves(speciesByDex.get(130)!, getGame(gameId))
+      expect(moves.some((move) => move.source.includes('기술 떠올리기'))).toBe(false)
+      expect(moves.some((move) => move.name === '난동부리기')).toBe(false)
+    }
+    expect(generatedMoves(speciesByDex.get(25)!, getGame('red')).some((move) => move.name === '전기쇼크')).toBe(true)
+    expect(generatedMoves(speciesByDex.get(169)!, getGame('crystal')).some((move) => move.name === '싫은소리')).toBe(false)
+    expect(generatedMoves(speciesByDex.get(51)!, getGame('crystal')).some((move) => move.name === '트라이어택')).toBe(true)
+  })
+
+  it('자연 습득과 개조 스타팅의 Lv.1 기술을 기술 떠올리기로 오인하지 않는다', () => {
+    const venusaurMoves = generatedMoves(speciesByDex.get(3)!, getGame('firered'))
+    const vineWhip = venusaurMoves.find((move) => move.name === '덩굴채찍')
+    expect(vineWhip?.source).toContain('이상해씨 Lv.10')
+    expect(vineWhip?.availableChapter).toBeLessThan(7)
+
+    const starterMoves = generatedMoves(speciesByDex.get(94)!, getGame('red'), 1, false)
+    expect(starterMoves.some((move) => move.availableChapter === 1)).toBe(true)
+    expect(starterMoves.some((move) => move.source.includes('Lv.1 기술 목록'))).toBe(true)
+  })
+
+  it('모든 버전과 포켓몬에서 기술 떠올리기 해금 시점을 지킨다', () => {
+    for (const game of games) {
+      const reminder = getFamily(game).moveReminder
+      let reminderMoveCount = 0
+      for (const species of speciesCatalog.filter((entry) => entry.generation <= game.generation)) {
+        const reminderMoves = generatedMoves(species, game)
+          .filter((move) => move.source.includes('기술 떠올리기'))
+        if (!reminder) {
+          expect(reminderMoves, `${game.id} #${species.dex}`).toEqual([])
+          continue
+        }
+        reminderMoveCount += reminderMoves.length
+        expect(
+          reminderMoves.every((move) => (
+            move.availableChapter >= reminder.chapter
+            && move.source.includes(reminder.location)
+            && move.source.includes(reminder.cost)
+          )),
+          `${game.id} #${species.dex}`,
+        ).toBe(true)
+      }
+      if (reminder) expect(reminderMoveCount, game.id).toBeGreaterThan(0)
+    }
+  })
+
   it('버전별 필드기만 평가하고 지그제구리 괴력 예외를 지킨다', () => {
     const emerald = getGame('emerald')
     const strength = getFamily(emerald).fieldMoves.find((move) => move.id === 'strength')!
@@ -318,6 +372,44 @@ describe('동적 로드맵과 저장 격리', () => {
   it('버전과 플랜별 진행 키를 분리한다', () => {
     expect(planProgressKey('red', 'a')).not.toBe(planProgressKey('blue', 'a'))
     expect(planProgressKey('red', 'a')).not.toBe(planProgressKey('red', 'b'))
+  })
+
+  it('액션이 다른 장으로 이동해도 기존 완료 상태를 이어받는다', () => {
+    const saved = new Set([
+      'kan-2:move:130:난동부리기',
+      'kan-1:capture:130',
+      'removed:move:130:삭제된기술',
+    ])
+    const reconciled = reconcilePlanProgress(saved, [
+      'kan-7:move:130:난동부리기',
+      'kan-5:capture:130',
+      'kan-8:boss:champion-k',
+    ])
+
+    expect(reconciled).toEqual(new Set([
+      'kan-7:move:130:난동부리기',
+      'kan-5:capture:130',
+    ]))
+  })
+
+  it('장마다 반복되는 늦은 합류 경고의 완료 상태는 합치지 않는다', () => {
+    const reconciled = reconcilePlanProgress(
+      new Set(['joh-1:late:130']),
+      ['joh-1:late:130', 'joh-2:late:130'],
+    )
+    expect(reconciled).toEqual(new Set(['joh-1:late:130']))
+  })
+
+  it('현재 로드맵에 없는 대체 액션 진행률은 저장할 때 보존한다', () => {
+    const merged = mergePlanProgress(
+      new Set(['kan-2:move:130:난동부리기', 'kan-1:late:130']),
+      ['kan-7:move:130:난동부리기', 'kan-5:capture:130'],
+      new Set(['kan-7:move:130:난동부리기']),
+    )
+    expect(merged).toEqual(new Set([
+      'kan-1:late:130',
+      'kan-7:move:130:난동부리기',
+    ]))
   })
 
   it('타입 챌린지 규칙과 같은 타입의 임시 대응만 로드맵에 사용한다', () => {

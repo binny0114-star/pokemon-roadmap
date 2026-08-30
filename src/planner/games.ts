@@ -199,12 +199,12 @@ const fields = {
 export const families: Record<string, FamilyConfig> = {
   kanto1: { id: 'kanto1', generation: 1, region: '관동', chapters: kantoChapters, bosses: kantoBosses, fieldMoves: fields.gen1, postgame: ['뮤츠가 기다리는 블루시티동굴', '도감 완성', '버전 교환 수집'] },
   johto2: { id: 'johto2', generation: 2, region: '성도·관동', chapters: johtoChapters, bosses: johtoBosses, fieldMoves: fields.gen2, postgame: ['관동 8개 배지', '은빛산 레드', '배회 전설 포켓몬'] },
-  hoenn3: { id: 'hoenn3', generation: 3, region: '호연', chapters: hoennChapters, bosses: hoennBosses, fieldMoves: fields.hoenn, postgame: ['배틀타워/배틀프런티어', '레지 삼형제', '하늘기둥 레쿠쟈'] },
-  kanto3: { id: 'kanto3', generation: 3, region: '관동·일곱섬', chapters: kantoChapters, bosses: kantoBosses, fieldMoves: fields.frlg, postgame: ['일곱섬 네트워크 머신', '강화 사천왕', '블루시티동굴 뮤츠'] },
-  sinnoh4: { id: 'sinnoh4', generation: 4, region: '신오', chapters: sinnohChapters, bosses: sinnohBosses, fieldMoves: fields.sinnoh, postgame: ['전국도감과 파이트에리어', '배틀타워/프런티어', '하드마운틴·전설 포켓몬'] },
-  johto4: { id: 'johto4', generation: 4, region: '성도·관동', chapters: johtoChapters, bosses: johtoBosses, fieldMoves: fields.hgss, postgame: ['관동 8개 배지', '은빛산 레드', '배틀프런티어'] },
-  unova5: { id: 'unova5', generation: 5, region: '하나', chapters: unovaChapters, bosses: unovaBosses, fieldMoves: fields.unova, postgame: ['칠보시티 이후 동쪽 하나', '챔피언 노간주', '블랙시티/화이트포리스트'] },
-  'unova5-2': { id: 'unova5-2', generation: 5, region: '하나', chapters: unova2Chapters, bosses: unova2Bosses, fieldMoves: fields.unova, postgame: ['포켓몬 월드 토너먼트', '검은마천루/하얀수동', 'N·아크로마 재대결'] },
+  hoenn3: { id: 'hoenn3', generation: 3, region: '호연', chapters: hoennChapters, bosses: hoennBosses, fieldMoves: fields.hoenn, moveReminder: { chapter: 4, location: '단풍마을', cost: '하트비늘 1개' }, postgame: ['배틀타워/배틀프런티어', '레지 삼형제', '하늘기둥 레쿠쟈'] },
+  kanto3: { id: 'kanto3', generation: 3, region: '관동·일곱섬', chapters: kantoChapters, bosses: kantoBosses, fieldMoves: fields.frlg, moveReminder: { chapter: 7, location: '2섬', cost: '작은버섯 2개 또는 큰버섯 1개' }, postgame: ['일곱섬 네트워크 머신', '강화 사천왕', '블루시티동굴 뮤츠'] },
+  sinnoh4: { id: 'sinnoh4', generation: 4, region: '신오', chapters: sinnohChapters, bosses: sinnohBosses, fieldMoves: fields.sinnoh, moveReminder: { chapter: 4, location: '들판시티', cost: '하트비늘 1개' }, postgame: ['전국도감과 파이트에리어', '배틀타워/프런티어', '하드마운틴·전설 포켓몬'] },
+  johto4: { id: 'johto4', generation: 4, region: '성도·관동', chapters: johtoChapters, bosses: johtoBosses, fieldMoves: fields.hgss, moveReminder: { chapter: 7, location: '검은먹시티', cost: '하트비늘 1개' }, postgame: ['관동 8개 배지', '은빛산 레드', '배틀프런티어'] },
+  unova5: { id: 'unova5', generation: 5, region: '하나', chapters: unovaChapters, bosses: unovaBosses, fieldMoves: fields.unova, moveReminder: { chapter: 5, location: '궐수시티', cost: '하트비늘 1개' }, postgame: ['칠보시티 이후 동쪽 하나', '챔피언 노간주', '블랙시티/화이트포리스트'] },
+  'unova5-2': { id: 'unova5-2', generation: 5, region: '하나', chapters: unova2Chapters, bosses: unova2Bosses, fieldMoves: fields.unova, moveReminder: { chapter: 4, location: '포켓몬 월드 토너먼트', cost: '하트비늘 1개' }, postgame: ['포켓몬 월드 토너먼트', '검은마천루/하얀수동', 'N·아크로마 재대결'] },
 }
 
 const game = (

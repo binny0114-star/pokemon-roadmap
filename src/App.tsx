@@ -32,6 +32,8 @@ import {
   loadPlanSession,
   loadPlanProgress,
   loadClearRecords,
+  mergePlanProgress,
+  reconcilePlanProgress,
   saveBuilderState,
   saveClearRecord,
   savePlanSession,
@@ -74,6 +76,13 @@ const tabs: { id: TabId; name: string; icon: string }[] = [
 ]
 
 const qualityLabel = { verified: '검증', inferred: '시점 추론' }
+
+function loadCurrentPlanProgress(gameId: PlannerGameId, plan: GeneratedPlan): Set<string> {
+  const saved = loadPlanProgress(gameId, plan.id)
+  const actionIds = composeRoadmap(getGame(gameId), plan)
+    .flatMap((chapter) => chapter.actions.map((action) => action.id))
+  return reconcilePlanProgress(saved, actionIds)
+}
 
 function Toggle({
   checked,
@@ -178,7 +187,7 @@ function App() {
         })
         setPlan(restored)
         setVariant(saved.variant)
-        setCompleted(loadPlanProgress(initialBuilder.gameId, restored.id))
+        setCompleted(loadCurrentPlanProgress(initialBuilder.gameId, restored))
       } catch {
         clearPlanSession()
       }
@@ -280,7 +289,7 @@ function App() {
       })
       setPlan(generated)
       setVariant(nextVariant)
-      setCompleted(loadPlanProgress(game.id, generated.id))
+      setCompleted(loadCurrentPlanProgress(game.id, generated))
       setMessage('')
       setActiveTab('party')
       setReplaceTarget(null)
@@ -308,7 +317,7 @@ function App() {
       const generated = generateParty(game, preferences, { requiredDexes: dexes, challengeType: null })
       setPlan(generated)
       setVariant(0)
-      setCompleted(loadPlanProgress(game.id, generated.id))
+      setCompleted(loadCurrentPlanProgress(game.id, generated))
       setActiveTab('party')
       setMessage('기존 검수 프리셋 6마리를 필수 멤버로 불러왔습니다.')
     } catch (error) {
@@ -338,7 +347,7 @@ function App() {
       })
       setPlan(generated)
       setVariant(0)
-      setCompleted(loadPlanProgress(game.id, generated.id))
+      setCompleted(loadCurrentPlanProgress(game.id, generated))
       setReplaceTarget(null)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '멤버를 교체하지 못했습니다.')
@@ -351,7 +360,8 @@ function App() {
       const next = new Set(current)
       if (next.has(id)) next.delete(id)
       else next.add(id)
-      savePlanProgress(game.id, plan.id, next)
+      const saved = loadPlanProgress(game.id, plan.id)
+      savePlanProgress(game.id, plan.id, mergePlanProgress(saved, roadmapActions.map((action) => action.id), next))
       if (roadmapActions.length > 0 && roadmapActions.every((action) => next.has(action.id))) {
         setClearRecords(saveClearRecord({
           id: `${game.id}:${plan.id}`,
