@@ -245,6 +245,10 @@ footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-t
 .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 22px 0 16px; padding: 3px; border-radius: 5px; background: #080a09; }
 .auth-tabs button { min-height: 38px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 700; cursor: pointer; }
 .auth-tabs button.selected { color: #08120d; background: #52d996; }
+.account-method-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 20px 0 14px; }
+.account-method-tabs button { min-height: 40px; border: 1px solid var(--line); border-radius: 4px; background: #090c0a; color: var(--muted); font-size: 10px; font-weight: 700; cursor: pointer; }
+.account-method-tabs button.selected { border-color: #52d996; color: #72e0aa; background: #10291d; }
+.account-method-tabs + .auth-tabs { margin-top: 0; }
 .auth-form { display: grid; gap: 11px; }
 .auth-form label { display: grid; gap: 5px; }
 .auth-form label span { color: #aab4af; font-size: 9px; font-weight: 700; }
@@ -253,6 +257,8 @@ footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-t
 .auth-form > button, .logout-button { min-height: 44px; border: 0; border-radius: 4px; background: #52d996; color: #07120c; font-size: 11px; font-weight: 800; cursor: pointer; }
 .auth-form > button:disabled { opacity: .5; cursor: wait; }
 .auth-error { margin: 0; padding: 8px 10px; border-radius: 3px; color: #f1a5a5; background: #321b1b; font-size: 9px; }
+.auth-info { margin: 0; padding: 8px 10px; border-radius: 3px; color: #9dd8ba; background: #153124; font-size: 9px; }
+.auth-form > button.auth-secondary { border: 1px solid var(--line); color: var(--muted); background: transparent; }
 .local-account-note { margin: 15px 0 0; color: #74817a; font-size: 8.5px; line-height: 1.6; }
 .account-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 20px 0; }
 .account-summary span { min-height: 72px; border: 1px solid var(--line); border-radius: 4px; background: #0a0d0b; display: flex; flex-direction: column; align-items: center; justify-content: center; }

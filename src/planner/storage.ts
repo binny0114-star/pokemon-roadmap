@@ -1,5 +1,6 @@
 import type { PlannerGameId } from './types'
 import { activeStorageScope } from './auth'
+import { queueCloudSync } from './cloud'
 
 export interface SavedPlanSession {
   gameId: PlannerGameId
@@ -43,10 +44,12 @@ export function loadPlanProgress(gameId: PlannerGameId, planId: string): Set<str
 
 export function savePlanProgress(gameId: PlannerGameId, planId: string, values: Set<string>): void {
   localStorage.setItem(planProgressKey(gameId, planId), JSON.stringify([...values]))
+  queueCloudSync()
 }
 
 export function saveBuilderState(value: unknown): void {
   localStorage.setItem(storageKey('builder'), JSON.stringify(value))
+  queueCloudSync()
 }
 
 export function loadBuilderState<T>(fallback: T): T {
@@ -61,6 +64,7 @@ export function loadBuilderState<T>(fallback: T): T {
 
 export function savePlanSession(value: SavedPlanSession): void {
   localStorage.setItem(storageKey('current-plan'), JSON.stringify(value))
+  queueCloudSync()
 }
 
 export function loadPlanSession(): SavedPlanSession | null {
@@ -76,6 +80,7 @@ export function loadPlanSession(): SavedPlanSession | null {
 
 export function clearPlanSession(): void {
   localStorage.removeItem(storageKey('current-plan'))
+  queueCloudSync()
 }
 
 export function loadClearRecords(): ClearRecord[] {
@@ -97,5 +102,6 @@ export function saveClearRecord(record: ClearRecord): ClearRecord[] {
   const records = loadClearRecords()
   const next = [record, ...records.filter((entry) => entry.id !== record.id)]
   localStorage.setItem(storageKey('clear-records'), JSON.stringify(next))
+  queueCloudSync()
   return next
 }

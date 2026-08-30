@@ -16,6 +16,17 @@ import { games, getBosses, getFamily, getGame } from './planner/games'
 import { composeRoadmap } from './planner/roadmap'
 import { learnsetSource } from './planner/learnsets'
 import { createAccount, getActiveAccount, login, logout } from './planner/auth'
+import { activeStorageScope } from './planner/auth'
+import {
+  cloudLogout,
+  getCachedCloudAccount,
+  initializeCloudAuth,
+  isCloudConfigured,
+  sendCloudOtp,
+  subscribeCloudSync,
+  verifyCloudOtp,
+  type CloudSyncStatus,
+} from './planner/cloud'
 import {
   clearPlanSession,
   loadBuilderState,
@@ -100,15 +111,22 @@ function App() {
   const [completed, setCompleted] = useState<Set<string>>(new Set())
   const [roadmapQuery, setRoadmapQuery] = useState('')
   const [catalogReady, setCatalogReady] = useState(false)
-  const [account] = useState(getActiveAccount)
+  const [localAccount] = useState(getActiveAccount)
+  const [cloudAccount, setCloudAccount] = useState(getCachedCloudAccount)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [accountMethod, setAccountMethod] = useState<'cloud' | 'local'>(isCloudConfigured() ? 'cloud' : 'local')
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [authName, setAuthName] = useState('')
   const [authPin, setAuthPin] = useState('')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authOtp, setAuthOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
   const [authBusy, setAuthBusy] = useState(false)
   const [authMessage, setAuthMessage] = useState('')
   const [clearRecords, setClearRecords] = useState(loadClearRecords)
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>(isCloudConfigured() ? 'idle' : 'local')
 
+  const account = cloudAccount ?? localAccount
   const game = getGame(builder.gameId)
   const family = getFamily(game)
   const bosses = getBosses(game)
@@ -120,6 +138,19 @@ function App() {
   useEffect(() => {
     saveBuilderState(builder)
   }, [builder])
+
+  useEffect(() => subscribeCloudSync(setCloudSyncStatus), [])
+
+  useEffect(() => {
+    if (!isCloudConfigured()) return
+    void initializeCloudAuth()
+      .then((value) => setCloudAccount(value))
+      .catch((error: unknown) => {
+        console.error(error)
+        setAuthMessage(error instanceof Error ? error.message : '온라인 로그인 상태를 확인하지 못했습니다.')
+        setCloudSyncStatus('error')
+      })
+  }, [])
 
   useEffect(() => {
     void loadCatalog().then(() => {
@@ -384,9 +415,35 @@ function App() {
     }
   }
 
-  const signOut = () => {
-    logout()
-    window.location.reload()
+  const submitCloudAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setAuthBusy(true)
+    setAuthMessage('')
+    try {
+      if (!otpSent) {
+        await sendCloudOtp(authEmail)
+        setOtpSent(true)
+        setAuthMessage('이메일로 보낸 인증코드 6자리를 입력해 주세요.')
+        setAuthBusy(false)
+        return
+      }
+      const sourceScope = activeStorageScope()
+      await verifyCloudOtp(authEmail, authOtp, sourceScope)
+      window.location.reload()
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : '온라인 로그인을 완료하지 못했습니다.')
+      setAuthBusy(false)
+    }
+  }
+
+  const signOut = async () => {
+    try {
+      if (cloudAccount) await cloudLogout()
+      else logout()
+      window.location.reload()
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : '로그아웃하지 못했습니다.')
+    }
   }
 
   return (
@@ -399,7 +456,11 @@ function App() {
             <button className="account-button" onClick={() => setAccountOpen(true)}>
               <span>{account ? '●' : '○'}</span>
               <b>{account?.name ?? '로그인'}</b>
-              {account && <small>{clearRecords.length}회 클리어</small>}
+              {account && <small>{cloudAccount
+                ? cloudSyncStatus === 'syncing' ? '동기화 중'
+                  : cloudSyncStatus === 'error' ? '동기화 오류'
+                    : '온라인 저장'
+                : `${clearRecords.length}회 클리어`}</small>}
             </button>
           </div>
         </nav>
@@ -427,9 +488,11 @@ function App() {
             {account ? (
               <>
                 <div className="account-heading">
-                  <span className="eyebrow">LOCAL TRAINER PROFILE</span>
+                  <span className="eyebrow">{cloudAccount ? 'CLOUD TRAINER PROFILE' : 'LOCAL TRAINER PROFILE'}</span>
                   <h2 id="account-title">{account.name} 트레이너</h2>
-                  <p>이 브라우저에서 파티, 진행률과 클리어 기록을 계정별로 저장합니다.</p>
+                  <p>{cloudAccount
+                    ? '파티, 진행률과 클리어 기록을 암호화된 로그인 세션으로 온라인에 동기화합니다.'
+                    : '이 브라우저에서 파티, 진행률과 클리어 기록을 계정별로 저장합니다.'}</p>
                 </div>
                 <div className="account-summary">
                   <span><b>{clearRecords.length}</b><small>클리어</small></span>
@@ -448,27 +511,51 @@ function App() {
                     </article>
                   )) : <p className="empty-history">로드맵의 모든 파티 액션을 완료하면 여기에 기록됩니다.</p>}
                 </div>
-                <button className="logout-button" onClick={signOut}>로그아웃하고 게스트로 전환</button>
-                <p className="local-account-note">로컬 계정은 서버로 전송되지 않으며 이 브라우저에만 존재합니다. 다른 기기와 자동 동기화되지는 않습니다.</p>
+                <button className="logout-button" onClick={() => void signOut()}>로그아웃하고 게스트로 전환</button>
+                <p className="local-account-note">{cloudAccount
+                  ? `Supabase에 마지막으로 ${cloudSyncStatus === 'saved' ? '저장됨' : cloudSyncStatus === 'syncing' ? '저장 중' : cloudSyncStatus === 'error' ? '저장 오류 발생' : '연결됨'}. 다른 브라우저에서도 같은 이메일로 로그인하면 복원됩니다.`
+                  : '로컬 계정은 서버로 전송되지 않으며 이 브라우저에만 존재합니다. 다른 기기와 자동 동기화되지는 않습니다.'}</p>
               </>
             ) : (
               <>
                 <div className="account-heading">
-                  <span className="eyebrow">OFFLINE ACCOUNT</span>
+                  <span className="eyebrow">{accountMethod === 'cloud' ? 'CLOUD ACCOUNT' : 'OFFLINE ACCOUNT'}</span>
                   <h2 id="account-title">트레이너 로그인</h2>
-                  <p>닉네임과 PIN으로 이 브라우저 안에서 진행 기록을 분리하세요.</p>
+                  <p>{accountMethod === 'cloud'
+                    ? '이메일 인증코드로 로그인하면 브라우저 데이터를 지워도 진행 기록을 복원할 수 있습니다.'
+                    : '닉네임과 PIN으로 이 브라우저 안에서 진행 기록을 분리하세요.'}</p>
                 </div>
-                <div className="auth-tabs">
-                  <button className={authMode === 'login' ? 'selected' : ''} onClick={() => { setAuthMode('login'); setAuthMessage('') }}>로그인</button>
-                  <button className={authMode === 'register' ? 'selected' : ''} onClick={() => { setAuthMode('register'); setAuthMessage('') }}>새 계정</button>
-                </div>
-                <form className="auth-form" onSubmit={submitAuth}>
-                  <label><span>닉네임</span><input value={authName} onChange={(event) => setAuthName(event.target.value)} minLength={2} maxLength={16} autoComplete="username" required /></label>
-                  <label><span>PIN</span><input value={authPin} onChange={(event) => setAuthPin(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" minLength={4} maxLength={12} type="password" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} required /></label>
-                  {authMessage && <p className="auth-error" role="alert">{authMessage}</p>}
-                  <button type="submit" disabled={authBusy}>{authBusy ? '처리 중…' : authMode === 'register' ? '계정 만들기' : '로그인'}</button>
-                </form>
-                <p className="local-account-note">처음 계정을 만들면 현재 게스트의 파티와 진행률을 가져옵니다. PIN은 PBKDF2로 해시되어 저장됩니다.</p>
+                {isCloudConfigured() && (
+                  <div className="account-method-tabs">
+                    <button className={accountMethod === 'cloud' ? 'selected' : ''} onClick={() => { setAccountMethod('cloud'); setAuthMessage('') }}>온라인 동기화</button>
+                    <button className={accountMethod === 'local' ? 'selected' : ''} onClick={() => { setAccountMethod('local'); setAuthMessage('') }}>로컬 PIN</button>
+                  </div>
+                )}
+                {accountMethod === 'cloud' ? (
+                  <form className="auth-form cloud-auth-form" onSubmit={submitCloudAuth}>
+                    <label><span>이메일</span><input value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} type="email" autoComplete="email" disabled={otpSent} required /></label>
+                    {otpSent && <label><span>인증코드 6자리</span><input value={authOtp} onChange={(event) => setAuthOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" pattern="[0-9]{6}" autoComplete="one-time-code" required autoFocus /></label>}
+                    {authMessage && <p className={otpSent && !authMessage.includes('실패') ? 'auth-info' : 'auth-error'} role="status">{authMessage}</p>}
+                    <button type="submit" disabled={authBusy}>{authBusy ? '처리 중…' : otpSent ? '로그인하고 복원' : '인증코드 받기'}</button>
+                    {otpSent && <button type="button" className="auth-secondary" onClick={() => { setOtpSent(false); setAuthOtp(''); setAuthMessage('') }}>이메일 다시 입력</button>}
+                  </form>
+                ) : (
+                  <>
+                    <div className="auth-tabs">
+                      <button className={authMode === 'login' ? 'selected' : ''} onClick={() => { setAuthMode('login'); setAuthMessage('') }}>로그인</button>
+                      <button className={authMode === 'register' ? 'selected' : ''} onClick={() => { setAuthMode('register'); setAuthMessage('') }}>새 계정</button>
+                    </div>
+                    <form className="auth-form" onSubmit={submitAuth}>
+                      <label><span>닉네임</span><input value={authName} onChange={(event) => setAuthName(event.target.value)} minLength={2} maxLength={16} autoComplete="username" required /></label>
+                      <label><span>PIN</span><input value={authPin} onChange={(event) => setAuthPin(event.target.value)} inputMode="numeric" pattern="[0-9]{4,12}" minLength={4} maxLength={12} type="password" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} required /></label>
+                      {authMessage && <p className="auth-error" role="alert">{authMessage}</p>}
+                      <button type="submit" disabled={authBusy}>{authBusy ? '처리 중…' : authMode === 'register' ? '계정 만들기' : '로그인'}</button>
+                    </form>
+                  </>
+                )}
+                <p className="local-account-note">{accountMethod === 'cloud'
+                  ? '인증 세션은 이 기기에 안전하게 저장됩니다. 이메일 주소는 로그인 식별자로만 사용합니다.'
+                  : '처음 계정을 만들면 현재 게스트의 파티와 진행률을 가져옵니다. PIN은 PBKDF2로 해시되어 저장됩니다.'}</p>
               </>
             )}
           </section>
@@ -769,7 +856,7 @@ function App() {
       <footer>
         <div className="brand footer-brand"><span className="brand-mark"><i /></span><span>POKÉ <b>ROUTE</b></span></div>
         <p>팬이 만든 비공식 공략 콘텐츠입니다. Nintendo, Game Freak, Pokémon Company와 제휴하거나 승인을 받지 않았습니다.</p>
-        <span>계정, 설정과 진행률은 이 브라우저에만 저장됩니다.</span>
+        <span>{isCloudConfigured() ? '온라인 로그인 시 설정과 진행률이 계정에 동기화됩니다.' : '계정, 설정과 진행률은 이 브라우저에만 저장됩니다.'}</span>
       </footer>
     </div>
   )

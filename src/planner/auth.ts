@@ -97,6 +97,12 @@ export function getActiveAccount(): LocalAccount | null {
 }
 
 export function activeStorageScope(): string {
+  try {
+    const cloudAccount = JSON.parse(localStorage.getItem('pokemon-roadmap:v4:cloud-account') ?? 'null')
+    if (cloudAccount?.kind === 'cloud' && typeof cloudAccount.id === 'string') return `cloud-${cloudAccount.id}`
+  } catch {
+    // Ignore malformed cached metadata and continue with a local account.
+  }
   return getActiveAccount()?.id ?? 'guest'
 }
 
