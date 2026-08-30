@@ -61,7 +61,10 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
       })
     }
 
-    for (const member of plan.members) {
+    const chronologicalMembers = [...plan.members].sort(
+      (a, b) => a.availability.storyOrder - b.availability.storyOrder || a.species.dex - b.species.dex,
+    )
+    for (const member of chronologicalMembers) {
       if (member.availability.chapter === number) {
         actions.push({
           id: `${chapter.id}:capture:${member.species.dex}`,

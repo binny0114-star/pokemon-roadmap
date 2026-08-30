@@ -63,6 +63,47 @@ describe('획득 제약', () => {
     expect(getAvailability(speciesByDex.get(84)!, red).chapter).toBe(5)
   })
 
+  it('레드의 3번도로를 달맞이산보다 먼저 배치한다', () => {
+    const red = getGame('red')
+    const jigglypuff = getAvailability(speciesByDex.get(39)!, red)
+    const clefable = getAvailability(speciesByDex.get(36)!, red)
+
+    expect(jigglypuff.location).toBe('3번도로')
+    expect(clefable.location).toBe('달맞이산')
+    expect(jigglypuff.chapter).toBe(2)
+    expect(clefable.chapter).toBe(2)
+    expect(jigglypuff.storyOrder).toBeLessThan(clefable.storyOrder)
+  })
+
+  it('엔딩 후 진화형 직접 조우보다 엔딩 전 진화 계열을 우선한다', () => {
+    const red = getGame('red')
+    const wigglytuff = getAvailability(speciesByDex.get(40)!, red)
+    const chansey = getAvailability(speciesByDex.get(113)!, red)
+
+    expect(wigglytuff).toMatchObject({
+      location: '3번도로',
+      chapter: 2,
+      postgameOnly: false,
+      sourceKind: 'evolution',
+    })
+    expect(chansey).toMatchObject({
+      location: '사파리존',
+      chapter: 5,
+      postgameOnly: false,
+    })
+  })
+
+  it('블루시티동굴 전용 포켓몬은 엔딩 후로 분류한다', () => {
+    const mewtwo = getAvailability(speciesByDex.get(150)!, getGame('red'))
+
+    expect(mewtwo).toMatchObject({
+      location: '블루시티동굴',
+      chapter: 9,
+      preChampion: false,
+      postgameOnly: true,
+    })
+  })
+
   it('상호 배타 스타터를 동시에 허용하지 않는다', () => {
     expect(validateRequired([1, 4], getGame('red'), defaults).errors.join(' ')).toContain('동시에 선택')
   })

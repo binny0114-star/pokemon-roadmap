@@ -28,6 +28,7 @@ export function loadCatalog(): Promise<void> {
 const locationKo: Record<string, string> = {
   'pallet-town': '태초마을',
   'cerulean-city': '블루시티',
+  'cerulean-cave': '블루시티동굴',
   'pewter-city': '회색시티',
   'viridian-forest': '상록숲',
   'mt-moon': '달맞이산',
@@ -62,6 +63,8 @@ const postgameMarkers: Record<string, string[]> = {
 function humanizeLocation(location: string): string {
   const translated = Object.entries(locationKo).find(([key]) => location.includes(key))
   if (translated) return translated[1]
+  const route = location.match(/(?:^|-)(?:sea-)?route-(\d+)(?:-|$)/)
+  if (route) return `${route[1]}번도로`
   return location
     .replaceAll('-', ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
@@ -88,20 +91,48 @@ function locationMatchesToken(location: string, token: string): boolean {
   return new RegExp(`(^|-)${escaped}(-|$)`).test(location)
 }
 
-function encounterChapter(game: GameConfig, encounter: CatalogEncounter): { chapter: number; quality: 'verified' | 'inferred' } {
+interface RankedEncounter {
+  encounter: CatalogEncounter
+  source: CatalogSpecies
+  chapter: number
+  storyOrder: number
+  postgame: boolean
+  quality: 'verified' | 'inferred'
+  tradeRequired: boolean
+}
+
+function isPostgameEncounter(game: GameConfig, encounter: CatalogEncounter): boolean {
+  const markers = (postgameMarkers[game.familyId] ?? []).filter(
+    (marker) => !(game.id === 'emerald' && marker === 'sky-pillar'),
+  )
+  return markers.some((marker) => locationMatchesToken(encounter.location.toLowerCase(), marker))
+}
+
+function encounterChapter(game: GameConfig, encounter: CatalogEncounter): Pick<RankedEncounter, 'chapter' | 'storyOrder' | 'quality'> {
   const family = getFamily(game)
   const location = encounter.location.toLowerCase()
-  const exact = family.chapters.findIndex((chapter) =>
-    chapter.locationTokens.some((token) => locationMatchesToken(location, token)),
-  )
-  if (exact >= 0) return { chapter: exact + 1, quality: 'verified' }
+  for (const [chapterIndex, chapter] of family.chapters.entries()) {
+    const tokenIndex = chapter.locationTokens.findIndex((token) => locationMatchesToken(location, token))
+    if (tokenIndex >= 0) {
+      const chapterNumber = chapterIndex + 1
+      return {
+        chapter: chapterNumber,
+        storyOrder: chapterNumber * 1_000 + tokenIndex * 10 + encounter.minLevel / 100,
+        quality: 'verified',
+      }
+    }
+  }
 
   const level = encounter.minLevel
   const inferred = Math.min(
     family.chapters.length,
     Math.max(1, Math.ceil(level / (60 / family.chapters.length))),
   )
-  return { chapter: inferred, quality: 'inferred' }
+  return {
+    chapter: inferred,
+    storyOrder: inferred * 1_000 + 900 + level / 100,
+    quality: 'inferred',
+  }
 }
 
 function hasEncounter(species: CatalogSpecies, versionId: number): boolean {
@@ -111,7 +142,7 @@ function hasEncounter(species: CatalogSpecies, versionId: number): boolean {
 function isVersionExclusive(species: CatalogSpecies, game: GameConfig): boolean {
   const siblings = games.filter((candidate) => candidate.familyId === game.familyId && candidate.id !== game.id)
   if (siblings.length === 0) return false
-  const line = [species, ...ancestors(species)]
+  const line = [species, ...ancestors(species)].filter((entry) => entry.generation <= game.generation)
   return line.some((entry) => hasEncounter(entry, game.versionId))
     && siblings.every((sibling) => line.every((entry) => !hasEncounter(entry, sibling.versionId)))
 }
@@ -120,35 +151,55 @@ export function getAvailability(species: CatalogSpecies, game: GameConfig): Avai
   if (species.generation > game.generation) {
     return {
       obtainable: false, preChampion: false, chapter: 99, location: '-', level: '-',
+      storyOrder: 99_000,
       tradeRequired: false, postgameOnly: false, versionExclusive: false, sourceKind: 'unknown',
       reason: `${game.generation}세대 당시에는 존재하지 않는 포켓몬입니다.`, quality: 'verified',
     }
   }
 
   const family = getFamily(game)
-  const root = chainRoot(species)
-  const line = [...ancestors(species), species]
-  const direct = species.encounters[String(game.versionId)] ?? []
-  const source = direct.length
-    ? species
-    : line.find((entry) => (entry.encounters[String(game.versionId)]?.length ?? 0) > 0)
+  const line = [...ancestors(species), species].filter((entry) => entry.generation <= game.generation)
+  const root = line[0] ?? chainRoot(species)
+  const ranked: RankedEncounter[] = line.flatMap((source) => {
+    const evolutionLine = line.slice(line.indexOf(source) + 1)
+    const tradeRequired = evolutionLine.some((entry) => entry.evolution?.trigger === 'trade')
+    return (source.encounters[String(game.versionId)] ?? []).map((encounter) => ({
+      encounter,
+      source,
+      postgame: isPostgameEncounter(game, encounter),
+      tradeRequired,
+      ...encounterChapter(game, encounter),
+    }))
+  })
 
-  if (!source) {
+  if (!ranked.length) {
     return {
       obtainable: false, preChampion: false, chapter: 99, location: '-', level: '-',
+      storyOrder: 99_000,
       tradeRequired: false, postgameOnly: false, versionExclusive: false, sourceKind: 'unknown',
       reason: '이 버전의 정적 조우 데이터에 입수 경로가 없습니다. 타 버전 교환 또는 이벤트가 필요할 수 있습니다.', quality: 'verified',
     }
   }
 
-  const encounters = source.encounters[String(game.versionId)] ?? []
-  const ranked = encounters.map((encounter) => ({ encounter, ...encounterChapter(game, encounter) }))
-    .sort((a, b) => a.chapter - b.chapter || a.encounter.minLevel - b.encounter.minLevel)
-  const first = ranked[0]
-  const postgameOnly = ranked.every(({ encounter, chapter: chapterIndex }) =>
-    chapterIndex > family.chapters.length
-    || (postgameMarkers[game.familyId] ?? []).some((marker) => encounter.location.includes(marker)),
+  const preChampion = ranked.filter((entry) => !entry.postgame && entry.chapter <= family.chapters.length)
+  const direct = ranked.filter((entry) => entry.source.dex === species.dex)
+  const directPreChampion = direct.filter((entry) => !entry.postgame && entry.chapter <= family.chapters.length)
+  const pool = directPreChampion.length
+    ? directPreChampion
+    : preChampion.length
+      ? preChampion
+      : direct.length
+        ? direct
+        : ranked
+  pool.sort((a, b) =>
+    Number(a.tradeRequired) - Number(b.tradeRequired)
+    || a.storyOrder - b.storyOrder
+    || a.encounter.minLevel - b.encounter.minLevel
+    || b.source.dex - a.source.dex,
   )
+  const first = pool[0]
+  const source = first.source
+  const postgameOnly = preChampion.length === 0
   const evolutionLine = line.slice(line.indexOf(source) + 1)
   const tradeRequired = source.dex !== species.dex && evolutionLine.some((entry) => entry.evolution?.trigger === 'trade')
   const starter = game.starters.includes(root.dex)
@@ -159,6 +210,7 @@ export function getAvailability(species: CatalogSpecies, game: GameConfig): Avai
     obtainable: true,
     preChampion: !postgameOnly,
     chapter: postgameOnly ? family.chapters.length + 1 : first.chapter,
+    storyOrder: postgameOnly ? (family.chapters.length + 1) * 1_000 : first.storyOrder,
     location: humanizeLocation(first.encounter.location),
     level: `Lv.${first.encounter.minLevel}${first.encounter.maxLevel !== first.encounter.minLevel ? `–${first.encounter.maxLevel}` : ''}`,
     tradeRequired,

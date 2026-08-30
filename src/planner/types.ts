@@ -98,6 +98,7 @@ export interface Availability {
   obtainable: boolean
   preChampion: boolean
   chapter: number
+  storyOrder: number
   location: string
   level: string
   tradeRequired: boolean
