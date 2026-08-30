@@ -104,6 +104,16 @@ describe('획득 제약', () => {
     })
   })
 
+  it('레드의 진화 안내에서 후세대 베이비 포켓몬을 제외한다', () => {
+    const red = getGame('red')
+    const plan = generateParty(red, defaults, { requiredDexes: [40, 36, 26, 113] })
+    const actions = composeRoadmap(red, plan).flatMap((chapter) => chapter.actions.map((action) => action.text))
+
+    expect(actions.join(' ')).not.toMatch(/푸푸린|피츄|핑복/)
+    expect(actions.some((text) => text.startsWith('삐 →'))).toBe(false)
+    expect(actions.some((text) => text.includes('푸린') && text.includes('푸크린 진화'))).toBe(true)
+  })
+
   it('상호 배타 스타터를 동시에 허용하지 않는다', () => {
     expect(validateRequired([1, 4], getGame('red'), defaults).errors.join(' ')).toContain('동시에 선택')
   })

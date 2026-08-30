@@ -1,24 +1,12 @@
-import { getAvailability, speciesCatalog } from './catalog'
+import { generationLineage, getAvailability, speciesCatalog } from './catalog'
 import { effectiveChapter, evolutionText, fieldMoveKo, speciesTypes, typeKo } from './engine'
 import { getBosses, getFamily } from './games'
 import { isStrongAgainst } from './typeChart'
 import type { DynamicRoadmapChapter, GameConfig, GeneratedMember, GeneratedPlan } from './types'
 
-function lineage(member: GeneratedMember): GeneratedMember['species'][] {
-  const result = [member.species]
-  let current = member.species
-  while (current.evolvesFrom) {
-    const parent = speciesCatalog.find((species) => species.dex === current.evolvesFrom)
-    if (!parent) break
-    result.unshift(parent)
-    current = parent
-  }
-  return result
-}
-
 function stageAtChapter(member: GeneratedMember, game: GameConfig, chapter: number): GeneratedMember['species'] | null {
   if (member.challengeStarter) return chapter >= 1 ? member.species : null
-  const stages = lineage(member).filter((species) => getAvailability(species, game).obtainable)
+  const stages = generationLineage(member.species, game.generation).filter((species) => getAvailability(species, game).obtainable)
   const available = stages.filter((species) => effectiveChapter(species, game) <= chapter)
   return available.at(-1) ?? null
 }
@@ -77,7 +65,7 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
         })
       }
       if (member.availability.sourceKind === 'evolution') {
-        for (const stage of lineage(member).slice(1)) {
+        for (const stage of generationLineage(member.species, game.generation).slice(1)) {
           const evolutionAt = effectiveChapter(stage, game)
           if (evolutionAt !== number || evolutionAt < member.availability.chapter) continue
           const parent = stage.evolvesFrom ? speciesCatalog.find((species) => species.dex === stage.evolvesFrom) : undefined

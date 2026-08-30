@@ -1,4 +1,4 @@
-import { evolutionText, getAvailability, speciesByDex, speciesCatalog } from './catalog'
+import { evolutionText, generationLineage, getAvailability, speciesByDex, speciesCatalog } from './catalog'
 import { getBosses, getFamily } from './games'
 import { getLegalMoves, moveExistsInGeneration, type LegalMove } from './learnsets'
 import { isStrongAgainst, typeCategory, weaknesses } from './typeChart'
@@ -58,33 +58,16 @@ export function speciesIcon(species: CatalogSpecies, generation = 5): string {
 export function effectiveChapter(species: CatalogSpecies, game: GameConfig): number {
   const family = getFamily(game)
   const availability = getAvailability(species, game)
-  let level = species.evolution?.minLevel ?? 0
-  let parent = species.evolvesFrom ? speciesByDex.get(species.evolvesFrom) : undefined
-  while (parent) {
-    level = Math.max(level, parent.evolution?.minLevel ?? 0)
-    parent = parent.evolvesFrom ? speciesByDex.get(parent.evolvesFrom) : undefined
-  }
+  const level = Math.max(...generationLineage(species, game.generation).map((stage) => stage.evolution?.minLevel ?? 0))
   const evolutionChapter = level ? Math.ceil(level / (60 / family.chapters.length)) : 1
   return Math.max(availability.chapter, evolutionChapter)
-}
-
-function speciesLineage(species: CatalogSpecies): CatalogSpecies[] {
-  const result = [species]
-  let current = species
-  while (current.evolvesFrom) {
-    const parent = speciesByDex.get(current.evolvesFrom)
-    if (!parent) break
-    result.unshift(parent)
-    current = parent
-  }
-  return result
 }
 
 function legalMovesForLineage(species: CatalogSpecies, game: GameConfig, includeAncestors = true): {
   move: LegalMove
   learnedBy: CatalogSpecies
 }[] {
-  const stages = includeAncestors ? speciesLineage(species) : [species]
+  const stages = includeAncestors ? generationLineage(species, game.generation) : [species]
   return stages.flatMap((learnedBy) => getLegalMoves(learnedBy, game).map((move) => ({ move, learnedBy })))
 }
 

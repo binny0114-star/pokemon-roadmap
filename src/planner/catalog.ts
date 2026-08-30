@@ -82,6 +82,10 @@ function ancestors(species: CatalogSpecies): CatalogSpecies[] {
   return result
 }
 
+export function generationLineage(species: CatalogSpecies, generation: number): CatalogSpecies[] {
+  return [...ancestors(species), species].filter((entry) => entry.generation <= generation)
+}
+
 function chainRoot(species: CatalogSpecies): CatalogSpecies {
   return ancestors(species)[0] ?? species
 }
@@ -142,7 +146,7 @@ function hasEncounter(species: CatalogSpecies, versionId: number): boolean {
 function isVersionExclusive(species: CatalogSpecies, game: GameConfig): boolean {
   const siblings = games.filter((candidate) => candidate.familyId === game.familyId && candidate.id !== game.id)
   if (siblings.length === 0) return false
-  const line = [species, ...ancestors(species)].filter((entry) => entry.generation <= game.generation)
+  const line = generationLineage(species, game.generation)
   return line.some((entry) => hasEncounter(entry, game.versionId))
     && siblings.every((sibling) => line.every((entry) => !hasEncounter(entry, sibling.versionId)))
 }
@@ -158,7 +162,7 @@ export function getAvailability(species: CatalogSpecies, game: GameConfig): Avai
   }
 
   const family = getFamily(game)
-  const line = [...ancestors(species), species].filter((entry) => entry.generation <= game.generation)
+  const line = generationLineage(species, game.generation)
   const root = line[0] ?? chainRoot(species)
   const ranked: RankedEncounter[] = line.flatMap((source) => {
     const evolutionLine = line.slice(line.indexOf(source) + 1)
