@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
+import { generationLineage, getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
 import { canLearnFieldMove, effectiveChapter, generatedMoves, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, speciesTypes, validateRequired } from './engine'
 import { families, games, getFamily, getGame } from './games'
 import { getLegalMoves } from './learnsets'
@@ -277,6 +277,37 @@ describe('결정론 추천 엔진', () => {
     const starterMoves = generatedMoves(speciesByDex.get(94)!, getGame('red'), 1, false)
     expect(starterMoves.some((move) => move.availableChapter === 1)).toBe(true)
     expect(starterMoves.some((move) => move.source.includes('Lv.1 기술 목록'))).toBe(true)
+  })
+
+  it('진화 시점을 지난 진화 전 자력기를 조건 없이 유지한다고 안내하지 않는다', () => {
+    const charizardMoves = generatedMoves(speciesByDex.get(6)!, getGame('firered'))
+    const flamethrower = charizardMoves.find((move) => move.name === '화염방사')
+    expect(flamethrower?.source).toContain('리자드 Lv.34')
+    expect(flamethrower?.source).not.toContain('파이리 Lv.31')
+    const shedinjaMoves = generatedMoves(speciesByDex.get(292)!, getGame('emerald'))
+    expect(shedinjaMoves.some((move) => move.source.includes('토중몬 Lv.38') || move.source.includes('토중몬 Lv.45'))).toBe(false)
+
+    for (const game of games) {
+      for (const species of speciesCatalog.filter((entry) => entry.generation <= game.generation)) {
+        const lineage = generationLineage(species, game.generation)
+        for (const move of generatedMoves(species, game)) {
+          const match = move.source.match(/^(.+) Lv\.(\d+) 자력 습득 후 유지$/)
+          if (!match) continue
+          const learnedByIndex = lineage.findIndex((stage) => stage.name === match[1])
+          const nextStage = lineage[learnedByIndex + 1]
+          const evolutionLevel = nextStage?.evolution?.minLevel
+            ?? (nextStage?.evolution?.trigger === 'shed'
+              ? speciesCatalog.find((candidate) =>
+                  candidate.evolvesFrom === nextStage.evolvesFrom
+                  && candidate.evolution?.trigger === 'level-up',
+                )?.evolution?.minLevel
+              : null)
+          if (!evolutionLevel) continue
+          expect(Number(match[2]), `${game.id} ${species.name} ${move.name}`)
+            .toBeLessThanOrEqual(evolutionLevel)
+        }
+      }
+    }
   })
 
   it('모든 버전과 포켓몬에서 기술 떠올리기 해금 시점을 지킨다', () => {

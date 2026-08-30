@@ -197,13 +197,34 @@ export function generatedMoves(
 ): GeneratedMove[] {
   const family = getFamily(game)
   const directlyAcquired = !getAvailability(species, game).sourceSpeciesName
-  const evolvedStages = new Set(generationLineage(species, game.generation).slice(1).map((stage) => stage.dex))
+  const lineage = generationLineage(species, game.generation)
+  const evolvedStages = new Set(lineage.slice(1).map((stage) => stage.dex))
+  const evolutionLevel = (stage: CatalogSpecies) =>
+    stage.evolution?.minLevel
+    ?? (stage.evolution?.trigger === 'shed'
+      ? speciesCatalog.find((candidate) =>
+          candidate.evolvesFrom === stage.evolvesFrom
+          && candidate.evolution?.trigger === 'level-up',
+        )?.evolution?.minLevel
+      : null)
+  const requiresDelayedEvolution = (move: LegalMove, learnedBy: CatalogSpecies) => {
+    if (!includeAncestors || move.method !== 'level' || learnedBy.dex === species.dex) return false
+    const nextStage = lineage[lineage.findIndex((stage) => stage.dex === learnedBy.dex) + 1]
+    const nextEvolutionLevel = nextStage ? evolutionLevel(nextStage) : null
+    return Boolean(nextEvolutionLevel) && move.level > nextEvolutionLevel!
+  }
   const isReminderOnly = (move: LegalMove, learnedBy: CatalogSpecies) =>
     includeAncestors
     && move.method === 'level'
-    && move.level <= 1
     && evolvedStages.has(learnedBy.dex)
     && !(directlyAcquired && learnedBy.dex === species.dex)
+    && (
+      move.level <= 1
+      || (
+        Boolean(evolutionLevel(learnedBy))
+        && move.level < evolutionLevel(learnedBy)!
+      )
+    )
   const levelChapter = (move: LegalMove, learnedBy: CatalogSpecies) =>
     Math.max(
       acquisitionChapter,
@@ -216,6 +237,7 @@ export function generatedMoves(
       const reminderOnly = isReminderOnly(move, learnedBy)
       return move.generation <= game.generation
         && !excludedStoryMoves.has(move.id)
+        && !requiresDelayedEvolution(move, learnedBy)
         && (!reminderOnly || Boolean(family.moveReminder))
     })
   const bestSource = new Map<string, (typeof legal)[number]>()
