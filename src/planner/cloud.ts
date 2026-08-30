@@ -139,7 +139,7 @@ export async function hydrateCloudState(account: CloudAccount, sourceScope: stri
   await uploadCloudState(account)
 }
 
-export async function initializeCloudAuth(): Promise<CloudAccount | null> {
+export async function initializeCloudAuth(sourceScope = 'guest'): Promise<CloudAccount | null> {
   if (!isCloudConfigured()) {
     setSyncStatus('local')
     return null
@@ -153,33 +153,24 @@ export async function initializeCloudAuth(): Promise<CloudAccount | null> {
     throw new Error(`온라인 로그인 확인 실패: ${error.message}`)
   }
   const account = accountFromUser(data.user)
+  const cached = getCachedCloudAccount()
+  if (!cached || cached.id !== account.id) await hydrateCloudState(account, sourceScope)
   saveCloudAccount(account)
+  setSyncStatus('saved')
   return account
 }
 
-export async function sendCloudOtp(email: string): Promise<void> {
+export async function sendCloudMagicLink(email: string): Promise<void> {
   const normalized = email.trim().toLocaleLowerCase('en')
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) throw new Error('올바른 이메일 주소를 입력해 주세요.')
   const { error } = await (await getClient()).auth.signInWithOtp({
     email: normalized,
-    options: { shouldCreateUser: true },
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: new URL(import.meta.env.BASE_URL, window.location.href).href,
+    },
   })
-  if (error) throw new Error(`인증코드 전송 실패: ${error.message}`)
-}
-
-export async function verifyCloudOtp(email: string, token: string, sourceScope: string): Promise<CloudAccount> {
-  if (!/^\d{6}$/.test(token)) throw new Error('이메일로 받은 숫자 6자리를 입력해 주세요.')
-  const { data, error } = await (await getClient()).auth.verifyOtp({
-    email: email.trim().toLocaleLowerCase('en'),
-    token,
-    type: 'email',
-  })
-  if (error || !data.user) throw new Error(`인증 실패: ${error?.message ?? '사용자 정보를 받지 못했습니다.'}`)
-  const account = accountFromUser(data.user)
-  await hydrateCloudState(account, sourceScope)
-  saveCloudAccount(account)
-  setSyncStatus('saved')
-  return account
+  if (error) throw new Error(`로그인 링크 전송 실패: ${error.message}`)
 }
 
 export async function cloudLogout(): Promise<void> {

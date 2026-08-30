@@ -22,9 +22,8 @@ import {
   getCachedCloudAccount,
   initializeCloudAuth,
   isCloudConfigured,
-  sendCloudOtp,
+  sendCloudMagicLink,
   subscribeCloudSync,
-  verifyCloudOtp,
   type CloudSyncStatus,
 } from './planner/cloud'
 import {
@@ -119,8 +118,6 @@ function App() {
   const [authName, setAuthName] = useState('')
   const [authPin, setAuthPin] = useState('')
   const [authEmail, setAuthEmail] = useState('')
-  const [authOtp, setAuthOtp] = useState('')
-  const [otpSent, setOtpSent] = useState(false)
   const [authBusy, setAuthBusy] = useState(false)
   const [authMessage, setAuthMessage] = useState('')
   const [clearRecords, setClearRecords] = useState(loadClearRecords)
@@ -143,8 +140,16 @@ function App() {
 
   useEffect(() => {
     if (!isCloudConfigured()) return
-    void initializeCloudAuth()
-      .then((value) => setCloudAccount(value))
+    const sourceScope = activeStorageScope()
+    const hadCloudAccount = Boolean(getCachedCloudAccount())
+    void initializeCloudAuth(sourceScope)
+      .then((value) => {
+        if (value && !hadCloudAccount) {
+          window.location.reload()
+          return
+        }
+        setCloudAccount(value)
+      })
       .catch((error: unknown) => {
         console.error(error)
         setAuthMessage(error instanceof Error ? error.message : '온라인 로그인 상태를 확인하지 못했습니다.')
@@ -420,16 +425,9 @@ function App() {
     setAuthBusy(true)
     setAuthMessage('')
     try {
-      if (!otpSent) {
-        await sendCloudOtp(authEmail)
-        setOtpSent(true)
-        setAuthMessage('이메일로 보낸 인증코드 6자리를 입력해 주세요.')
-        setAuthBusy(false)
-        return
-      }
-      const sourceScope = activeStorageScope()
-      await verifyCloudOtp(authEmail, authOtp, sourceScope)
-      window.location.reload()
+      await sendCloudMagicLink(authEmail)
+      setAuthMessage('로그인 링크를 이메일로 보냈습니다. 링크를 열면 이 화면으로 돌아와 자동 복원됩니다.')
+      setAuthBusy(false)
     } catch (error) {
       setAuthMessage(error instanceof Error ? error.message : '온라인 로그인을 완료하지 못했습니다.')
       setAuthBusy(false)
@@ -522,7 +520,7 @@ function App() {
                   <span className="eyebrow">{accountMethod === 'cloud' ? 'CLOUD ACCOUNT' : 'OFFLINE ACCOUNT'}</span>
                   <h2 id="account-title">트레이너 로그인</h2>
                   <p>{accountMethod === 'cloud'
-                    ? '이메일 인증코드로 로그인하면 브라우저 데이터를 지워도 진행 기록을 복원할 수 있습니다.'
+                    ? '이메일 매직 링크로 로그인하면 브라우저 데이터를 지워도 진행 기록을 복원할 수 있습니다.'
                     : '닉네임과 PIN으로 이 브라우저 안에서 진행 기록을 분리하세요.'}</p>
                 </div>
                 {isCloudConfigured() && (
@@ -533,11 +531,9 @@ function App() {
                 )}
                 {accountMethod === 'cloud' ? (
                   <form className="auth-form cloud-auth-form" onSubmit={submitCloudAuth}>
-                    <label><span>이메일</span><input value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} type="email" autoComplete="email" disabled={otpSent} required /></label>
-                    {otpSent && <label><span>인증코드 6자리</span><input value={authOtp} onChange={(event) => setAuthOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" pattern="[0-9]{6}" autoComplete="one-time-code" required autoFocus /></label>}
-                    {authMessage && <p className={otpSent && !authMessage.includes('실패') ? 'auth-info' : 'auth-error'} role="status">{authMessage}</p>}
-                    <button type="submit" disabled={authBusy}>{authBusy ? '처리 중…' : otpSent ? '로그인하고 복원' : '인증코드 받기'}</button>
-                    {otpSent && <button type="button" className="auth-secondary" onClick={() => { setOtpSent(false); setAuthOtp(''); setAuthMessage('') }}>이메일 다시 입력</button>}
+                    <label><span>이메일</span><input value={authEmail} onChange={(event) => setAuthEmail(event.target.value)} type="email" autoComplete="email" required /></label>
+                    {authMessage && <p className={authMessage.includes('보냈습니다') ? 'auth-info' : 'auth-error'} role="status">{authMessage}</p>}
+                    <button type="submit" disabled={authBusy}>{authBusy ? '전송 중…' : '로그인 링크 받기'}</button>
                   </form>
                 ) : (
                   <>
