@@ -10,9 +10,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "validate:data": "vitest run src/planner/dataValidation.test.ts",
-    "generate:data": "node scripts/generate-catalog.mjs && node scripts/generate-learnsets.mjs",
-    "generate:data:check": "npm run generate:data && git diff --exit-code -- src/generated/species.json src/generated/learnsets.json",
-    "generate:learnsets": "node scripts/generate-learnsets.mjs"
+    "generate:data": "node scripts/generate-catalog.mjs && node scripts/generate-learnsets.mjs && node scripts/generate-modern-encounters.mjs",
+    "generate:data:check": "npm run generate:data && git diff --exit-code -- src/generated/species.json src/generated/learnsets.json src/generated/modern-encounters.json",
+    "generate:learnsets": "node scripts/generate-learnsets.mjs",
+    "generate:modern-encounters": "node scripts/generate-modern-encounters.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.112.4",
