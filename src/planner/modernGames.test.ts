@@ -72,6 +72,21 @@ describe('6–9세대 스토리 패밀리', () => {
       'winona-oras', 'tate-liza-oras', 'maxie-or', 'wallace-oras', 'sidney-oras',
       'phoebe-oras', 'glacia-oras', 'drake-oras', 'steven-oras',
     ])
+    expect(sequence('sun')).toEqual([
+      'ilima-trial', 'hala', 'lana-trial', 'kiawe-trial', 'mallow-trial', 'olivia',
+      'sophocles-trial', 'acerola-trial', 'nanu', 'lusamine-sm', 'hapu',
+      'kommo-o-trial', 'lusamine-ultra-space-sm', 'hala-e4', 'olivia-e4',
+      'acerola-e4', 'kahili', 'kukui',
+    ])
+    expect(sequence('moon')).toEqual(sequence('sun'))
+    expect(sequence('ultra-sun')).toEqual([
+      'ilima-trial-usum', 'hala-usum', 'lana-trial-usum', 'kiawe-trial-usum',
+      'mallow-trial-usum', 'olivia-usum', 'sophocles-trial-usum',
+      'acerola-trial-usum', 'nanu-usum', 'lusamine-usum', 'kommo-o-trial-usum',
+      'ultra-necrozma', 'mina-trial', 'hapu-usum', 'molayne-e4',
+      'olivia-e4-usum', 'acerola-e4-usum', 'kahili-usum', 'hau',
+    ])
+    expect(sequence('ultra-moon')).toEqual(sequence('ultra-sun'))
     expect(sequence('sword')).toEqual([
       'milo', 'nessa', 'kabu', 'bea', 'opal', 'gordie', 'piers', 'raihan',
       'marnie-cup', 'hop-cup', 'eternatus', 'leon',
@@ -106,8 +121,31 @@ describe('6–9세대 스토리 패밀리', () => {
       types: ['electric', 'steel'],
       level: 'Lv.33',
     })
+    expect(boss('sun', 'kommo-o-trial')).toMatchObject({ chapter: 6, level: 'Lv.45' })
+    expect(boss('ultra-sun', 'kommo-o-trial-usum')).toMatchObject({ chapter: 6, level: 'Lv.49' })
+    expect(boss('ultra-sun', 'ultra-necrozma').chapter).toBe(6)
+    expect(boss('ultra-sun', 'mina-trial').chapter).toBe(7)
+    expect(boss('ultra-sun', 'hapu-usum').chapter).toBe(7)
     expect(boss('scarlet', 'quaking-earth-titan').name).toBe('위대한엄니')
     expect(boss('violet', 'quaking-earth-titan').name).toBe('무쇠바퀴')
+  })
+
+  it('알로라 후반 챕터 목표가 버전별 필수 순서를 따른다', () => {
+    expect(modernFamilies.alola7.chapters[5].objectives).toEqual([
+      '섬의 여왕 하푸 격파',
+      '포니대협곡에서 주인 짜랑고우거 격파',
+      '솔가레오/루나아라와 함께 울트라스페이스 진입',
+    ])
+    expect(modernFamilies['alola7-ultra'].chapters[5].objectives).toEqual([
+      '포니대협곡에서 주인 짜랑고우거 격파',
+      '울트라메가로폴리스에서 울트라네크로즈마 격파',
+    ])
+    expect(modernFamilies['alola7-ultra'].chapters[3].level).toBe('Lv.29–44')
+    expect(modernFamilies['alola7-ultra'].chapters[6].objectives).toEqual([
+      '마츠리카의 시련과 주인 에리본 격파',
+      '섬의 여왕 하푸 격파',
+      '라나키라마운틴으로 이동',
+    ])
   })
 
   it('팔데아 정식 선행 조건과 권장 레벨 순서를 분리한다', () => {

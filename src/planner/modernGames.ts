@@ -139,8 +139,8 @@ const alolaChapters = [
   chapter('alo-3', '아칼라섬 후반', '에테르재단과 큰 시련', 'Lv.22–28', ['route-8', 'fossil-restoration-center', 'aether-paradise', 'diglett-tunnel', 'konikoni', 'memorial-hill', 'ruins-of-life'], ['에테르파라다이스 첫 방문', '섬의 여왕 라이치 격파'], ['바랜드 서치']),
   chapter('alo-4', '울라울라섬', '전기·고스트 시련과 큰 시련', 'Lv.27–39', ['malie', 'route-10', 'hokulani', 'route-11', 'route-12', 'blush-mountain', 'tapu-village', 'route-14', 'abandoned-thrifty-megamart', 'route-15', 'po-town'], ['마마네와 아세로라의 시련 완수', '포마을 스컬단 본거지 돌파', '섬의 왕 나누 격파'], ['만마드 대시', '샤크니아 제트']),
   chapter('alo-5', '에테르파라다이스', '울트라홀과 루자미네', 'Lv.38–42', ['aether-paradise'], ['에테르파라다이스 돌파', '루자미네 격파', '릴리에와 포니섬으로 이동']),
-  chapter('alo-6', '포니섬', '마지막 큰 시련과 피리', 'Lv.40–48', ['seafolk-village', 'poni-wilds', 'ancient-poni-path', 'vast-poni-canyon', 'altar-of-the-sunne', 'altar-of-the-moone'], ['섬의 여왕 하푸 격파', '포니대협곡 시련 완수', '솔가레오/루나아라와 조우']),
-  chapter('alo-7', '울트라스페이스 귀환', '울트라비스트 사건 종결', 'Lv.47–50', ['ultra-space', 'mount-lanakila'], ['울트라스페이스에서 루자미네 구출', '라나키라마운틴 등반']),
+  chapter('alo-6', '포니섬', '마지막 큰 시련과 포니대협곡 시련', 'Lv.40–48', ['seafolk-village', 'poni-wilds', 'ancient-poni-path', 'ruins-of-hope', 'exeggutor-island', 'vast-poni-canyon', 'altar-of-the-sunne', 'altar-of-the-moone'], ['섬의 여왕 하푸 격파', '포니대협곡에서 주인 짜랑고우거 격파', '솔가레오/루나아라와 함께 울트라스페이스 진입']),
+  chapter('alo-7', '울트라스페이스 귀환', '울트라비스트 사건 종결', 'Lv.47–50', ['ultra-space', 'altar-of-the-sunne', 'altar-of-the-moone', 'mount-lanakila'], ['울트라스페이스에서 루자미네 격파 및 구출', '솔가레오/루나아라 포획', '라나키라마운틴 등반']),
   chapter('alo-8', '알로라리그', '초대 챔피언', 'Lv.50–58', ['pokemon-league'], ['사천왕 격파', '쿠쿠이박사와 초대 챔피언 결정전 승리']),
 ]
 
@@ -156,6 +156,8 @@ const alolaBosses = [
   boss('nanu', '나누', '울라울라 큰 시련', 4, ['dark'], 'Lv.38–39'),
   boss('lusamine-sm', '루자미네', '에테르대표', 5, ['fairy', 'ice'], 'Lv.41'),
   boss('hapu', '하푸', '포니 큰 시련', 6, ['ground'], 'Lv.47–48'),
+  boss('kommo-o-trial', '주인 짜랑고우거', '포니대협곡 시련', 6, ['dragon', 'fighting'], 'Lv.45'),
+  boss('lusamine-ultra-space-sm', '루자미네', '울트라스페이스 최종전', 7, ['fairy', 'water'], 'Lv.50'),
   boss('hala-e4', '할라', '사천왕', 8, ['fighting'], 'Lv.54–55'),
   boss('olivia-e4', '라이치', '사천왕', 8, ['rock'], 'Lv.54–55'),
   boss('acerola-e4', '아세로라', '사천왕', 8, ['ghost'], 'Lv.54–55'),
@@ -164,10 +166,14 @@ const alolaBosses = [
 ]
 
 const ultraChapters = [
-  ...alolaChapters.slice(0, 4).map((entry) => ({ ...entry, id: entry.id.replace('alo-', 'ult-') })),
-  chapter('ult-5', '에테르파라다이스', '네크로즈마의 습격', 'Lv.38–43', ['aether-paradise'], ['에테르파라다이스 돌파', '루자미네 격파', '울트라조사대와 네크로즈마 추적']),
-  chapter('ult-6', '포니섬과 일륜·월륜의 제단', '큰 시련과 울트라메가로폴리스', 'Lv.41–60', ['seafolk-village', 'poni-wilds', 'ancient-poni-path', 'vast-poni-canyon', 'altar-of-the-sunne', 'altar-of-the-moone', 'ultra-megalopolis'], ['섬의 여왕 하푸 격파', '포니대협곡 시련 완수', '울트라네크로즈마 격파']),
-  chapter('ult-7', '포니화원 → 바다민족의 마을', '마츠리카의 페어리 시련', 'Lv.51–55', ['poni-meadow', 'resolution-cave', 'seafolk-village'], ['마츠리카의 시련과 주인 에리본 격파', '라나키라마운틴으로 이동']),
+  ...alolaChapters.slice(0, 4).map((entry, index) => ({
+    ...entry,
+    id: entry.id.replace('alo-', 'ult-'),
+    ...(index === 3 ? { level: 'Lv.29–44' } : {}),
+  })),
+  chapter('ult-5', '에테르파라다이스', '네크로즈마의 습격', 'Lv.42–47', ['aether-paradise'], ['에테르파라다이스 돌파', '루자미네 격파', '울트라조사대와 네크로즈마 추적']),
+  chapter('ult-6', '포니대협곡 → 울트라메가로폴리스', '마지막 시련과 울트라네크로즈마', 'Lv.44–60', ['seafolk-village', 'poni-wilds', 'ancient-poni-path', 'ruins-of-hope', 'exeggutor-island', 'vast-poni-canyon', 'altar-of-the-sunne', 'altar-of-the-moone', 'ultra-megalopolis'], ['포니대협곡에서 주인 짜랑고우거 격파', '울트라메가로폴리스에서 울트라네크로즈마 격파']),
+  chapter('ult-7', '마츠리카의 시련 → 나시 아일랜드', '페어리 시련과 마지막 큰 시련', 'Lv.51–55', ['seafolk-village', 'hauoli-cemetery', 'lush-jungle', 'wela-volcano-park', 'hokulani-observatory', 'aether-house', 'exeggutor-island', 'mount-lanakila'], ['마츠리카의 시련과 주인 에리본 격파', '섬의 여왕 하푸 격파', '라나키라마운틴으로 이동']),
   chapter('ult-8', '알로라리그', '하우와 초대 챔피언 결정전', 'Lv.54–60', ['mount-lanakila', 'pokemon-league'], ['사천왕 격파', '하우와 초대 챔피언 결정전 승리']),
 ]
 
@@ -182,9 +188,10 @@ const ultraBosses = [
   boss('acerola-trial-usum', '주인 따라큐', '아세로라의 시련', 4, ['ghost', 'fairy'], 'Lv.35'),
   boss('nanu-usum', '나누', '울라울라 큰 시련', 4, ['dark'], 'Lv.43–44'),
   boss('lusamine-usum', '루자미네', '에테르대표', 5, ['fairy', 'ice'], 'Lv.47'),
-  boss('hapu-usum', '하푸', '포니 큰 시련', 6, ['ground'], 'Lv.53–54'),
+  boss('kommo-o-trial-usum', '주인 짜랑고우거', '포니대협곡 시련', 6, ['dragon', 'fighting'], 'Lv.49'),
   boss('ultra-necrozma', '울트라네크로즈마', '울트라메가로폴리스', 6, ['psychic', 'dragon'], 'Lv.60'),
   boss('mina-trial', '주인 에리본', '마츠리카의 시련', 7, ['bug', 'fairy'], 'Lv.55'),
+  boss('hapu-usum', '하푸', '포니 큰 시련', 7, ['ground'], 'Lv.53–54'),
   boss('molayne-e4', '멀레인', '사천왕', 8, ['steel'], 'Lv.56–57'),
   boss('olivia-e4-usum', '라이치', '사천왕', 8, ['rock'], 'Lv.56–57'),
   boss('acerola-e4-usum', '아세로라', '사천왕', 8, ['ghost'], 'Lv.56–57'),
