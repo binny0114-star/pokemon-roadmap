@@ -201,6 +201,12 @@ describe('획득 제약', () => {
   })
 
   it('조우 방식 해금 전의 이른 장소를 입수 시기로 오인하지 않는다', () => {
+    expect(getAvailability(speciesByDex.get(60)!, getGame('firered'))).toMatchObject({
+      chapter: 5,
+      location: '연분홍시티',
+      method: '좋은낚싯대',
+      postgameOnly: false,
+    })
     const fireRedPoliwrath = getAvailability(speciesByDex.get(62)!, getGame('firered'))
     expect(fireRedPoliwrath).toMatchObject({
       chapter: 5,
@@ -435,6 +441,17 @@ describe('결정론 추천 엔진', () => {
       }
       if (reminder) expect(reminderMoveCount, game.id).toBeGreaterThan(0)
     }
+  })
+
+  it('세대별 기술 떠올리기 위치·비용·해금 장을 고정한다', () => {
+    expect(families.kanto1.moveReminder).toBeUndefined()
+    expect(families.johto2.moveReminder).toBeUndefined()
+    expect(families.hoenn3.moveReminder).toEqual({ chapter: 4, location: '단풍마을', cost: '하트비늘 1개' })
+    expect(families.kanto3.moveReminder).toEqual({ chapter: 7, location: '2섬', cost: '작은버섯 2개 또는 큰버섯 1개' })
+    expect(families.sinnoh4.moveReminder).toEqual({ chapter: 4, location: '들판시티', cost: '하트비늘 1개' })
+    expect(families.johto4.moveReminder).toEqual({ chapter: 7, location: '검은먹시티', cost: '하트비늘 1개' })
+    expect(families.unova5.moveReminder).toEqual({ chapter: 5, location: '궐수시티', cost: '하트비늘 1개' })
+    expect(families['unova5-2'].moveReminder).toEqual({ chapter: 4, location: '포켓몬 월드 토너먼트', cost: '하트비늘 1개' })
   })
 
   it('버전별 필드기만 평가하고 지그제구리 괴력 예외를 지킨다', () => {

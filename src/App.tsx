@@ -1,8 +1,18 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import './App.css'
 import { guides } from './data'
 import { getPlan as getCuratedPlan } from './data/integrity'
-import { catalogSource, evolutionText, getAvailability, loadCatalog, searchSpecies, speciesByDex, speciesCatalog } from './planner/catalog'
+import {
+  catalogCoverage,
+  catalogSource,
+  evolutionText,
+  getAvailability,
+  loadCatalog,
+  modernEncounterProvenance,
+  searchSpecies,
+  speciesByDex,
+  speciesCatalog,
+} from './planner/catalog'
 import {
   challengeCandidateCount,
   challengeTypeOrder,
@@ -19,6 +29,7 @@ import {
   modernEncounterChapter,
   modernFamilies,
   modernGames,
+  modernStoryProvenance,
   type ModernPlannerGameId,
 } from './planner/modernGames'
 import { gameCatalog } from './planner/versionRegistry'
@@ -85,6 +96,7 @@ const tabs: { id: TabId; name: string; icon: string }[] = [
 ]
 
 const qualityLabel = { verified: '검증', inferred: '시점 추론' }
+const modernPreviewGameIds = new Set<string>(modernGames.map((entry) => entry.id))
 const modernMethodKo: Record<string, string> = {
   walk: '일반 조우',
   grass: '풀숲',
@@ -190,6 +202,10 @@ function App() {
   const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>(isCloudConfigured() ? 'idle' : 'local')
   const [previewGameId, setPreviewGameId] = useState<ModernPlannerGameId>('sword')
   const [previewChapter, setPreviewChapter] = useState(1)
+  const accountButtonRef = useRef<HTMLButtonElement>(null)
+  const accountDialogRef = useRef<HTMLElement>(null)
+  const pokemonSearchRef = useRef<HTMLInputElement>(null)
+  const previewTabsRef = useRef<HTMLDivElement>(null)
 
   const account = cloudAccount ?? localAccount
   const game = getGame(builder.gameId)
@@ -203,6 +219,13 @@ function App() {
   const previewFamily = modernFamilies[previewGame.familyId]
   const previewStory = previewFamily.chapters[previewChapter - 1]
   const previewBosses = getModernBosses(previewGameId).filter((entry) => entry.chapter === previewChapter)
+  const previewStorySource = modernStoryProvenance.sources.find((source) =>
+    source.games.some((gameId) => gameId === previewGameId),
+  )
+  const previewHasEncounterSnapshot = useMemo(() =>
+    catalogReady && speciesCatalog.some((species) =>
+      species.encounters[String(previewGame.catalog.versionId)]?.some((encounter) => encounter.source === 'pkhex'),
+    ), [catalogReady, previewGame])
   const previewEncounters = useMemo(() => {
     if (!catalogReady) return []
     return speciesCatalog.flatMap((species) =>
@@ -228,6 +251,62 @@ function App() {
   }, [builder])
 
   useEffect(() => subscribeCloudSync(setCloudSyncStatus), [])
+
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      const target = event.target
+      if (
+        accountOpen
+        ||
+        event.key !== '/'
+        || event.ctrlKey
+        || event.metaKey
+        || event.altKey
+        || (target instanceof HTMLElement && (
+          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable
+        ))
+      ) return
+      event.preventDefault()
+      pokemonSearchRef.current?.focus()
+    }
+    window.addEventListener('keydown', focusSearch)
+    return () => window.removeEventListener('keydown', focusSearch)
+  }, [accountOpen])
+
+  useEffect(() => {
+    if (!accountOpen) return
+    const dialog = accountDialogRef.current
+    if (!dialog) return
+    const trigger = accountButtonRef.current
+    const focusableElements = () => [...dialog.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )]
+    focusableElements()[0]?.focus()
+    const handleDialogKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setAccountOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = focusableElements()
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (!first || !last) return
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    dialog.addEventListener('keydown', handleDialogKey)
+    return () => {
+      dialog.removeEventListener('keydown', handleDialogKey)
+      trigger?.focus()
+    }
+  }, [accountOpen])
 
   useEffect(() => {
     if (!isCloudConfigured()) return
@@ -475,6 +554,22 @@ function App() {
     clearPlanSession()
   }
 
+  const handlePreviewTabKeyDown = (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) => {
+    const count = previewFamily.chapters.length + 1
+    let nextIndex = currentIndex
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % count
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + count) % count
+    else if (event.key === 'Home') nextIndex = 0
+    else if (event.key === 'End') nextIndex = count - 1
+    else return
+    event.preventDefault()
+    setPreviewChapter(nextIndex + 1)
+    previewTabsRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]?.focus()
+  }
+
   const generationChallengeTypes = challengeTypeOrder.filter((type) =>
     game.generation >= 2 || (type !== 'dark' && type !== 'steel'),
   )
@@ -543,7 +638,13 @@ function App() {
           <a className="brand" href="#top"><span className="brand-mark"><i /></span><span>POKÉ <b>ROUTE</b></span></a>
           <div className="topbar-actions">
             <span className="offline-badge"><i /> 정적 오프라인 엔진</span>
-            <button className="account-button" onClick={() => setAccountOpen(true)}>
+            <button
+              ref={accountButtonRef}
+              className="account-button"
+              onClick={() => setAccountOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={accountOpen}
+            >
               <span>{account ? '●' : '○'}</span>
               <b>{account?.name ?? '로그인'}</b>
               {account && <small>{cloudAccount
@@ -561,7 +662,7 @@ function App() {
             <p>좋아하는 멤버나 단일 타입 챌린지를 고르면 획득 시점, 보스 상성과 필드기를 계산해<br className="desktop-only" /> 맞춤 파티와 전용 스토리 로드맵을 만듭니다.</p>
           </div>
           <div className="hero-stat-grid">
-            <span><b>649</b><small>전국도감 데이터</small></span>
+            <span><b>{catalogCoverage?.nationalDex.count ?? 1025}</b><small>전국도감 데이터</small></span>
             <span><b>21</b><small>원작 버전</small></span>
             <span><b>8</b><small>스토리 패밀리</small></span>
             <span><b>0</b><small>런타임 API</small></span>
@@ -573,7 +674,7 @@ function App() {
         <div className="account-overlay" role="presentation" onMouseDown={(event) => {
           if (event.target === event.currentTarget) setAccountOpen(false)
         }}>
-          <section className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title">
+          <section ref={accountDialogRef} className="account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title">
             <button className="dialog-close" onClick={() => setAccountOpen(false)} aria-label="계정 창 닫기">×</button>
             {account ? (
               <>
@@ -684,6 +785,31 @@ function App() {
           </div>
           <p className="data-note">ⓘ 6–9세대의 검수된 스토리·입수 데이터는 아래에서 미리볼 수 있습니다. 스토리·입수·버전별 기술 데이터가 모두 완비되기 전에는 파티 로드맵 생성을 열지 않습니다.</p>
           {game.notes?.map((note) => <p className="data-note" key={note}>ⓘ {note}</p>)}
+          <details className="version-catalog">
+            <summary>
+              <span>전 버전 지원 상태 보기</span>
+              <small>39개 버전 · 완전 지원 21 · 카탈로그 전용 18</small>
+            </summary>
+            <div className="version-catalog-grid">
+              {gameCatalog.map((entry) => {
+                const full = entry.plannerSupport.status === 'full'
+                const previewAvailable = modernPreviewGameIds.has(entry.id)
+                return (
+                  <article key={entry.id}>
+                    <span>{entry.generation}세대 · {entry.region}</span>
+                    <strong>{entry.shortName}</strong>
+                    <b className={full ? 'support-full' : 'support-catalog'}>
+                      {full ? '파티·로드맵 지원' : '카탈로그 전용'}
+                    </b>
+                    <p>{full
+                      ? '버전별 입수·기술·보스 데이터를 사용해 전체 로드맵을 생성합니다.'
+                      : entry.plannerSupport.status === 'catalog-only' && entry.plannerSupport.reason}</p>
+                    {!full && <small>{previewAvailable ? '스토리·입수 미리보기 제공' : '전용 진행 모델 미지원'}</small>}
+                  </article>
+                )
+              })}
+            </div>
+          </details>
         </section>
 
         <section className="builder-section modern-preview">
@@ -704,27 +830,58 @@ function App() {
                 {modernGames.map((entry) => <option key={entry.id} value={entry.id}>{entry.catalog.name}</option>)}
               </select>
             </label>
-            <p>{previewGame.catalog.plannerSupport.status === 'catalog-only' && previewGame.catalog.plannerSupport.reason}</p>
+            <div>
+              <div className="preview-capabilities" aria-label="미리보기 지원 범위">
+                <span className="available">스토리 순서 검수</span>
+                <span className={previewHasEncounterSnapshot ? 'available' : 'unavailable'}>
+                  {previewHasEncounterSnapshot ? '폼 보존 입수 스냅샷' : '정확한 입수 스냅샷 없음'}
+                </span>
+                <span className="unavailable">파티 로드맵 생성 미지원</span>
+              </div>
+              <p>{previewGame.catalog.plannerSupport.status === 'catalog-only' && previewGame.catalog.plannerSupport.reason}</p>
+              {previewStorySource && (
+                <p className="preview-provenance">
+                  스토리 검수 {modernStoryProvenance.reviewedAt} · <a href={previewStorySource.url} target="_blank" rel="noreferrer">워크스루 출처</a>
+                </p>
+              )}
+            </div>
           </div>
-          <div className="preview-chapters" role="tablist" aria-label="스토리 장">
+          <div ref={previewTabsRef} className="preview-chapters" role="tablist" aria-label="스토리 장">
             {previewFamily.chapters.map((entry, index) => (
               <button
                 key={entry.id}
+                id={`preview-tab-${index + 1}`}
+                role="tab"
+                aria-controls="preview-panel"
+                aria-selected={previewChapter === index + 1}
+                tabIndex={previewChapter === index + 1 ? 0 : -1}
                 className={previewChapter === index + 1 ? 'selected' : ''}
                 onClick={() => setPreviewChapter(index + 1)}
+                onKeyDown={(event) => handlePreviewTabKeyDown(event, index)}
               >
                 {index + 1}장
               </button>
             ))}
             <button
+              id="preview-tab-postgame"
+              role="tab"
+              aria-controls="preview-panel"
+              aria-selected={previewChapter === previewFamily.chapters.length + 1}
+              tabIndex={previewChapter === previewFamily.chapters.length + 1 ? 0 : -1}
               className={previewChapter === previewFamily.chapters.length + 1 ? 'selected' : ''}
               onClick={() => setPreviewChapter(previewFamily.chapters.length + 1)}
+              onKeyDown={(event) => handlePreviewTabKeyDown(event, previewFamily.chapters.length)}
             >
               엔딩 후
             </button>
           </div>
           {previewStory ? (
-            <div className="preview-story">
+            <div
+              id="preview-panel"
+              className="preview-story"
+              role="tabpanel"
+              aria-labelledby={`preview-tab-${previewChapter}`}
+            >
               <div>
                 <small>{previewStory.level}</small>
                 <h3>{previewStory.title}</h3>
@@ -734,7 +891,12 @@ function App() {
               {previewStory.unlocks && previewStory.unlocks.length > 0 && <p><strong>해금</strong> · {previewStory.unlocks.join(' · ')}</p>}
             </div>
           ) : (
-            <div className="preview-story">
+            <div
+              id="preview-panel"
+              className="preview-story"
+              role="tabpanel"
+              aria-labelledby="preview-tab-postgame"
+            >
               <div><small>POSTGAME</small><h3>엔딩 후 주요 콘텐츠</h3></div>
               <ul>{previewFamily.postgame.map((entry) => <li key={entry}>{entry}</li>)}</ul>
             </div>
@@ -826,7 +988,7 @@ function App() {
           </div>
           <label className="pokemon-search">
             <span>⌕</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름, 영문명 또는 전국도감 번호 검색" aria-label="포켓몬 검색" />
+            <input ref={pokemonSearchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름, 영문명 또는 전국도감 번호 검색" aria-label="포켓몬 검색" />
             <kbd>/</kbd>
           </label>
           <div className="picker-grid" aria-busy={!catalogReady}>
@@ -1028,7 +1190,8 @@ function App() {
         <details className="methodology">
           <summary>데이터 및 추천 방법론 <span>DATA / METHODOLOGY</span></summary>
           <div>
-            <section><h3>정적 데이터 출처</h3><p>{catalogSource}. {learnsetSource()}. 전국도감 #001–649의 종·진화와 조우 장소·세부 구역·방식·조건, 버전별 자력기·TM/HM·기술가르침 호환 데이터를 빌드 전에 정규화했습니다. 브라우저는 외부 API를 호출하지 않습니다.</p></section>
+            <section><h3>정적 데이터 출처</h3><p>{catalogSource}. {learnsetSource()}. 전국도감 #001–{catalogCoverage?.nationalDex.max ?? 1025}의 종·진화와 조우 장소·세부 구역·방식·조건, 버전별 자력기·TM/HM·기술가르침 호환 데이터를 빌드 전에 정규화했습니다. 브라우저는 외부 API를 호출하지 않습니다.</p></section>
+            <section><h3>현대 미리보기 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료와 버전별 공개 워크스루를 사용합니다. 미리보기는 출처가 확보된 범위만 표시하며 파티 로드맵 완전 지원을 뜻하지 않습니다.</p></section>
             <section><h3>결정론 점수</h3><p>스토리 합류 시점, 남은 관장·사천왕 상성, 새 공격 타입, 종족값·역할, 공통 약점 감점, 버전별 필드기 기여를 합산합니다. 단일 타입 모드는 해당 타입을 공유하는 진화 계열 안에서만 같은 점수를 적용합니다.</p></section>
             <section><h3>한계와 품질 표시</h3><p>낚싯대·파도타기·바위깨기·박치기와 엔딩 후 조건은 실제 조우 방식의 해금 시점보다 앞당기지 않습니다. 시간대·계절·대량발생·포켓트레·라디오 같은 조건도 입수 안내에 표시합니다. 특수 심볼의 세부 이벤트나 일반 TM·기술가르침의 지도상 획득 시점을 완전히 확정할 수 없는 경우에는 “시점 추론”으로 구분합니다.</p></section>
           </div>
