@@ -283,3 +283,114 @@ footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-t
   .account-button { padding: 5px 8px; }
   .account-dialog { padding: 23px 17px; }
 }
+.modern-preview {
+  display: grid;
+  gap: 1rem;
+}
+
+.modern-preview-controls {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.7fr) 1fr;
+  gap: 1rem;
+  align-items: end;
+}
+
+.modern-preview-controls label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.modern-preview-controls label > span,
+.preview-story small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.modern-preview-controls select {
+  width: 100%;
+}
+
+.modern-preview-controls p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.preview-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.preview-chapters button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  background: var(--paper);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.preview-chapters button.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.preview-story {
+  display: grid;
+  grid-template-columns: minmax(14rem, 0.7fr) 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+}
+
+.preview-story h3,
+.preview-story p,
+.preview-story ul {
+  margin: 0.25rem 0;
+}
+
+.preview-bosses,
+.preview-encounters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.65rem;
+}
+
+.preview-bosses span,
+.preview-encounters article {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--paper);
+}
+
+.preview-bosses small,
+.preview-encounters small,
+.preview-encounters span {
+  color: var(--muted);
+}
+
+.preview-encounter-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-encounter-heading h3 {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .modern-preview-controls,
+  .preview-story {
+    grid-template-columns: 1fr;
+  }
+}

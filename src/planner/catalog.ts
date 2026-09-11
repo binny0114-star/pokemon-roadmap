@@ -1,6 +1,7 @@
 import { games, getFamily } from './games'
 import { loadLearnsets } from './learnsets'
 import type { Availability, CatalogEncounter, CatalogSpecies, GameConfig } from './types'
+import { getCatalogGame } from './versionRegistry'
 
 interface Snapshot {
   source: string
@@ -17,6 +18,7 @@ interface Snapshot {
       generations: number[]
       reason: string
     }
+
   }
   coverage: {
     nationalDex: { min: number; max: number; count: number }
@@ -46,9 +48,24 @@ interface Snapshot {
   species: CatalogSpecies[]
 }
 
+interface ModernEncounterSnapshot {
+  provenance: {
+    source: string
+    repository: string
+    revision: string
+    license: string
+    notes: string[]
+  }
+  games: Record<string, ({
+    species: number
+    form: number
+  } & CatalogEncounter)[]>
+}
+
 export let catalogSource = '정적 데이터 로딩 중'
 export let catalogProvenance: Snapshot['provenance'] | null = null
 export let catalogCoverage: Snapshot['coverage'] | null = null
+export let modernEncounterProvenance: ModernEncounterSnapshot['provenance'] | null = null
 export const speciesCatalog: CatalogSpecies[] = []
 export const speciesByDex = new Map<number, CatalogSpecies>()
 let catalogPromise: Promise<void> | null = null
@@ -79,13 +96,33 @@ function readSnapshot(value: unknown): Snapshot {
 export function loadCatalog(): Promise<void> {
   if (speciesCatalog.length) return Promise.resolve()
   if (!catalogPromise) {
-    catalogPromise = Promise.all([import('../generated/species.json'), loadLearnsets()]).then(([module]) => {
+    catalogPromise = Promise.all([
+      import('../generated/species.json'),
+      import('../generated/modern-encounters.json'),
+      loadLearnsets(),
+    ]).then(([module, modernModule]) => {
       const data = readSnapshot(module.default)
+      const modern = modernModule.default as ModernEncounterSnapshot
+      if (!/^[a-f0-9]{40}$/.test(modern.provenance.revision) || modern.provenance.license !== 'GPL-3.0') {
+        throw new Error('현대 버전 조우 스냅샷 메타데이터가 올바르지 않습니다.')
+      }
       catalogSource = data.source
       catalogProvenance = data.provenance
       catalogCoverage = data.coverage
       speciesCatalog.push(...data.species)
       for (const species of data.species) speciesByDex.set(species.dex, species)
+      modernEncounterProvenance = modern.provenance
+      for (const [gameId, rows] of Object.entries(modern.games)) {
+        const game = getCatalogGame(gameId)
+        if (!game) throw new Error(`레지스트리에 없는 현대 조우 게임입니다: ${gameId}`)
+        for (const row of rows) {
+          const species = speciesByDex.get(row.species)
+          if (!species) throw new Error(`현대 조우 종 번호가 올바르지 않습니다: #${row.species}`)
+          const encounters = species.encounters[String(game.versionId)] ?? []
+          encounters.push({ ...row, source: 'pkhex' })
+          species.encounters[String(game.versionId)] = encounters
+        }
+      }
     })
   }
   return catalogPromise

@@ -7,6 +7,8 @@ export type PlannerGameId =
   | 'black' | 'white' | 'black-2' | 'white-2'
 
 export interface CatalogEncounter {
+  form?: number
+  source?: 'pokeapi' | 'pkhex'
   location: string
   area: string
   regionId: number | null

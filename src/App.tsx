@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import './App.css'
 import { guides } from './data'
 import { getPlan as getCuratedPlan } from './data/integrity'
@@ -13,6 +13,14 @@ import {
   validateRequired,
 } from './planner/engine'
 import { getBosses, getFamily, getGame } from './planner/games'
+import {
+  getModernBosses,
+  getModernGame,
+  modernEncounterChapter,
+  modernFamilies,
+  modernGames,
+  type ModernPlannerGameId,
+} from './planner/modernGames'
 import { gameCatalog } from './planner/versionRegistry'
 import { composeRoadmap } from './planner/roadmap'
 import { learnsetSource } from './planner/learnsets'
@@ -77,6 +85,54 @@ const tabs: { id: TabId; name: string; icon: string }[] = [
 ]
 
 const qualityLabel = { verified: '검증', inferred: '시점 추론' }
+const modernMethodKo: Record<string, string> = {
+  walk: '일반 조우',
+  grass: '풀숲',
+  surf: '파도타기',
+  'old-rod': '낡은낚싯대',
+  'good-rod': '좋은낚싯대',
+  'super-rod': '대단한낚싯대',
+  'rock-smash': '바위깨기',
+  horde: '무리배틀',
+  'friend-safari': '프렌드사파리',
+  overworld: '오버월드',
+  hidden: '숨은 조우',
+  fishing: '낚시',
+  raid: '레이드',
+  static: '고정 심볼',
+  gift: '선물',
+  egg: '알',
+  fossil: '화석 복원',
+}
+const modernConditionKo: Record<string, string> = {
+  'max-raid': '맥스 레이드',
+  'water-bike': '수상 자전거',
+  postgame: '엔딩 후',
+  'form-region-dependent': '지역에 따라 폼 결정',
+  'form-random': '폼 무작위',
+  'time-morning': '아침',
+  'time-day': '낮',
+  'time-evening': '저녁',
+  'time-night': '밤',
+  'weather-normal': '맑음',
+  'weather-overcast': '흐림',
+  'weather-rain': '비',
+  'weather-thunderstorm': '뇌우',
+  'weather-intense-sun': '강한 햇빛',
+  'weather-snow': '눈',
+  'weather-snowstorm': '눈보라',
+  'weather-sandstorm': '모래바람',
+  'weather-heavy-fog': '짙은 안개',
+  'weather-mist': '안개',
+}
+
+function modernConditionLabel(condition: string): string {
+  const badge = /^badge-count-(\d+)$/.exec(condition)
+  if (badge) return `배지 ${badge[1]}개`
+  const stars = /^raid-stars-(\d+)-(\d+)$/.exec(condition)
+  if (stars) return `레이드 ${stars[1]}–${stars[2]}성`
+  return modernConditionKo[condition] ?? condition
+}
 
 function loadCurrentPlanProgress(gameId: PlannerGameId, plan: GeneratedPlan): Set<string> {
   const saved = loadPlanProgress(gameId, plan.id)
@@ -132,6 +188,8 @@ function App() {
   const [authMessage, setAuthMessage] = useState('')
   const [clearRecords, setClearRecords] = useState(loadClearRecords)
   const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>(isCloudConfigured() ? 'idle' : 'local')
+  const [previewGameId, setPreviewGameId] = useState<ModernPlannerGameId>('sword')
+  const [previewChapter, setPreviewChapter] = useState(1)
 
   const account = cloudAccount ?? localAccount
   const game = getGame(builder.gameId)
@@ -141,6 +199,29 @@ function App() {
   const roadmap = plan ? composeRoadmap(game, plan) : []
   const roadmapActions = roadmap.flatMap((chapter) => chapter.actions)
   const progress = roadmapActions.length ? Math.round(completed.size / roadmapActions.length * 100) : 0
+  const previewGame = getModernGame(previewGameId)
+  const previewFamily = modernFamilies[previewGame.familyId]
+  const previewStory = previewFamily.chapters[previewChapter - 1]
+  const previewBosses = getModernBosses(previewGameId).filter((entry) => entry.chapter === previewChapter)
+  const previewEncounters = useMemo(() => {
+    if (!catalogReady) return []
+    return speciesCatalog.flatMap((species) =>
+      (species.encounters[String(previewGame.catalog.versionId)] ?? [])
+        .filter((encounter) =>
+          encounter.source === 'pkhex'
+          && modernEncounterChapter(
+            previewGame.familyId,
+            encounter.location,
+            encounter.conditions,
+            encounter.method,
+            encounter.minLevel,
+          ) === previewChapter)
+        .map((encounter) => ({ species, encounter })))
+      .sort((left, right) =>
+        left.encounter.location.localeCompare(right.encounter.location)
+        || left.species.dex - right.species.dex
+        || (left.encounter.form ?? 0) - (right.encounter.form ?? 0))
+  }, [catalogReady, previewChapter, previewGame])
 
   useEffect(() => {
     saveBuilderState(builder)
@@ -601,8 +682,94 @@ function App() {
             <div className="game-count">{family.chapters.length}<small>CHAPTERS</small></div>
             <div className="game-count">{bosses.length}<small>BOSSES</small></div>
           </div>
-          <p className="data-note">ⓘ 6–9세대, 레츠고, LEGENDS는 기본 폼 도감·기술 카탈로그만 수록되어 있습니다. 검수된 스토리·조우·지역 폼 모델이 추가되기 전에는 로드맵 생성을 선택할 수 없습니다.</p>
+          <p className="data-note">ⓘ 6–9세대의 검수된 스토리·입수 데이터는 아래에서 미리볼 수 있습니다. 스토리·입수·버전별 기술 데이터가 모두 완비되기 전에는 파티 로드맵 생성을 열지 않습니다.</p>
           {game.notes?.map((note) => <p className="data-note" key={note}>ⓘ {note}</p>)}
+        </section>
+
+        <section className="builder-section modern-preview">
+          <div className="builder-step">
+            <span className="step-number">◎</span>
+            <div><small>REVIEWED PREVIEW</small><h2>6–9세대 스토리·입수 미리보기</h2></div>
+          </div>
+          <div className="modern-preview-controls">
+            <label>
+              <span>미리보기 버전</span>
+              <select
+                value={previewGameId}
+                onChange={(event) => {
+                  setPreviewGameId(event.target.value as ModernPlannerGameId)
+                  setPreviewChapter(1)
+                }}
+              >
+                {modernGames.map((entry) => <option key={entry.id} value={entry.id}>{entry.catalog.name}</option>)}
+              </select>
+            </label>
+            <p>{previewGame.catalog.plannerSupport.status === 'catalog-only' && previewGame.catalog.plannerSupport.reason}</p>
+          </div>
+          <div className="preview-chapters" role="tablist" aria-label="스토리 장">
+            {previewFamily.chapters.map((entry, index) => (
+              <button
+                key={entry.id}
+                className={previewChapter === index + 1 ? 'selected' : ''}
+                onClick={() => setPreviewChapter(index + 1)}
+              >
+                {index + 1}장
+              </button>
+            ))}
+            <button
+              className={previewChapter === previewFamily.chapters.length + 1 ? 'selected' : ''}
+              onClick={() => setPreviewChapter(previewFamily.chapters.length + 1)}
+            >
+              엔딩 후
+            </button>
+          </div>
+          {previewStory ? (
+            <div className="preview-story">
+              <div>
+                <small>{previewStory.level}</small>
+                <h3>{previewStory.title}</h3>
+                <p>{previewStory.subtitle}</p>
+              </div>
+              <ul>{previewStory.objectives.map((objective) => <li key={objective}>{objective}</li>)}</ul>
+              {previewStory.unlocks && previewStory.unlocks.length > 0 && <p><strong>해금</strong> · {previewStory.unlocks.join(' · ')}</p>}
+            </div>
+          ) : (
+            <div className="preview-story">
+              <div><small>POSTGAME</small><h3>엔딩 후 주요 콘텐츠</h3></div>
+              <ul>{previewFamily.postgame.map((entry) => <li key={entry}>{entry}</li>)}</ul>
+            </div>
+          )}
+          {previewBosses.length > 0 && (
+            <div className="preview-bosses">
+              {previewBosses.map((entry) => (
+                <span key={entry.id}><strong>{entry.name}</strong><small>{entry.title} · {entry.level}</small></span>
+              ))}
+            </div>
+          )}
+          <div className="preview-encounter-heading">
+            <h3>이 장의 출현·입수 데이터</h3>
+            <span>{previewEncounters.length}건</span>
+          </div>
+          {previewEncounters.length > 0 ? (
+            <>
+              <div className="preview-encounters">
+                {previewEncounters.slice(0, 60).map(({ species, encounter }, index) => (
+                  <article key={`${species.dex}:${encounter.form ?? 0}:${encounter.location}:${encounter.area}:${encounter.method}:${index}`}>
+                    <strong>#{species.dex} {species.name}{encounter.form ? ` · 폼 ${encounter.form}` : ''}</strong>
+                    <span>{encounter.location}{encounter.area !== encounter.location ? ` / ${encounter.area}` : ''}</span>
+                    <small>
+                      {modernMethodKo[encounter.method] ?? encounter.method} · Lv.{encounter.minLevel}
+                      {encounter.maxLevel !== encounter.minLevel ? `–${encounter.maxLevel}` : ''}
+                      {encounter.conditions.length ? ` · ${encounter.conditions.map(modernConditionLabel).join(' · ')}` : ''}
+                    </small>
+                  </article>
+                ))}
+              </div>
+              {previewEncounters.length > 60 && <p className="data-note">ⓘ 화면에는 첫 60건을 표시합니다. 정적 스냅샷에는 이 장의 {previewEncounters.length}건이 모두 보존됩니다.</p>}
+            </>
+          ) : (
+            <p className="data-note">ⓘ 이 버전·구간은 현재 고정 리비전에서 정확한 로컬 입수 데이터를 제공하지 않으므로 임의로 채우지 않았습니다.</p>
+          )}
         </section>
 
         <section className="builder-section">
