@@ -10,9 +10,28 @@ export type CatalogGameId =
 
 export type MechanicsFamily = 'classic' | 'lets-go' | 'legends'
 export type ReleaseKind = 'original' | 'third' | 'enhanced' | 'sequel' | 'remake'
+export type AccuracyGateId =
+  | 'availability'
+  | 'forms'
+  | 'learnsets'
+  | 'evolutions'
+  | 'story'
+  | 'mechanics'
+  | 'integration'
+export interface AccuracyGate {
+  complete: boolean
+  evidence: string
+}
 export type PlannerSupport =
-  | { status: 'full' }
-  | { status: 'catalog-only'; reason: string }
+  | {
+      status: 'full'
+      accuracyGates?: Record<AccuracyGateId, AccuracyGate>
+    }
+  | {
+      status: 'catalog-only'
+      reason: string
+      accuracyGates?: Record<AccuracyGateId, AccuracyGate>
+    }
 
 export interface GameCatalogEntry {
   id: CatalogGameId
@@ -29,6 +48,7 @@ export interface GameCatalogEntry {
   dataVersionGroupIds: number[]
   pairedWith: CatalogGameId[]
   dataAlias?: string
+  supportReview?: string
   plannerSupport: PlannerSupport
   plannerFamilyId?: FamilyId
 }
@@ -71,6 +91,13 @@ function validateRegistry(value: unknown): {
     throw new Error('지원하지 않는 버전 레지스트리 스키마입니다.')
   }
   const games = candidate.games as GameCatalogEntry[]
+  const gatedGameIds = new Set([
+    'x', 'y', 'omega-ruby', 'alpha-sapphire',
+    'sun', 'moon', 'ultra-sun', 'ultra-moon',
+  ])
+  const requiredAccuracyGates: AccuracyGateId[] = [
+    'availability', 'forms', 'learnsets', 'evolutions', 'story', 'mechanics', 'integration',
+  ]
   const ids = new Set(games.map((game) => game.id))
   if (ids.size !== games.length) throw new Error('버전 레지스트리 게임 ID가 중복됩니다.')
   for (const game of games) {
@@ -88,6 +115,25 @@ function validateRegistry(value: unknown): {
     }
     if (game.plannerSupport.status === 'full' && !game.plannerFamilyId) {
       throw new Error(`완전 지원 게임에 플래너 패밀리가 없습니다: ${game.id}`)
+    }
+    if (gatedGameIds.has(game.id)) {
+      if (!game.plannerSupport.accuracyGates) {
+        throw new Error(`6–7세대 지원 게이트가 없습니다: ${game.id}`)
+      }
+      if (!game.supportReview || !/^\d{4}-\d{2}-\d{2}$/.test(game.supportReview)) {
+        throw new Error(`6–7세대 지원 검수일이 없습니다: ${game.id}`)
+      }
+      const gates = game.plannerSupport.accuracyGates
+      for (const gateId of requiredAccuracyGates) {
+        const gate = gates[gateId]
+        if (!gate || !gate.evidence.trim()) {
+          throw new Error(`6–7세대 지원 게이트 근거가 없습니다: ${game.id}/${gateId}`)
+        }
+      }
+      const allComplete = requiredAccuracyGates.every((gateId) => gates[gateId].complete)
+      if ((game.plannerSupport.status === 'full') !== allComplete) {
+        throw new Error(`6–7세대 지원 상태가 정확성 게이트와 일치하지 않습니다: ${game.id}`)
+      }
     }
     for (const sibling of game.pairedWith) {
       if (!ids.has(sibling)) throw new Error(`${game.id}의 페어 ${sibling}가 레지스트리에 없습니다.`)

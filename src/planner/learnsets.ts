@@ -34,6 +34,15 @@ interface Snapshot {
     learnsetSpeciesByVersionGroup: Record<string, number>
     methods: string[]
     isolatedVersionGroups: boolean
+    plannerDataPolicy: {
+      speciesForms: string
+      levelUp: string
+      machines: string
+      tutors: string
+      eggMoves: string
+      reminderRules: string
+      acquisitionTiming: string
+    }
     forms: {
       policy: string
       planning: string
@@ -65,6 +74,8 @@ function readSnapshot(value: unknown): Snapshot {
     || !data.coverage
     || data.coverage.nationalDexMax !== 1025
     || data.coverage.isolatedVersionGroups !== true
+    || data.coverage.plannerDataPolicy?.eggMoves !== 'not-ingested'
+    || data.coverage.plannerDataPolicy?.acquisitionTiming !== 'not-ingested'
     || data.coverage.versionGroupIds.join(',') !== catalogVersionGroupIds.join(',')
     || !data.moves
     || !data.versions

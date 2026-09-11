@@ -32,7 +32,7 @@ import {
   modernStoryProvenance,
   type ModernPlannerGameId,
 } from './planner/modernGames'
-import { gameCatalog } from './planner/versionRegistry'
+import { gameCatalog, type AccuracyGateId } from './planner/versionRegistry'
 import { composeRoadmap } from './planner/roadmap'
 import { learnsetSource } from './planner/learnsets'
 import { createAccount, getActiveAccount, login, logout } from './planner/auth'
@@ -96,6 +96,15 @@ const tabs: { id: TabId; name: string; icon: string }[] = [
 ]
 
 const qualityLabel = { verified: '검증', inferred: '시점 추론' }
+const accuracyGateKo: Record<AccuracyGateId, string> = {
+  availability: '버전별 입수·최초 장',
+  forms: '폼 정체성',
+  learnsets: '기술 합법성·획득 시점',
+  evolutions: '진화 조건·최초 장',
+  story: '의무 스토리·보스',
+  mechanics: '이동 메커니즘',
+  integration: '플래너·저장 통합',
+}
 const modernPreviewGameIds = new Set<string>(modernGames.map((entry) => entry.id))
 const modernMethodKo: Record<string, string> = {
   walk: '일반 조우',
@@ -107,6 +116,8 @@ const modernMethodKo: Record<string, string> = {
   'rock-smash': '바위깨기',
   horde: '무리배틀',
   'friend-safari': '프렌드사파리',
+  'wild-unspecified': '일반 야생(세부 방식 미분리)',
+  sos: '난입배틀(SOS)',
   overworld: '오버월드',
   hidden: '숨은 조우',
   fishing: '낚시',
@@ -232,6 +243,9 @@ function App() {
       : [],
   ), [catalogReady])
   const previewHasEncounterSnapshot = encounterPreviewGameIds.has(previewGameId)
+  const previewAccuracyGates = previewGame.catalog.plannerSupport.status === 'catalog-only'
+    ? previewGame.catalog.plannerSupport.accuracyGates
+    : undefined
   const previewEncounters = useMemo(() => {
     if (!catalogReady) return []
     return speciesCatalog.flatMap((species) =>
@@ -799,6 +813,9 @@ function App() {
             <div className="version-catalog-grid">
               {gameCatalog.map((entry) => {
                 const full = entry.plannerSupport.status === 'full'
+                const accuracyGates = entry.plannerSupport.status === 'catalog-only'
+                  ? entry.plannerSupport.accuracyGates
+                  : undefined
                 const storyPreviewAvailable = modernPreviewGameIds.has(entry.id)
                 const encounterPreviewAvailable = encounterPreviewGameIds.has(entry.id)
                 return (
@@ -820,6 +837,12 @@ function App() {
                             ? '스토리·입수 미리보기 제공'
                             : '스토리·보스 미리보기 제공 · 정확한 입수 스냅샷 없음'
                     }</small>}
+                    {accuracyGates && (
+                      <small>
+                        정확성 게이트 {Object.values(accuracyGates).filter((gate) => gate.complete).length}/
+                        {Object.keys(accuracyGates).length} 통과
+                      </small>
+                    )}
                   </article>
                 )
               })}
@@ -847,13 +870,28 @@ function App() {
             </label>
             <div>
               <div className="preview-capabilities" aria-label="미리보기 지원 범위">
-                <span className="available">스토리 순서 검수</span>
                 <span className={previewHasEncounterSnapshot ? 'available' : 'unavailable'}>
-                  {previewHasEncounterSnapshot ? '폼 보존 입수 스냅샷' : '정확한 입수 스냅샷 없음'}
+                  {previewHasEncounterSnapshot ? '부분 입수 스냅샷' : '정확한 입수 스냅샷 없음'}
                 </span>
                 <span className="unavailable">파티 로드맵 생성 미지원</span>
               </div>
               <p>{previewGame.catalog.plannerSupport.status === 'catalog-only' && previewGame.catalog.plannerSupport.reason}</p>
+              {previewAccuracyGates && (
+                <details className="accuracy-gates">
+                  <summary>
+                    정확성 게이트 {Object.values(previewAccuracyGates).filter((gate) => gate.complete).length}/
+                    {Object.keys(previewAccuracyGates).length} 통과
+                  </summary>
+                  <ul>
+                    {Object.entries(previewAccuracyGates).map(([gateId, gate]) => (
+                      <li key={gateId}>
+                        <strong>{gate.complete ? '통과' : '차단'} · {accuracyGateKo[gateId as AccuracyGateId]}</strong>
+                        <span>{gate.evidence}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               {previewStorySource && (
                 <p className="preview-provenance">
                   스토리 검수 {modernStoryProvenance.reviewedAt} · <a href={previewStorySource.url} target="_blank" rel="noreferrer">워크스루 출처</a>

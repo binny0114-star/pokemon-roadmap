@@ -187,6 +187,15 @@ await writeFile(
       learnsetSpeciesByVersionGroup,
       methods: ['level', 'machine', 'tutor'],
       isolatedVersionGroups: true,
+      plannerDataPolicy: {
+        speciesForms: 'default-form-only',
+        levelUp: 'source-rows',
+        machines: 'useful-moves-only',
+        tutors: 'useful-moves-only',
+        eggMoves: 'not-ingested',
+        reminderRules: 'not-normalized',
+        acquisitionTiming: 'not-ingested',
+      },
       forms: {
         policy: 'default-form-only',
         planning: 'unsupported',

@@ -42,6 +42,23 @@ describe('6–9세대 스토리 패밀리', () => {
     }
   })
 
+  it('6–7세대 8개 버전은 모든 정확성 게이트 근거가 있고 미완료 게이트가 승격을 막는다', () => {
+    const targetIds: ModernPlannerGameId[] = [
+      'x', 'y', 'omega-ruby', 'alpha-sapphire',
+      'sun', 'moon', 'ultra-sun', 'ultra-moon',
+    ]
+    for (const gameId of targetIds) {
+      const support = modernGames.find((game) => game.id === gameId)!.catalog.plannerSupport
+      expect(support.status, gameId).toBe('catalog-only')
+      if (support.status !== 'catalog-only') throw new Error(`${gameId} 지원 게이트를 읽을 수 없습니다.`)
+      expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
+        'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
+      ])
+      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.evidence.trim()), gameId).toBe(true)
+      expect(Object.values(support.accuracyGates ?? {}).some((gate) => !gate.complete), gameId).toBe(true)
+    }
+  })
+
   it('모든 보스가 실제 챕터에 연대순으로 연결된다', () => {
     for (const game of modernGames) {
       const family = modernFamilies[game.familyId]
@@ -174,14 +191,27 @@ describe('6–9세대 스토리 패밀리', () => {
 describe('6–9세대 정적 입수 스냅샷', () => {
   it('PKHeX 고정 리비전과 모든 지원 버전을 기록한다', () => {
     expect(modernEncounterSnapshot.provenance.revision).toBe('77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5')
+    expect(modernEncounterSnapshot.provenance.files).toEqual(expect.arrayContaining([
+      'legality/wild/Gen7/encounter_sn.pkl',
+      'legality/wild/Gen7/encounter_mn.pkl',
+      'legality/wild/Gen7/encounter_us.pkl',
+      'legality/wild/Gen7/encounter_um.pkl',
+      'Legality/Encounters/Data/Gen8/Encounters8.cs',
+      'Legality/Encounters/Data/Gen8/Encounters8b.cs',
+      'Legality/Encounters/Data/Gen9/Encounters9.cs',
+    ]))
     expect(Object.keys(encounterGames).sort()).toEqual([
       'alpha-sapphire',
       'brilliant-diamond',
+      'moon',
       'omega-ruby',
       'scarlet',
       'shield',
       'shining-pearl',
+      'sun',
       'sword',
+      'ultra-moon',
+      'ultra-sun',
       'violet',
       'x',
       'y',
@@ -202,21 +232,38 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(modernGames.filter((game) => encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
       'alpha-sapphire',
       'brilliant-diamond',
+      'moon',
       'omega-ruby',
       'scarlet',
       'shield',
       'shining-pearl',
+      'sun',
       'sword',
+      'ultra-moon',
+      'ultra-sun',
       'violet',
       'x',
       'y',
     ])
-    expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
-      'moon',
-      'sun',
-      'ultra-moon',
-      'ultra-sun',
-    ])
+    expect(modernGames.filter((game) => !encounterGameIds.has(game.id))).toEqual([])
+  })
+
+  it('Gen 7 버전별 야생·SOS 자원과 폼을 보존한다', () => {
+    for (const gameId of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
+      const rows = encounterGames[gameId]
+      expect(rows.some((row) => row.method === 'wild-unspecified'), gameId).toBe(true)
+      expect(rows.some((row) => row.method === 'sos'), gameId).toBe(true)
+      expect(rows.some((row) => row.species === 19 && row.form === 1), gameId).toBe(true)
+    }
+    const species = (gameId: string) => new Set(encounterGames[gameId].map((row) => row.species))
+    expect(species('sun').has(776)).toBe(true)
+    expect(species('moon').has(776)).toBe(false)
+    expect(species('moon').has(780)).toBe(true)
+    expect(species('sun').has(780)).toBe(false)
+    expect(species('ultra-sun').has(693)).toBe(true)
+    expect(species('ultra-moon').has(693)).toBe(false)
+    expect(species('ultra-moon').has(691)).toBe(true)
+    expect(species('ultra-sun').has(691)).toBe(false)
   })
 
   it('Gen 6 Standard 슬롯을 확인할 수 없는 세부 방식으로 오표기하지 않는다', () => {
@@ -229,6 +276,10 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     for (const [gameId, rows] of Object.entries(encounterGames)) {
       const minimumRows = ['x', 'y', 'omega-ruby', 'alpha-sapphire'].includes(gameId)
         ? 80
+        : ['sun', 'moon'].includes(gameId)
+          ? 900
+          : ['ultra-sun', 'ultra-moon'].includes(gameId)
+            ? 1_000
         : ['brilliant-diamond', 'shining-pearl'].includes(gameId)
           ? 500
           : 800
@@ -325,6 +376,10 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       y: 'kalos6',
       'omega-ruby': 'hoenn6',
       'alpha-sapphire': 'hoenn6',
+      sun: 'alola7',
+      moon: 'alola7',
+      'ultra-sun': 'alola7-ultra',
+      'ultra-moon': 'alola7-ultra',
       sword: 'galar8',
       shield: 'galar8',
       'brilliant-diamond': 'sinnoh8',
@@ -332,6 +387,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       scarlet: 'paldea9',
       violet: 'paldea9',
     }
+    const unmapped = new Set<string>()
     for (const [gameId, rows] of Object.entries(encounterGames)) {
       for (const row of rows) {
         const chapter = modernEncounterChapter(
@@ -341,13 +397,19 @@ describe('6–9세대 정적 입수 스냅샷', () => {
           row.method,
           row.minLevel,
         )
-        expect(chapter, `${gameId}/#${row.species}/${row.location}`).not.toBeNull()
-        expect(chapter!, `${gameId}/#${row.species}/${row.location}`).toBeGreaterThan(0)
+        if (chapter === null) unmapped.add(`${gameId}:${row.location}`)
+        else expect(chapter, `${gameId}/#${row.species}/${row.location}`).toBeGreaterThan(0)
       }
     }
+    expect([...unmapped].sort()).toEqual([])
   })
 
   it('이동기와 최종 지역의 실제 접근 시점을 앞당기지 않는다', () => {
+    expect(modernEncounterChapter('alola7', 'kalae-bay')).toBe(2)
+    expect(modernEncounterChapter('alola7', 'melemele-sea')).toBe(2)
+    expect(modernEncounterChapter('alola7', 'seaward-cave')).toBe(2)
+    expect(modernEncounterChapter('alola7', 'hano-beach')).toBe(3)
+    expect(modernEncounterChapter('alola7-ultra', 'dividing-peak-tunnel')).toBe(2)
     expect(modernEncounterChapter('galar8', 'axews-eye')).toBe(7)
     expect(modernEncounterChapter('galar8', 'south-lake-miloch', [], 'surf')).toBe(7)
     expect(modernEncounterChapter('galar8', 'rolling-fields', ['badge-count-8'], 'raid')).toBe(10)

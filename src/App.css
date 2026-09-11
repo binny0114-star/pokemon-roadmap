@@ -414,6 +414,39 @@ footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-t
   font-weight: 800;
 }
 
+.accuracy-gates {
+  margin-top: 0.65rem;
+  color: #c8d1cc;
+  font-size: 0.72rem;
+}
+
+.accuracy-gates summary {
+  width: fit-content;
+  cursor: pointer;
+  color: #e8c273;
+  font-weight: 800;
+}
+
+.accuracy-gates ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accuracy-gates li {
+  display: grid;
+  gap: 0.15rem;
+  padding-left: 0.65rem;
+  border-left: 2px solid #574722;
+  line-height: 1.45;
+}
+
+.accuracy-gates li span {
+  color: var(--muted);
+}
+
 .modern-preview-controls .preview-provenance {
   margin-top: 0.35rem;
   font-size: 0.7rem;

@@ -9,6 +9,10 @@ const sources = {
   y: ['legality/wild/Gen6/encounter_y.pkl'],
   'omega-ruby': ['legality/wild/Gen6/encounter_or.pkl'],
   'alpha-sapphire': ['legality/wild/Gen6/encounter_as.pkl'],
+  sun: ['legality/wild/Gen7/encounter_sn.pkl'],
+  moon: ['legality/wild/Gen7/encounter_mn.pkl'],
+  'ultra-sun': ['legality/wild/Gen7/encounter_us.pkl'],
+  'ultra-moon': ['legality/wild/Gen7/encounter_um.pkl'],
   sword: [
     'legality/wild/Gen8/encounter_sw_hidden.pkl',
     'legality/wild/Gen8/encounter_sw_symbol.pkl',
@@ -23,6 +27,19 @@ const sources = {
   'shining-pearl': ['legality/wild/Gen8/encounter_sp.pkl'],
   paldea: ['legality/wild/Gen9/encounter_wild_paldea.pkl'],
 }
+const inputFiles = [
+  ...Object.values(sources).flat(),
+  'text/locations/gen6/text_xy_00000_en.txt',
+  'text/locations/gen7/text_sm_00000_en.txt',
+  'text/locations/gen7/text_sm_30000_en.txt',
+  'text/locations/gen8/text_swsh_00000_en.txt',
+  'text/locations/gen8b/text_bdsp_00000_en.txt',
+  'text/locations/gen9/text_sv_00000_en.txt',
+  'Legality/Encounters/Data/Gen8/Encounters8.cs',
+  'Legality/Encounters/Data/Gen8/Encounters8Nest.cs',
+  'Legality/Encounters/Data/Gen8/Encounters8b.cs',
+  'Legality/Encounters/Data/Gen9/Encounters9.cs',
+]
 
 const paldeaVersionExclusive = {
   200: ['violet'], 246: ['scarlet'], 247: ['scarlet'], 316: ['violet'], 317: ['violet'],
@@ -286,6 +303,34 @@ function parseGen6(buffer, locationNames) {
   })
 }
 
+function parseGen7(buffer, locationNames, transferLocationNames) {
+  const typeNames = ['wild-unspecified', 'sos']
+  return unpack(buffer).flatMap((area) => {
+    const locationId = area.readUInt16LE(0)
+    const locationName = locationId >= 30000 && locationId < 40000
+      ? transferLocationNames[locationId - 30000]
+      : locationNames[locationId]
+    const location = locationName || `alola-location-${locationId}`
+    const method = typeNames[area[2]] ?? 'unknown'
+    const result = []
+    for (let offset = 4; offset + 3 < area.length; offset += 4) {
+      const encoded = area.readUInt16LE(offset)
+      const decoded = normalizeForm(encoded >> 11)
+      result.push(encounter(
+        encoded & 0x3ff,
+        decoded.form,
+        location,
+        `${location}-${locationId}-${method}`,
+        area[offset + 2],
+        area[offset + 3],
+        method,
+        decoded.condition ? [decoded.condition] : [],
+      ))
+    }
+    return result
+  })
+}
+
 function parsePaldea(buffer, locationNames) {
   return unpack(buffer).flatMap((area) => {
     const locationId = area[2] || area[0]
@@ -331,8 +376,10 @@ function deduplicate(rows) {
   )
 }
 
-const [gen6Names, galarNames, sinnohNames, paldeaNames, nestSource] = await Promise.all([
+const [gen6Names, gen7Names, gen7TransferNames, galarNames, sinnohNames, paldeaNames, nestSource] = await Promise.all([
   fetchText('text/locations/gen6/text_xy_00000_en.txt').then(names),
+  fetchText('text/locations/gen7/text_sm_00000_en.txt').then(names),
+  fetchText('text/locations/gen7/text_sm_30000_en.txt').then(names),
   fetchText('text/locations/gen8/text_swsh_00000_en.txt').then(names),
   fetchText('text/locations/gen8b/text_bdsp_00000_en.txt').then(names),
   fetchText('text/locations/gen9/text_sv_00000_en.txt').then(names),
@@ -345,6 +392,10 @@ const rowsByGame = {}
 for (const game of ['x', 'y', 'omega-ruby', 'alpha-sapphire']) {
   const [wild] = await Promise.all(sources[game].map(fetchBytes))
   rowsByGame[game] = deduplicate(parseGen6(wild, gen6Names))
+}
+for (const game of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
+  const [wild] = await Promise.all(sources[game].map(fetchBytes))
+  rowsByGame[game] = deduplicate(parseGen7(wild, gen7Names, gen7TransferNames))
 }
 for (const game of ['sword', 'shield']) {
   const [hidden, symbol, raids] = await Promise.all(sources[game].map(fetchBytes))
@@ -390,8 +441,11 @@ await writeFile(
       repository: 'https://github.com/kwsch/PKHeX',
       revision: pkhexRevision,
       license: 'GPL-3.0',
+      files: [...new Set(inputFiles)].sort(),
       notes: [
         'X/Y and Omega Ruby/Alpha Sapphire slots preserve form and level ranges from separate version resources; PKHeX Standard slots are excluded because they do not distinguish grass, cave, surf and fishing methods.',
+        'Sun/Moon and Ultra Sun/Ultra Moon preserve separate version resources, forms, level ranges and SOS identity; ordinary Gen 7 slots are labeled wild-unspecified because the resource does not encode grass, cave, surf or fishing as distinct methods.',
+        'Gen 7 code-defined static, gift, fossil, in-game trade, Island Scan/QR and Ultra Space tables are not included until their story prerequisites can be normalized without inference.',
         'Sword/Shield weather, method and level ranges are decoded from separate version resources.',
         'Sword/Shield base-game raid dens preserve den subarea, star rank, badge gate and level range.',
         'Sword/Shield base-game starters, fossils, Toxel, Type: Null and story legendaries are transcribed from the pinned PKHeX static table.',

@@ -444,6 +444,32 @@ export const modernBossOverrides: Partial<Record<ModernPlannerGameId, PlannerBos
       : entry),
 }
 
+const alolaLocationChapterOverrides = {
+  'berry-fields': 1,
+  'route-3': 1,
+  'ten-carat-hill': 1,
+  'dividing-peak-tunnel': 2,
+  'kalae-bay': 2,
+  'melemele-sea': 2,
+  'poke-pelago': 2,
+  'route-6': 2,
+  'seaward-cave': 2,
+  'akala-outskirts': 3,
+  'digletts-tunnel': 3,
+  'hano-beach': 3,
+  'route-9': 3,
+  'haina-desert': 4,
+  'route-13': 4,
+  'route-16': 4,
+  'route-17': 4,
+  'ruins-of-abundance': 4,
+  'thrifty-megamart': 4,
+  'ulaula-beach': 4,
+  'ulaula-meadow': 4,
+  'poni-breaker-coast': 6,
+  'sandy-cave': 6,
+}
+
 const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, number>>> = {
   kalos6: {
     'route-22': 1,
@@ -458,6 +484,8 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
     'sea-mauville': 5,
     'sealed-chamber': 8,
   },
+  alola7: alolaLocationChapterOverrides,
+  'alola7-ultra': alolaLocationChapterOverrides,
   galar8: {
     'west-lake-axewell': 1,
     'axews-eye': 7,
@@ -510,6 +538,12 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
 
 const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
   hoenn6: ['battle-resort', 'sky-pillar'],
+  alola7: [
+    'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
+  ],
+  'alola7-ultra': [
+    'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
+  ],
   galar8: [],
   sinnoh8: [
     'route-224', 'route-225', 'route-226', 'route-227', 'route-228', 'route-229', 'route-230',
