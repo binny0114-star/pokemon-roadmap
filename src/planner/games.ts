@@ -113,7 +113,7 @@ const hoennBosses = [
 ]
 
 const sinnohBosses = [
-  boss('roark', '강석', '무쇠 체육관', 1, ['rock'], 'Lv.12–14'), boss('gardenia', '유채', '영원 체육관', 2, ['grass'], 'Lv.19–22'),
+  boss('roark', '강석', '무쇠 체육관', 1, ['rock'], 'Lv.12–14'), boss('gardenia', '유채', '영원 체육관', 2, ['grass'], 'Lv.20–22'),
   boss('fantina', '멜리사', '연고 체육관', 3, ['ghost'], 'Lv.24–26'), boss('maylene', '자두', '장막 체육관', 3, ['fighting'], 'Lv.28–32'),
   boss('wake', '맥실러', '들판 체육관', 4, ['water'], 'Lv.33–37'), boss('byron', '동관', '운하 체육관', 5, ['steel'], 'Lv.37–41'),
   boss('candice', '무청', '선단 체육관', 6, ['ice'], 'Lv.40–44'), boss('volkner', '전진', '물가 체육관', 8, ['electric'], 'Lv.46–50'),

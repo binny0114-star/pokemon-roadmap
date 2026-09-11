@@ -222,10 +222,16 @@ function App() {
   const previewStorySource = modernStoryProvenance.sources.find((source) =>
     source.games.some((gameId) => gameId === previewGameId),
   )
-  const previewHasEncounterSnapshot = useMemo(() =>
-    catalogReady && speciesCatalog.some((species) =>
-      species.encounters[String(previewGame.catalog.versionId)]?.some((encounter) => encounter.source === 'pkhex'),
-    ), [catalogReady, previewGame])
+  const encounterPreviewGameIds = useMemo<Set<string>>(() => new Set(
+    catalogReady
+      ? modernGames
+          .filter((entry) => speciesCatalog.some((species) =>
+            species.encounters[String(entry.catalog.versionId)]?.some((encounter) => encounter.source === 'pkhex'),
+          ))
+          .map((entry) => entry.id)
+      : [],
+  ), [catalogReady])
+  const previewHasEncounterSnapshot = encounterPreviewGameIds.has(previewGameId)
   const previewEncounters = useMemo(() => {
     if (!catalogReady) return []
     return speciesCatalog.flatMap((species) =>
@@ -793,7 +799,8 @@ function App() {
             <div className="version-catalog-grid">
               {gameCatalog.map((entry) => {
                 const full = entry.plannerSupport.status === 'full'
-                const previewAvailable = modernPreviewGameIds.has(entry.id)
+                const storyPreviewAvailable = modernPreviewGameIds.has(entry.id)
+                const encounterPreviewAvailable = encounterPreviewGameIds.has(entry.id)
                 return (
                   <article key={entry.id}>
                     <span>{entry.generation}세대 · {entry.region}</span>
@@ -804,7 +811,15 @@ function App() {
                     <p>{full
                       ? '버전별 입수·기술·보스 데이터를 사용해 전체 로드맵을 생성합니다.'
                       : entry.plannerSupport.status === 'catalog-only' && entry.plannerSupport.reason}</p>
-                    {!full && <small>{previewAvailable ? '스토리·입수 미리보기 제공' : '전용 진행 모델 미지원'}</small>}
+                    {!full && <small>{
+                      !storyPreviewAvailable
+                        ? '전용 진행 모델 미지원'
+                        : !catalogReady
+                          ? '스토리 미리보기 · 입수 데이터 확인 중'
+                          : encounterPreviewAvailable
+                            ? '스토리·입수 미리보기 제공'
+                            : '스토리·보스 미리보기 제공 · 정확한 입수 스냅샷 없음'
+                    }</small>}
                   </article>
                 )
               })}
