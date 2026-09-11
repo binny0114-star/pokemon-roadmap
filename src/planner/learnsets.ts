@@ -1,4 +1,5 @@
 import type { CatalogSpecies, GameConfig, GeneratedMove } from './types'
+import { catalogVersionGroupIds, versionRegistrySource } from './versionRegistry'
 
 interface SnapshotMove {
   id: string
@@ -12,6 +13,32 @@ interface SnapshotMove {
 
 interface Snapshot {
   source: string
+  provenance: {
+    source: string
+    repository: string
+    revision: string
+    files: string[]
+    compatibilitySnapshot: {
+      repository: string
+      revision: string
+      speciesPath: string
+      learnsetsPath: string
+      generations: number[]
+      reason: string
+    }
+  }
+  coverage: {
+    nationalDexMax: number
+    versionGroupIds: number[]
+    versionGroupGeneration: Record<string, number>
+    learnsetSpeciesByVersionGroup: Record<string, number>
+    methods: string[]
+    isolatedVersionGroups: boolean
+    forms: {
+      policy: string
+      planning: string
+    }
+  }
   moves: Record<string, SnapshotMove>
   versions: Record<string, Record<string, Partial<Pick<SnapshotMove, 'type' | 'power' | 'accuracy'>>>>
   learnsets: Record<string, Record<string, (string | number | null)[][]>>
@@ -25,11 +52,49 @@ export interface LegalMove extends Omit<SnapshotMove, 'category'> {
 }
 
 let snapshot: Snapshot | null = null
+export let learnsetProvenance: Snapshot['provenance'] | null = null
+export let learnsetCoverage: Snapshot['coverage'] | null = null
+
+function readSnapshot(value: unknown): Snapshot {
+  if (!value || typeof value !== 'object') throw new Error('기술 스냅샷이 객체가 아닙니다.')
+  const data = value as Partial<Snapshot>
+  if (
+    typeof data.source !== 'string'
+    || !data.provenance
+    || data.provenance.revision !== versionRegistrySource.revision
+    || !data.coverage
+    || data.coverage.nationalDexMax !== 1025
+    || data.coverage.isolatedVersionGroups !== true
+    || data.coverage.versionGroupIds.join(',') !== catalogVersionGroupIds.join(',')
+    || !data.moves
+    || !data.versions
+    || !data.learnsets
+  ) {
+    throw new Error('기술 스냅샷 메타데이터가 올바르지 않습니다.')
+  }
+  for (const [groupId, speciesLearnsets] of Object.entries(data.learnsets)) {
+    const generation = data.coverage.versionGroupGeneration[groupId]
+    if (!generation || !catalogVersionGroupIds.includes(Number(groupId))) {
+      throw new Error(`지원하지 않는 버전 그룹 기술 데이터입니다: ${groupId}`)
+    }
+    for (const entries of Object.values(speciesLearnsets)) {
+      for (const [moveId] of entries) {
+        const move = data.moves[String(moveId)]
+        if (!move || move.generation > generation) {
+          throw new Error(`버전 그룹 ${groupId}에 미래 세대 기술이 섞였습니다: ${moveId}`)
+        }
+      }
+    }
+  }
+  return data as Snapshot
+}
 
 export async function loadLearnsets(): Promise<void> {
   if (snapshot) return
   const module = await import('../generated/learnsets.json')
-  snapshot = module.default
+  snapshot = readSnapshot(module.default)
+  learnsetProvenance = snapshot.provenance
+  learnsetCoverage = snapshot.coverage
 }
 
 export function learnsetSource(): string {
@@ -37,7 +102,7 @@ export function learnsetSource(): string {
 }
 
 export function getLegalMoves(species: CatalogSpecies, game: GameConfig): LegalMove[] {
-  if (!snapshot) return []
+  if (!snapshot || species.generation > game.generation) return []
   const entries = snapshot.learnsets[String(game.versionGroupId)]?.[String(species.dex)] ?? []
   return entries.flatMap(([moveId, method, level, machine]) => {
     if (
@@ -48,7 +113,7 @@ export function getLegalMoves(species: CatalogSpecies, game: GameConfig): LegalM
     ) return []
     const move = snapshot?.moves[String(moveId)]
     const override = snapshot?.versions[String(game.versionGroupId)]?.[String(moveId)]
-    if (!move) return []
+    if (!move || move.generation > game.generation) return []
     const category: GeneratedMove['category'] = move.category === '변화'
       ? '변화'
       : move.category === '특수'

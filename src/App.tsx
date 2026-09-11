@@ -12,7 +12,8 @@ import {
   typeKo,
   validateRequired,
 } from './planner/engine'
-import { games, getBosses, getFamily, getGame } from './planner/games'
+import { getBosses, getFamily, getGame } from './planner/games'
+import { gameCatalog } from './planner/versionRegistry'
 import { composeRoadmap } from './planner/roadmap'
 import { learnsetSource } from './planner/learnsets'
 import { createAccount, getActiveAccount, login, logout } from './planner/auth'
@@ -578,10 +579,16 @@ function App() {
             <label>
               <span>플레이 버전</span>
               <select value={game.id} onChange={(event) => selectGame(event.target.value as PlannerGameId)}>
-                {[1, 2, 3, 4, 5].map((generation) => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((generation) => (
                   <optgroup key={generation} label={`${generation}세대`}>
-                    {games.filter((entry) => entry.generation === generation).map((entry) => (
-                      <option key={entry.id} value={entry.id}>{entry.name}</option>
+                    {gameCatalog.filter((entry) => entry.generation === generation).map((entry) => (
+                      <option
+                        key={entry.id}
+                        value={entry.id}
+                        disabled={entry.plannerSupport.status !== 'full'}
+                      >
+                        {entry.name}{entry.plannerSupport.status === 'catalog-only' ? ' · 데이터 준비 중' : ''}
+                      </option>
                     ))}
                   </optgroup>
                 ))}
@@ -594,6 +601,7 @@ function App() {
             <div className="game-count">{family.chapters.length}<small>CHAPTERS</small></div>
             <div className="game-count">{bosses.length}<small>BOSSES</small></div>
           </div>
+          <p className="data-note">ⓘ 6–9세대, 레츠고, LEGENDS는 기본 폼 도감·기술 카탈로그만 수록되어 있습니다. 검수된 스토리·조우·지역 폼 모델이 추가되기 전에는 로드맵 생성을 선택할 수 없습니다.</p>
           {game.notes?.map((note) => <p className="data-note" key={note}>ⓘ {note}</p>)}
         </section>
 

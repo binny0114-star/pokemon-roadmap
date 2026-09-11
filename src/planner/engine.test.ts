@@ -1,11 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { generationLineage, getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
+import { catalogCoverage, catalogProvenance, generationLineage, getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
 import { canLearnFieldMove, effectiveChapter, generatedMoves, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, speciesTypes, validateRequired } from './engine'
 import { families, games, getFamily, getGame } from './games'
-import { getLegalMoves } from './learnsets'
+import { getLegalMoves, learnsetCoverage, learnsetProvenance } from './learnsets'
 import { composeRoadmap, roadmapReferencesAreAvailable } from './roadmap'
 import { mergePlanProgress, planProgressKey, reconcilePlanProgress } from './storage'
 import type { PlannerPreferences } from './types'
+import { catalogVersionGroupIds, gameCatalog, plannerGameCatalog, versionRegistrySource } from './versionRegistry'
 
 const defaults: PlannerPreferences = {
   noTrade: true,
@@ -20,22 +21,90 @@ beforeAll(async () => {
 })
 
 describe('지원 버전과 정적 카탈로그', () => {
-  it('21개 버전과 8개 패밀리를 고유 ID로 로드한다', () => {
+  it('기존 21개 기본 입력의 자동 파티와 플랜 ID를 그대로 유지한다', () => {
+    const expected = new Map([
+      ['red', 'red:balanced:1-20-26-64-75-130:n:h'],
+      ['green', 'green:balanced:1-20-26-64-75-130:n:h'],
+      ['blue', 'blue:balanced:1-20-26-64-75-130:n:h'],
+      ['yellow', 'yellow:balanced:20-25-31-47-57-130:n:h'],
+      ['gold', 'gold:balanced:75-93-152-176-181-214:n:h'],
+      ['silver', 'silver:balanced:75-93-152-176-181-214:n:h'],
+      ['crystal', 'crystal:balanced:93-95-99-152-176-214:n:h'],
+      ['ruby', 'ruby:balanced:73-252-289-292-297-306:n:h'],
+      ['sapphire', 'sapphire:balanced:73-252-289-292-297-306:n:h'],
+      ['emerald', 'emerald:balanced:160-181-252-289-297-348:n:h'],
+      ['firered', 'firered:balanced:1-26-57-64-75-130:n:h'],
+      ['leafgreen', 'leafgreen:balanced:1-26-57-64-75-130:n:h'],
+      ['diamond', 'diamond:balanced:93-95-130-387-400-405:n:h'],
+      ['pearl', 'pearl:balanced:93-95-130-387-400-405:n:h'],
+      ['platinum', 'platinum:balanced:95-130-387-400-454-479:n:h'],
+      ['heartgold', 'heartgold:balanced:26-62-75-152-164-200:n:h'],
+      ['soulsilver', 'soulsilver:balanced:26-62-75-152-164-200:n:h'],
+      ['black', 'black:balanced:130-495-508-518-560-637:n:h'],
+      ['white', 'white:balanced:130-495-508-518-560-637:n:h'],
+      ['black-2', 'black-2:balanced:130-445-462-495-508-545:n:h'],
+      ['white-2', 'white-2:balanced:149-184-462-495-508-545:n:h'],
+    ])
+    for (const game of games) {
+      expect(
+        generateParty(game, defaults, { requiredDexes: [game.starters[0]] }).id,
+        game.id,
+      ).toBe(expected.get(game.id))
+    }
+  }, 20_000)
+
+  it('기존 21개 플래너 버전과 8개 패밀리를 고유 ID로 유지한다', () => {
     expect(games).toHaveLength(21)
     expect(new Set(games.map((game) => game.id)).size).toBe(21)
     expect(Object.keys(families)).toHaveLength(8)
     for (const game of games) expect(getFamily(game).chapters.length).toBeGreaterThanOrEqual(8)
   })
 
-  it('전국도감 1–649가 완전하고 참조가 유효하다', () => {
-    expect(speciesCatalog).toHaveLength(649)
+  it('전국도감 1–1025가 완전하고 참조가 유효하다', () => {
+    expect(speciesCatalog).toHaveLength(1025)
     expect(speciesCatalog[0].dex).toBe(1)
-    expect(speciesCatalog[648].dex).toBe(649)
-    expect(new Set(speciesCatalog.map((species) => species.id)).size).toBe(649)
+    expect(speciesCatalog[1024].dex).toBe(1025)
+    expect(new Set(speciesCatalog.map((species) => species.id)).size).toBe(1025)
     for (const species of speciesCatalog) {
       if (species.evolvesFrom) expect(speciesByDex.has(species.evolvesFrom)).toBe(true)
       expect(species.types.length).toBeGreaterThan(0)
     }
+  })
+
+  it('39개 본가 버전과 현대 메커니즘 패밀리를 명시적으로 분류한다', () => {
+    expect(gameCatalog).toHaveLength(39)
+    expect(plannerGameCatalog).toHaveLength(21)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(18)
+    expect(gameCatalog.find((game) => game.id === 'lets-go-pikachu')?.mechanicsFamily).toBe('lets-go')
+    expect(gameCatalog.find((game) => game.id === 'legends-arceus')?.mechanicsFamily).toBe('legends')
+    expect(gameCatalog.find((game) => game.id === 'legends-z-a')).toMatchObject({
+      versionId: 47,
+      versionGroupId: 30,
+      dataVersionGroupIds: [30, 31],
+      mechanicsFamily: 'legends',
+      plannerSupport: { status: 'catalog-only' },
+    })
+    expect(gameCatalog.find((game) => game.id === 'scarlet')).toMatchObject({
+      generation: 9,
+      versionId: 40,
+      versionGroupId: 25,
+      dataVersionGroupIds: [25, 26, 27],
+      plannerSupport: { status: 'catalog-only' },
+    })
+  })
+
+  it('생성 데이터가 고정 리비전과 완전한 세대 경계를 기록한다', () => {
+    expect(catalogProvenance?.revision).toBe(versionRegistrySource.revision)
+    expect(learnsetProvenance?.revision).toBe(versionRegistrySource.revision)
+    expect(catalogCoverage?.generationBoundaries).toEqual({
+      1: 151, 2: 251, 3: 386, 4: 493, 5: 649, 6: 721, 7: 809, 8: 905, 9: 1025,
+    })
+    expect(learnsetCoverage?.versionGroupIds).toEqual(catalogVersionGroupIds)
+    expect(learnsetCoverage?.isolatedVersionGroups).toBe(true)
+    expect(learnsetCoverage?.learnsetSpeciesByVersionGroup['30']).toBe(0)
+    expect(learnsetCoverage?.learnsetSpeciesByVersionGroup['31']).toBe(0)
+    expect(catalogCoverage?.forms).toMatchObject({ policy: 'default-form-only', planning: 'unsupported' })
+    expect(learnsetCoverage?.forms).toMatchObject({ policy: 'default-form-only', planning: 'unsupported' })
   })
 
   it('세대 당시 타입을 적용한다', () => {
@@ -46,6 +115,13 @@ describe('지원 버전과 정적 카탈로그', () => {
 })
 
 describe('획득 제약', () => {
+  it('같은 버전 그룹에서도 버전별 조우를 서로 섞지 않는다', () => {
+    expect(getAvailability(speciesByDex.get(23)!, getGame('red')).obtainable).toBe(true)
+    expect(getAvailability(speciesByDex.get(23)!, getGame('blue')).obtainable).toBe(false)
+    expect(getAvailability(speciesByDex.get(27)!, getGame('red')).obtainable).toBe(false)
+    expect(getAvailability(speciesByDex.get(27)!, getGame('blue')).obtainable).toBe(true)
+  })
+
   it('아직 존재하지 않거나 이벤트 전용인 포켓몬을 거부한다', () => {
     expect(getAvailability(speciesByDex.get(152)!, getGame('red')).obtainable).toBe(false)
     expect(getAvailability(speciesByDex.get(151)!, getGame('red')).obtainable).toBe(false)
@@ -234,6 +310,32 @@ describe('결정론 추천 엔진', () => {
         expect(member.moves.map((move) => move.quality)).not.toContain('review')
       }
     }
+  })
+
+  it('미래 세대 종과 기술이 이전 버전의 기술표에 섞이지 않는다', () => {
+    for (const game of games) {
+      for (const species of speciesCatalog.filter((entry) => entry.generation > game.generation)) {
+        expect(getLegalMoves(species, game), `${game.id} #${species.dex}`).toEqual([])
+      }
+      for (const species of speciesCatalog.filter((entry) => entry.generation <= game.generation)) {
+        expect(
+          getLegalMoves(species, game).every((move) => move.generation <= game.generation),
+          `${game.id} #${species.dex}`,
+        ).toBe(true)
+      }
+    }
+  }, 20_000)
+
+  it('인접 버전 그룹의 기술표를 서로 합치지 않는다', () => {
+    const charizard = speciesByDex.get(6)!
+    expect(getLegalMoves(charizard, getGame('red')).some((move) => move.id === 'fly')).toBe(false)
+    expect(getLegalMoves(charizard, getGame('yellow')).some((move) => move.id === 'fly')).toBe(true)
+  })
+
+  it('기존 입력의 플랜 ID 형식과 저장 키를 유지한다', () => {
+    const plan = generateParty(getGame('red'), defaults, { requiredDexes: [12, 18, 24, 31, 57, 59] })
+    expect(plan.id).toBe('red:balanced:12-18-24-31-57-59:n:h')
+    expect(planProgressKey('red', plan.id)).toBe(`pokemon-roadmap:v3:guest:progress:red:${plan.id}`)
   })
 
   it('1세대 기술의 당시 타입 변경 이력을 적용한다', () => {

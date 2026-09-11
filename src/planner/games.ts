@@ -1,4 +1,5 @@
 import type { FamilyConfig, GameConfig, PlannerBoss, StoryChapter } from './types'
+import { getPlannerCatalogGame } from './versionRegistry'
 
 const chapter = (
   id: string,
@@ -208,50 +209,49 @@ export const families: Record<string, FamilyConfig> = {
 }
 
 const game = (
-  id: GameConfig['id'], name: string, shortName: string, familyId: GameConfig['familyId'], versionId: number,
-  generation: number, region: string, endpoint: string, accent: string, starters: number[], fossils: number[][],
+  id: GameConfig['id'], endpoint: string, accent: string, starters: number[], fossils: number[][],
   extra: Partial<GameConfig> = {},
-): GameConfig => ({
-  id,
-  name,
-  shortName,
-  familyId,
-  versionId,
-  versionGroupId: ({
-    1: 1, 2: 1, 3: 2, 4: 3, 5: 3, 6: 4, 7: 5, 8: 5, 9: 6, 10: 7, 11: 7,
-    12: 8, 13: 8, 14: 9, 15: 10, 16: 10, 17: 11, 18: 11, 21: 14, 22: 14,
-  } as Record<number, number>)[versionId],
-  generation,
-  region,
-  endpoint,
-  accent,
-  starters,
-  fossils,
-  ...extra,
-})
+): GameConfig => {
+  const registry = getPlannerCatalogGame(id)
+  return {
+    id,
+    name: registry.name,
+    shortName: registry.shortName,
+    familyId: registry.plannerFamilyId,
+    versionId: registry.versionId,
+    versionGroupId: registry.versionGroupId,
+    generation: registry.generation,
+    region: registry.region,
+    endpoint,
+    accent,
+    starters,
+    fossils,
+    ...extra,
+  }
+}
 
 export const games: GameConfig[] = [
-  game('red', '포켓몬스터 레드', '레드', 'kanto1', 1, 1, '관동', '챔피언 라이벌', '#df4b45', [1, 4, 7], [[138, 140]], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
-  game('green', '포켓몬스터 그린', '그린', 'kanto1', 2, 1, '관동', '챔피언 라이벌', '#439b66', [1, 4, 7], [[138, 140]], { notes: ['그린 조우 데이터는 원작 일본 그린과 계보가 가까운 PokéAPI Blue 스냅샷을 사용합니다.'] }),
-  game('blue', '포켓몬스터 블루', '블루', 'kanto1', 2, 1, '관동', '챔피언 라이벌', '#447ed1', [1, 4, 7], [[138, 140]], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
-  game('yellow', '포켓몬스터 피카츄', '피카츄', 'kanto1', 3, 1, '관동', '챔피언 라이벌', '#d5aa24', [25], [], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
-  game('gold', '포켓몬스터 금', '금', 'johto2', 4, 2, '성도·관동', '챔피언 목호', '#c99c2e', [152, 155, 158], []),
-  game('silver', '포켓몬스터 은', '은', 'johto2', 5, 2, '성도·관동', '챔피언 목호', '#8da1b5', [152, 155, 158], [], { curatedGuideId: 'silver' }),
-  game('crystal', '포켓몬스터 크리스탈', '크리스탈', 'johto2', 6, 2, '성도·관동', '챔피언 목호', '#25a8c7', [152, 155, 158], [], { curatedGuideId: 'crystal' }),
-  game('ruby', '포켓몬스터 루비', '루비', 'hoenn3', 7, 3, '호연', '챔피언 성호', '#cf4050', [252, 255, 258], [[345, 347]]),
-  game('sapphire', '포켓몬스터 사파이어', '사파이어', 'hoenn3', 8, 3, '호연', '챔피언 성호', '#3268d5', [252, 255, 258], [[345, 347]], { curatedGuideId: 'sapphire' }),
-  game('emerald', '포켓몬스터 에메랄드', '에메랄드', 'hoenn3', 9, 3, '호연', '챔피언 윤진', '#15976d', [252, 255, 258], [[345, 347]], { curatedGuideId: 'emerald' }),
-  game('firered', '포켓몬스터 파이어레드', '파이어레드', 'kanto3', 10, 3, '관동', '챔피언 라이벌', '#e55c3b', [1, 4, 7], [[138, 140]]),
-  game('leafgreen', '포켓몬스터 리프그린', '리프그린', 'kanto3', 11, 3, '관동', '챔피언 라이벌', '#65a951', [1, 4, 7], [[138, 140]]),
-  game('diamond', '포켓몬스터 디아루가', '디아루가', 'sinnoh4', 12, 4, '신오', '챔피언 난천', '#5e96ba', [387, 390, 393], [[408, 410]]),
-  game('pearl', '포켓몬스터 펄기아', '펄기아', 'sinnoh4', 13, 4, '신오', '챔피언 난천', '#c27f9e', [387, 390, 393], [[408, 410]]),
-  game('platinum', '포켓몬스터 기라티나', '기라티나', 'sinnoh4', 14, 4, '신오', '챔피언 난천', '#6f747e', [387, 390, 393], [[408, 410]]),
-  game('heartgold', '포켓몬스터 하트골드', '하트골드', 'johto4', 15, 4, '성도·관동', '챔피언 목호', '#c99c2e', [152, 155, 158], []),
-  game('soulsilver', '포켓몬스터 소울실버', '소울실버', 'johto4', 16, 4, '성도·관동', '챔피언 목호', '#8da1b5', [152, 155, 158], []),
-  game('black', '포켓몬스터 블랙', '블랙', 'unova5', 17, 5, '하나', 'N·게치스', '#343a3d', [495, 498, 501], [[564, 566]]),
-  game('white', '포켓몬스터 화이트', '화이트', 'unova5', 18, 5, '하나', 'N·게치스', '#9ca5a9', [495, 498, 501], [[564, 566]]),
-  game('black-2', '포켓몬스터 블랙 2', '블랙 2', 'unova5-2', 21, 5, '하나', '챔피언 아이리스', '#343a3d', [495, 498, 501], [[564, 566]]),
-  game('white-2', '포켓몬스터 화이트 2', '화이트 2', 'unova5-2', 22, 5, '하나', '챔피언 아이리스', '#9ca5a9', [495, 498, 501], [[564, 566]]),
+  game('red', '챔피언 라이벌', '#df4b45', [1, 4, 7], [[138, 140]], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
+  game('green', '챔피언 라이벌', '#439b66', [1, 4, 7], [[138, 140]], { notes: ['그린 조우 데이터는 기존 저장 데이터와 추천 결과를 보존하기 위해 PokéAPI Blue 스냅샷을 사용합니다.'] }),
+  game('blue', '챔피언 라이벌', '#447ed1', [1, 4, 7], [[138, 140]], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
+  game('yellow', '챔피언 라이벌', '#d5aa24', [25], [], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
+  game('gold', '챔피언 목호', '#c99c2e', [152, 155, 158], []),
+  game('silver', '챔피언 목호', '#8da1b5', [152, 155, 158], [], { curatedGuideId: 'silver' }),
+  game('crystal', '챔피언 목호', '#25a8c7', [152, 155, 158], [], { curatedGuideId: 'crystal' }),
+  game('ruby', '챔피언 성호', '#cf4050', [252, 255, 258], [[345, 347]]),
+  game('sapphire', '챔피언 성호', '#3268d5', [252, 255, 258], [[345, 347]], { curatedGuideId: 'sapphire' }),
+  game('emerald', '챔피언 윤진', '#15976d', [252, 255, 258], [[345, 347]], { curatedGuideId: 'emerald' }),
+  game('firered', '챔피언 라이벌', '#e55c3b', [1, 4, 7], [[138, 140]]),
+  game('leafgreen', '챔피언 라이벌', '#65a951', [1, 4, 7], [[138, 140]]),
+  game('diamond', '챔피언 난천', '#5e96ba', [387, 390, 393], [[408, 410]]),
+  game('pearl', '챔피언 난천', '#c27f9e', [387, 390, 393], [[408, 410]]),
+  game('platinum', '챔피언 난천', '#6f747e', [387, 390, 393], [[408, 410]]),
+  game('heartgold', '챔피언 목호', '#c99c2e', [152, 155, 158], []),
+  game('soulsilver', '챔피언 목호', '#8da1b5', [152, 155, 158], []),
+  game('black', 'N·게치스', '#343a3d', [495, 498, 501], [[564, 566]]),
+  game('white', 'N·게치스', '#9ca5a9', [495, 498, 501], [[564, 566]]),
+  game('black-2', '챔피언 아이리스', '#343a3d', [495, 498, 501], [[564, 566]]),
+  game('white-2', '챔피언 아이리스', '#9ca5a9', [495, 498, 501], [[564, 566]]),
 ]
 
 export function getGame(id: string): GameConfig {

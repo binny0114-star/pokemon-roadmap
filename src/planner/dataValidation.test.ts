@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { encounterMethodUnlockChapter, getAvailability, loadCatalog, speciesByDex, speciesCatalog, supportedEncounterMethods } from './catalog'
+import { catalogCoverage, encounterMethodUnlockChapter, getAvailability, loadCatalog, speciesByDex, speciesCatalog, supportedEncounterMethods } from './catalog'
 import { families, games, getBosses, getFamily } from './games'
 import { getLegalMoves } from './learnsets'
+import { gameCatalog } from './versionRegistry'
 
 const validTypes = new Set(['normal', 'fire', 'water', 'electric', 'grass', 'ice', 'fighting', 'poison', 'ground', 'flying', 'psychic', 'bug', 'rock', 'ghost', 'dragon', 'dark', 'steel', 'fairy'])
 
@@ -11,19 +12,34 @@ beforeAll(async () => {
 
 describe('정적 데이터셋 검증 스크립트', () => {
   it('도감 ID, 타입, 진화 참조가 유효하다', () => {
-    expect(speciesCatalog).toHaveLength(649)
-    expect(new Set(speciesCatalog.map((species) => species.dex)).size).toBe(649)
-    expect(new Set(speciesCatalog.map((species) => species.id)).size).toBe(649)
+    expect(speciesCatalog).toHaveLength(1025)
+    expect(new Set(speciesCatalog.map((species) => species.dex)).size).toBe(1025)
+    expect(new Set(speciesCatalog.map((species) => species.id)).size).toBe(1025)
+    expect(new Set(catalogCoverage?.plannerEncounterMethods)).toEqual(supportedEncounterMethods)
     for (const species of speciesCatalog) {
+      expect(species.formDataStatus).toBe('default-form-only')
       expect(species.types.every((type) => validTypes.has(type))).toBe(true)
-      if (species.evolvesFrom) expect(speciesByDex.has(species.evolvesFrom)).toBe(true)
-      for (const encounters of Object.values(species.encounters)) {
+      if (species.evolvesFrom) {
+        expect(speciesByDex.has(species.evolvesFrom)).toBe(true)
+        expect(species.evolutionMethods.length > 0 || species.evolutionDataStatus === 'missing-source').toBe(true)
+        expect(species.evolutionMethods.every((method) =>
+          method.generation === null || method.generation >= species.generation,
+        )).toBe(true)
+      } else {
+        expect(species.evolutionMethods).toEqual([])
+        expect(species.evolutionDataStatus).toBe('not-applicable')
+      }
+      for (const [versionId, encounters] of Object.entries(species.encounters)) {
         for (const encounter of encounters) {
           expect(encounter.location.length).toBeGreaterThan(0)
           expect(encounter.area.length).toBeGreaterThan(0)
           expect(encounter.regionId === null || encounter.regionId > 0).toBe(true)
-          expect(supportedEncounterMethods.has(encounter.method)).toBe(true)
-          expect(encounter.slot === null || encounter.slot > 0).toBe(true)
+          if (catalogCoverage?.plannerVersionIds.includes(Number(versionId))) {
+            expect(supportedEncounterMethods.has(encounter.method)).toBe(true)
+            expect(encounter.slot === null || encounter.slot > 0).toBe(true)
+          } else {
+            expect(encounter.slot === null || encounter.slot >= 0).toBe(true)
+          }
           expect(encounter.conditions).toBeInstanceOf(Array)
           expect(encounter.minLevel).toBeGreaterThan(0)
           expect(encounter.maxLevel).toBeGreaterThanOrEqual(encounter.minLevel)
@@ -31,6 +47,51 @@ describe('정적 데이터셋 검증 스크립트', () => {
       }
     }
   }, 20_000)
+
+  it('조우 데이터가 버전과 세대 경계를 넘지 않는다', () => {
+    const generationsByVersion = new Map<number, number>()
+    for (const game of gameCatalog) {
+      for (const versionId of game.sourceVersionIds ?? [game.versionId]) {
+        generationsByVersion.set(
+          versionId,
+          Math.max(generationsByVersion.get(versionId) ?? 0, game.generation),
+        )
+      }
+    }
+    expect(catalogCoverage?.encounterVersionIds).toEqual([...generationsByVersion.keys()].sort((a, b) => a - b))
+    for (const species of speciesCatalog) {
+      for (const versionId of Object.keys(species.encounters).map(Number)) {
+        expect(generationsByVersion.has(versionId), `#${species.dex} version ${versionId}`).toBe(true)
+        expect(species.generation, `#${species.dex} version ${versionId}`)
+          .toBeLessThanOrEqual(generationsByVersion.get(versionId)!)
+      }
+    }
+  })
+
+  it('호환 오버레이 뒤에도 현대 버전 조우와 DLC 버전을 보존한다', () => {
+    expect(speciesByDex.get(25)?.encounters['33']?.length).toBeGreaterThan(0)
+    expect(speciesByDex.get(891)?.encounters['35']?.length).toBeGreaterThan(0)
+    expect(catalogCoverage?.serializedEncounterEntriesByVersion['23']).toBeGreaterThan(1_000)
+    expect(catalogCoverage?.serializedEncounterEntriesByVersion['35']).toBeGreaterThan(0)
+  })
+
+  it('버전별 진화 방식의 세부 조건을 손실 없이 보존한다', () => {
+    expect(speciesByDex.get(475)?.evolutionMethods.some((method) => method.genderId === 2)).toBe(true)
+    expect(speciesByDex.get(350)?.evolutionMethods.some((method) => (method.minBeauty ?? 0) > 0)).toBe(true)
+    expect(speciesByDex.get(26)?.evolutionMethods.some((method) => method.regionId === 7)).toBe(true)
+    const constrained = speciesCatalog.flatMap((species) => species.evolutionMethods).filter((method) =>
+      method.baseFormId !== null
+      || method.evolvedFormId !== null
+      || method.usedMoveId !== null
+      || method.minMoveCount !== null
+      || method.minSteps !== null
+      || method.minDamageTaken !== null,
+    )
+    expect(constrained.length).toBeGreaterThan(0)
+    expect(speciesByDex.get(904)?.evolutionMethods).toEqual(expect.arrayContaining([
+      expect.objectContaining({ versionGroupId: 30, usedMoveId: 839, minMoveCount: 20 }),
+    ]))
+  })
 
   it('게임, 챕터, 보스, 필드기 ID가 중복되거나 끊어지지 않는다', () => {
     expect(new Set(games.map((game) => game.id)).size).toBe(games.length)

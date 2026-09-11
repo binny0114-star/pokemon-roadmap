@@ -4,20 +4,86 @@ import type { Availability, CatalogEncounter, CatalogSpecies, GameConfig } from 
 
 interface Snapshot {
   source: string
+  provenance: {
+    source: string
+    repository: string
+    revision: string
+    files: string[]
+    compatibilitySnapshot: {
+      repository: string
+      revision: string
+      speciesPath: string
+      learnsetsPath: string
+      generations: number[]
+      reason: string
+    }
+  }
+  coverage: {
+    nationalDex: { min: number; max: number; count: number }
+    generationBoundaries: Record<string, number>
+    encounterVersionIds: number[]
+    encounterRowsByVersion: Record<string, number>
+    serializedEncounterEntriesByVersion: Record<string, number>
+    plannerVersionIds: number[]
+    plannerEncounterMethods: string[]
+    catalogOnlyVersionIds: number[]
+    storyTiming: string
+    evolutionPolicy: string
+    evolutionVersionGroupIds: number[]
+    correctedEvolutionRows: {
+      speciesId: number
+      sourceVersionGroupId: number
+      normalizedGeneration: number
+      reason: string
+    }[]
+    missingEvolutionSpeciesIds: number[]
+    forms: {
+      policy: string
+      planning: string
+      excludedNonDefaultPokemonCount: number
+    }
+  }
   species: CatalogSpecies[]
 }
 
 export let catalogSource = '정적 데이터 로딩 중'
+export let catalogProvenance: Snapshot['provenance'] | null = null
+export let catalogCoverage: Snapshot['coverage'] | null = null
 export const speciesCatalog: CatalogSpecies[] = []
 export const speciesByDex = new Map<number, CatalogSpecies>()
 let catalogPromise: Promise<void> | null = null
+
+function readSnapshot(value: unknown): Snapshot {
+  if (!value || typeof value !== 'object') throw new Error('전국도감 스냅샷이 객체가 아닙니다.')
+  const data = value as Partial<Snapshot>
+  if (
+    typeof data.source !== 'string'
+    || !data.provenance
+    || !/^[a-f0-9]{40}$/.test(data.provenance.revision)
+    || !data.coverage
+    || !Array.isArray(data.species)
+    || data.coverage.nationalDex.min !== 1
+    || data.coverage.nationalDex.max !== 1025
+    || data.coverage.nationalDex.count !== data.species.length
+  ) {
+    throw new Error('전국도감 스냅샷 메타데이터가 올바르지 않습니다.')
+  }
+  for (const [index, species] of data.species.entries()) {
+    if (species.dex !== index + 1 || species.generation < 1 || species.generation > 9) {
+      throw new Error(`전국도감 경계가 올바르지 않습니다: #${species.dex}`)
+    }
+  }
+  return data as Snapshot
+}
 
 export function loadCatalog(): Promise<void> {
   if (speciesCatalog.length) return Promise.resolve()
   if (!catalogPromise) {
     catalogPromise = Promise.all([import('../generated/species.json'), loadLearnsets()]).then(([module]) => {
-      const data = module.default as Snapshot
+      const data = readSnapshot(module.default)
       catalogSource = data.source
+      catalogProvenance = data.provenance
+      catalogCoverage = data.coverage
       speciesCatalog.push(...data.species)
       for (const species of data.species) speciesByDex.set(species.dex, species)
     })
@@ -443,6 +509,8 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig): Availab
         ].join(' · '),
         unavailableReason: encounter.conditions.some((condition) => unavailableConditions.includes(condition))
           ? '이벤트 또는 별도 배포 조건이 필요한 입수 경로입니다.'
+          : encounter.conditions.some((condition) => condition.startsWith('johto-safari-blocks-'))
+            ? '사파리존 블록 배치와 대기 일수의 정확한 해금 시점이 모델링되지 않았습니다.'
           : eventOnlyLocations.some((location) => locationMatchesToken(encounter.location, location))
             ? '배포 아이템 또는 이벤트가 필요한 입수 경로입니다.'
           : (game.id === 'black-2' && encounter.conditions.includes('item-ice-key'))
