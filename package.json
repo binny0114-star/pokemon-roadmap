@@ -11,6 +11,7 @@
     "test": "vitest run",
     "validate:data": "vitest run src/planner/dataValidation.test.ts",
     "generate:data": "node scripts/generate-catalog.mjs && node scripts/generate-learnsets.mjs",
+    "generate:data:check": "npm run generate:data && git diff --exit-code -- src/generated/species.json src/generated/learnsets.json",
     "generate:learnsets": "node scripts/generate-learnsets.mjs"
   },
   "dependencies": {

@@ -1,61 +1,49 @@
 import { mkdir, writeFile } from 'node:fs/promises'
+import {
+  catalogVersionGroupIds,
+  fetchCsv,
+  fetchLegacyPlannerSnapshot,
+  plannerVersionGroupIds,
+  provenance,
+  registry,
+} from './pokeapi-source.mjs'
 
-const base = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv'
-const versionGroups = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14])
+const files = [
+  'moves',
+  'move_names',
+  'pokemon',
+  'pokemon_species',
+  'pokemon_moves',
+  'machines',
+  'items',
+  'types',
+  'move_changelog',
+  'version_groups',
+]
+
+const [
+  movesRows,
+  namesRows,
+  pokemonRows,
+  speciesRows,
+  pokemonMoveRows,
+  machineRows,
+  itemRows,
+  typeRows,
+  changelogRows,
+  versionGroupRows,
+  legacyLearnsetSnapshot,
+] = await Promise.all([
+  ...files.map(fetchCsv),
+  fetchLegacyPlannerSnapshot(registry.legacyPlannerSnapshot.learnsetsPath),
+])
+
+const maxNationalDex = 1025
+const versionGroups = new Set(catalogVersionGroupIds)
 const statusMoves = new Set([
   'toxic', 'protect', 'rest', 'sleep-talk', 'substitute', 'double-team', 'reflect',
   'light-screen', 'thunder-wave', 'will-o-wisp', 'swords-dance', 'bulk-up',
   'calm-mind', 'curse', 'leech-seed', 'recover', 'roost', 'agility',
-])
-
-function parseCsv(text) {
-  const rows = []
-  let row = []
-  let field = ''
-  let quoted = false
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index]
-    if (quoted) {
-      if (char === '"' && text[index + 1] === '"') {
-        field += '"'
-        index += 1
-      } else if (char === '"') quoted = false
-      else field += char
-    } else if (char === '"') quoted = true
-    else if (char === ',') {
-      row.push(field)
-      field = ''
-    } else if (char === '\n') {
-      row.push(field.replace(/\r$/, ''))
-      rows.push(row)
-      row = []
-      field = ''
-    } else field += char
-  }
-  if (field || row.length) {
-    row.push(field)
-    rows.push(row)
-  }
-  const [headers, ...values] = rows
-  return values.filter((value) => value.length === headers.length)
-    .map((value) => Object.fromEntries(headers.map((header, index) => [header, value[index]])))
-}
-
-async function fetchCsv(name) {
-  const response = await fetch(`${base}/${name}.csv`)
-  if (!response.ok) throw new Error(`${name}.csv: ${response.status}`)
-  return parseCsv(await response.text())
-}
-
-const [movesRows, namesRows, pokemonMoveRows, machineRows, itemRows, typeRows, changelogRows, versionGroupRows] = await Promise.all([
-  fetchCsv('moves'),
-  fetchCsv('move_names'),
-  fetchCsv('pokemon_moves'),
-  fetchCsv('machines'),
-  fetchCsv('items'),
-  fetchCsv('types'),
-  fetchCsv('move_changelog'),
-  fetchCsv('version_groups'),
 ])
 
 const names = new Map(
@@ -65,6 +53,19 @@ const names = new Map(
 )
 const items = new Map(itemRows.map((row) => [Number(row.id), row.identifier]))
 const types = new Map(typeRows.map((row) => [Number(row.id), row.identifier]))
+const speciesGeneration = new Map(
+  speciesRows
+    .filter((row) => Number(row.id) <= maxNationalDex)
+    .map((row) => [Number(row.id), Number(row.generation_id)]),
+)
+const speciesByDefaultPokemon = new Map(
+  pokemonRows
+    .filter((row) => row.is_default === '1' && Number(row.species_id) <= maxNationalDex)
+    .map((row) => [Number(row.id), Number(row.species_id)]),
+)
+const versionGroupGeneration = new Map(
+  versionGroupRows.map((row) => [Number(row.id), Number(row.generation_id)]),
+)
 const moves = new Map(movesRows.map((row) => {
   const id = Number(row.id)
   return [id, {
@@ -89,20 +90,26 @@ const machines = new Map(
 const learnsets = {}
 const usedMoveIds = new Set()
 for (const row of pokemonMoveRows) {
-  const pokemon = Number(row.pokemon_id)
+  const speciesId = speciesByDefaultPokemon.get(Number(row.pokemon_id))
   const versionGroup = Number(row.version_group_id)
   const moveId = Number(row.move_id)
   const method = Number(row.pokemon_move_method_id)
-  if (pokemon > 649 || !versionGroups.has(versionGroup) || ![1, 3, 4].includes(method)) continue
+  if (!speciesId || !versionGroups.has(versionGroup) || ![1, 3, 4].includes(method)) continue
+  const groupGeneration = versionGroupGeneration.get(versionGroup)
   const move = moves.get(moveId)
-  if (!move) continue
+  if (
+    !move
+    || !groupGeneration
+    || move.generation > groupGeneration
+    || (speciesGeneration.get(speciesId) ?? 99) > groupGeneration
+  ) continue
   const machine = method === 4 ? machines.get(`${versionGroup}:${moveId}`) : undefined
   const usefulMachine = method !== 4 || Boolean(machine) && (move.power >= 50 || statusMoves.has(move.id))
   const usefulTutor = method !== 3 || move.power >= 50 || statusMoves.has(move.id)
   if (!usefulMachine || !usefulTutor) continue
 
   const group = learnsets[versionGroup] ??= {}
-  const entries = group[pokemon] ??= []
+  const entries = group[speciesId] ??= []
   const source = method === 1 ? 'level' : method === 3 ? 'tutor' : 'machine'
   const level = method === 1 ? Number(row.level) : 0
   const existing = entries.find((entry) => entry[0] === moveId)
@@ -120,9 +127,9 @@ for (const group of Object.values(learnsets)) {
   }
 }
 
-const moveData = Object.fromEntries(
+const moveData = Object.assign(Object.fromEntries(
   [...usedMoveIds].sort((a, b) => a - b).map((id) => [id, moves.get(id)]),
-)
+), legacyLearnsetSnapshot.moves)
 const versionGroupOrder = new Map(versionGroupRows.map((row) => [Number(row.id), Number(row.order)]))
 const changelogsByMove = new Map()
 for (const row of changelogRows) {
@@ -133,8 +140,9 @@ for (const row of changelogRows) {
   changelogsByMove.set(moveId, entries)
 }
 const versions = {}
-for (const versionGroup of versionGroups) {
+for (const versionGroup of catalogVersionGroupIds) {
   const targetOrder = versionGroupOrder.get(versionGroup)
+  if (!targetOrder) throw new Error(`Missing version group order for ${versionGroup}.`)
   const overrides = {}
   for (const moveId of usedMoveIds) {
     const historical = (changelogsByMove.get(moveId) ?? [])
@@ -152,12 +160,38 @@ for (const versionGroup of versionGroups) {
   }
   versions[versionGroup] = overrides
 }
+for (const versionGroup of plannerVersionGroupIds) {
+  learnsets[versionGroup] = legacyLearnsetSnapshot.learnsets[versionGroup] ?? {}
+  versions[versionGroup] = legacyLearnsetSnapshot.versions[versionGroup] ?? {}
+}
+
+const learnsetSpeciesByVersionGroup = Object.fromEntries(
+  catalogVersionGroupIds.map((versionGroup) => [
+    versionGroup,
+    Object.keys(learnsets[versionGroup] ?? {}).length,
+  ]),
+)
 
 await mkdir(new URL('../src/generated/', import.meta.url), { recursive: true })
 await writeFile(
   new URL('../src/generated/learnsets.json', import.meta.url),
   `${JSON.stringify({
-    source: 'PokéAPI CSV snapshot 2026-08-29 (pokemon_moves, moves, machines)',
+    source: `PokéAPI CSV @ ${registry.source.revision} (pokemon_moves, moves, machines)`,
+    provenance: provenance(files),
+    coverage: {
+      nationalDexMax: maxNationalDex,
+      versionGroupIds: catalogVersionGroupIds,
+      versionGroupGeneration: Object.fromEntries(
+        catalogVersionGroupIds.map((id) => [id, versionGroupGeneration.get(id)]),
+      ),
+      learnsetSpeciesByVersionGroup,
+      methods: ['level', 'machine', 'tutor'],
+      isolatedVersionGroups: true,
+      forms: {
+        policy: 'default-form-only',
+        planning: 'unsupported',
+      },
+    },
     moves: moveData,
     versions,
     learnsets,

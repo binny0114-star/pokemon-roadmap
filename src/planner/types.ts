@@ -28,6 +28,32 @@ export interface CatalogEvolution {
   tradeSpeciesId: number | null
 }
 
+export interface CatalogEvolutionMethod extends CatalogEvolution {
+  versionGroupId: number | null
+  generation: number | null
+  default: boolean
+  locationId: number | null
+  regionId: number | null
+  genderId: number | null
+  minBeauty: number | null
+  minAffection: number | null
+  relativePhysicalStats: number | null
+  knownMoveId: number | null
+  knownMoveTypeId: number | null
+  partySpeciesId: number | null
+  partyTypeId: number | null
+  needsOverworldRain: boolean
+  turnUpsideDown: boolean
+  needsMultiplayer: boolean
+  nearSpecialRock: boolean
+  baseFormId: number | null
+  evolvedFormId: number | null
+  usedMoveId: number | null
+  minMoveCount: number | null
+  minSteps: number | null
+  minDamageTaken: number | null
+}
+
 export interface CatalogSpecies {
   dex: number
   id: string
@@ -41,6 +67,9 @@ export interface CatalogSpecies {
   legendary: boolean
   mythical: boolean
   evolution: CatalogEvolution | null
+  evolutionMethods: CatalogEvolutionMethod[]
+  evolutionDataStatus: 'available' | 'missing-source' | 'not-applicable'
+  formDataStatus: 'default-form-only'
   encounters: Record<string, CatalogEncounter[]>
 }
 
