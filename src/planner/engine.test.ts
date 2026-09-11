@@ -101,6 +101,8 @@ describe('지원 버전과 정적 카탈로그', () => {
     })
     expect(learnsetCoverage?.versionGroupIds).toEqual(catalogVersionGroupIds)
     expect(learnsetCoverage?.isolatedVersionGroups).toBe(true)
+    expect(learnsetCoverage?.learnsetSpeciesByVersionGroup['30']).toBe(0)
+    expect(learnsetCoverage?.learnsetSpeciesByVersionGroup['31']).toBe(0)
     expect(catalogCoverage?.forms).toMatchObject({ policy: 'default-form-only', planning: 'unsupported' })
     expect(learnsetCoverage?.forms).toMatchObject({ policy: 'default-form-only', planning: 'unsupported' })
   })
