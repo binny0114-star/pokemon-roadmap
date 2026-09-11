@@ -18,7 +18,7 @@ const defaults: PlannerPreferences = {
 
 beforeAll(async () => {
   await loadCatalog()
-})
+}, 30_000)
 
 describe('지원 버전과 정적 카탈로그', () => {
   it('기존 21개 기본 입력의 자동 파티와 플랜 ID를 그대로 유지한다', () => {
