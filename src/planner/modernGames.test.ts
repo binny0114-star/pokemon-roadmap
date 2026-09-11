@@ -197,6 +197,28 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(Object.keys(encounterGames).some((key) => /^\d+$/.test(key))).toBe(false)
   })
 
+  it('카탈로그 카드용 스토리 전용·스토리+입수 범위를 분리한다', () => {
+    const encounterGameIds = new Set(Object.keys(encounterGames))
+    expect(modernGames.filter((game) => encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
+      'alpha-sapphire',
+      'brilliant-diamond',
+      'omega-ruby',
+      'scarlet',
+      'shield',
+      'shining-pearl',
+      'sword',
+      'violet',
+      'x',
+      'y',
+    ])
+    expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
+      'moon',
+      'sun',
+      'ultra-moon',
+      'ultra-sun',
+    ])
+  })
+
   it('Gen 6 Standard 슬롯을 확인할 수 없는 세부 방식으로 오표기하지 않는다', () => {
     for (const gameId of ['x', 'y', 'omega-ruby', 'alpha-sapphire']) {
       expect(encounterGames[gameId].some((row) => row.method === 'unsupported-standard')).toBe(false)

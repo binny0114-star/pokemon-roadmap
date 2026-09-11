@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { activeStorageScope, createAccount, getActiveAccount, login, logout } from './auth'
-import { loadClearRecords, loadPlanProgress, saveClearRecord, savePlanProgress } from './storage'
+import {
+  loadBuilderState,
+  loadClearRecords,
+  loadPlanProgress,
+  loadPlanSession,
+  saveBuilderState,
+  saveClearRecord,
+  savePlanProgress,
+  savePlanSession,
+} from './storage'
 
 class MemoryStorage implements Storage {
   private values = new Map<string, string>()
@@ -60,5 +69,52 @@ describe('로컬 트레이너 계정', () => {
     await login('실버', '1111')
     expect(loadPlanProgress('silver', 'plan-a')).toEqual(new Set(['one']))
     expect(loadClearRecords()).toHaveLength(1)
+  })
+
+  it('v3 게스트 상태를 같은 키로 저장하고 새로고침 뒤 복원한다', () => {
+    const builder = { gameId: 'firered', requiredDexes: [4, 60], marker: 'preserved' }
+    const session = {
+      gameId: 'firered' as const,
+      challengeType: null,
+      memberDexes: [4, 60, 64, 75, 130, 143],
+      lockedDexes: [143],
+      variant: 2,
+    }
+
+    saveBuilderState(builder)
+    savePlanSession(session)
+    savePlanProgress('firered', 'stable-plan', new Set(['kan-2:capture:60']))
+
+    expect(localStorage.getItem('pokemon-roadmap:v3:guest:builder')).toBe(JSON.stringify(builder))
+    expect(localStorage.getItem('pokemon-roadmap:v3:guest:current-plan')).toBe(JSON.stringify(session))
+    expect(localStorage.getItem('pokemon-roadmap:v3:guest:progress:firered:stable-plan')).toBe('["kan-2:capture:60"]')
+    expect(loadBuilderState({ gameId: 'emerald', requiredDexes: [], marker: '' })).toEqual(builder)
+    expect(loadPlanSession()).toEqual(session)
+    expect(loadPlanProgress('firered', 'stable-plan')).toEqual(new Set(['kan-2:capture:60']))
+  })
+
+  it('v2 게스트 데이터를 읽되 기존 v3 데이터를 우선한다', () => {
+    localStorage.setItem('pokemon-roadmap:v2:builder', JSON.stringify({ gameId: 'red', requiredDexes: [1] }))
+    localStorage.setItem('pokemon-roadmap:v2:current-plan', JSON.stringify({
+      gameId: 'red',
+      challengeType: null,
+      memberDexes: [1, 20, 26, 64, 75, 130],
+      lockedDexes: [],
+      variant: 0,
+    }))
+    localStorage.setItem('pokemon-roadmap:v2:progress:red:legacy-plan', '["kan-1:capture:1"]')
+
+    expect(loadBuilderState({ gameId: 'emerald', requiredDexes: [] })).toMatchObject({
+      gameId: 'red',
+      requiredDexes: [1],
+    })
+    expect(loadPlanSession()?.gameId).toBe('red')
+    expect(loadPlanProgress('red', 'legacy-plan')).toEqual(new Set(['kan-1:capture:1']))
+
+    localStorage.setItem('pokemon-roadmap:v3:guest:builder', JSON.stringify({ gameId: 'yellow', requiredDexes: [25] }))
+    expect(loadBuilderState({ gameId: 'emerald', requiredDexes: [] })).toMatchObject({
+      gameId: 'yellow',
+      requiredDexes: [25],
+    })
   })
 })

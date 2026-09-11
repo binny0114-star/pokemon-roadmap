@@ -113,13 +113,23 @@ const hoennBosses = [
 ]
 
 const sinnohBosses = [
-  boss('roark', '강석', '무쇠 체육관', 1, ['rock'], 'Lv.12–14'), boss('gardenia', '유채', '영원 체육관', 2, ['grass'], 'Lv.19–22'),
-  boss('maylene', '자두', '장막 체육관', 3, ['fighting'], 'Lv.27–30'), boss('wake', '맥실러', '들판 체육관', 4, ['water'], 'Lv.27–37'),
-  boss('fantina', '멜리사', '연고 체육관', 3, ['ghost'], 'Lv.24–36'), boss('byron', '동관', '운하 체육관', 5, ['steel'], 'Lv.36–41'),
-  boss('candice', '무청', '선단 체육관', 6, ['ice'], 'Lv.38–44'), boss('volkner', '전진', '물가 체육관', 8, ['electric'], 'Lv.46–50'),
+  boss('roark', '강석', '무쇠 체육관', 1, ['rock'], 'Lv.12–14'), boss('gardenia', '유채', '영원 체육관', 2, ['grass'], 'Lv.20–22'),
+  boss('fantina', '멜리사', '연고 체육관', 3, ['ghost'], 'Lv.24–26'), boss('maylene', '자두', '장막 체육관', 3, ['fighting'], 'Lv.28–32'),
+  boss('wake', '맥실러', '들판 체육관', 4, ['water'], 'Lv.33–37'), boss('byron', '동관', '운하 체육관', 5, ['steel'], 'Lv.37–41'),
+  boss('candice', '무청', '선단 체육관', 6, ['ice'], 'Lv.40–44'), boss('volkner', '전진', '물가 체육관', 8, ['electric'], 'Lv.46–50'),
   boss('aaron', '충호', '사천왕', 8, ['bug'], 'Lv.49–53'), boss('bertha', '들국화', '사천왕', 8, ['ground'], 'Lv.50–55'),
   boss('flint', '대엽', '사천왕', 8, ['fire'], 'Lv.52–57'), boss('lucian', '오엽', '사천왕', 8, ['psychic'], 'Lv.53–59'),
   boss('cynthia', '난천', '챔피언', 8, ['dragon'], 'Lv.58–62'),
+]
+
+const diamondPearlBosses = [
+  boss('roark', '강석', '무쇠 체육관', 1, ['rock'], 'Lv.12–14'), boss('gardenia', '유채', '영원 체육관', 2, ['grass'], 'Lv.19–22'),
+  boss('maylene', '자두', '장막 체육관', 3, ['fighting'], 'Lv.27–30'), boss('wake', '맥실러', '들판 체육관', 4, ['water'], 'Lv.27–30'),
+  boss('fantina', '멜리사', '연고 체육관', 4, ['ghost'], 'Lv.32–36'), boss('byron', '동관', '운하 체육관', 5, ['steel'], 'Lv.36–39'),
+  boss('candice', '무청', '선단 체육관', 6, ['ice'], 'Lv.38–42'), boss('volkner', '전진', '물가 체육관', 8, ['electric'], 'Lv.46–49'),
+  boss('aaron', '충호', '사천왕', 8, ['bug'], 'Lv.53–57'), boss('bertha', '들국화', '사천왕', 8, ['ground'], 'Lv.55–59'),
+  boss('flint', '대엽', '사천왕', 8, ['fire'], 'Lv.57–61'), boss('lucian', '오엽', '사천왕', 8, ['psychic'], 'Lv.59–63'),
+  boss('cynthia', '난천', '챔피언', 8, ['dragon'], 'Lv.60–66'),
 ]
 
 const unovaBosses = [
@@ -264,6 +274,7 @@ export function getFamily(game: GameConfig): FamilyConfig {
 
 export function getBosses(game: GameConfig): PlannerBoss[] {
   const base = getFamily(game).bosses
+  if (game.id === 'diamond' || game.id === 'pearl') return diamondPearlBosses
   if (game.id === 'emerald') {
     return base.map((entry) => {
       if (entry.id === 'wallace-gym') return boss('juan', '아단', '루네 체육관', 9, ['water'], 'Lv.41–46')
