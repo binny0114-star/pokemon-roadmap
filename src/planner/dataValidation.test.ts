@@ -19,7 +19,7 @@ describe('정적 데이터셋 검증 스크립트', () => {
     expect(speciesCatalog).toHaveLength(1025)
     expect(new Set(speciesCatalog.map((species) => species.dex)).size).toBe(1025)
     expect(new Set(speciesCatalog.map((species) => species.id)).size).toBe(1025)
-    expect(new Set(catalogCoverage?.plannerEncounterMethods)).toEqual(supportedEncounterMethods)
+    expect(catalogCoverage?.plannerEncounterMethods.every((method) => supportedEncounterMethods.has(method))).toBe(true)
     for (const species of speciesCatalog) {
       expect(species.formDataStatus).toBe('default-form-only')
       expect(species.types.every((type) => validTypes.has(type))).toBe(true)

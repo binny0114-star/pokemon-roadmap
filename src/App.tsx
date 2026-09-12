@@ -17,12 +17,13 @@ import {
   challengeCandidateCount,
   challengeTypeOrder,
   generateParty,
+  speciesDisplayName,
   speciesIcon,
   speciesTypes,
   typeKo,
   validateRequired,
 } from './planner/engine'
-import { getBosses, getFamily, getGame } from './planner/games'
+import { families, games, getBosses, getFamily, getGame } from './planner/games'
 import {
   getModernBosses,
   getModernGame,
@@ -106,10 +107,25 @@ const accuracyGateKo: Record<AccuracyGateId, string> = {
   integration: '플래너·저장 통합',
 }
 const modernPreviewGameIds = new Set<string>(modernGames.map((entry) => entry.id))
-const gatedModernEntries = gameCatalog.filter((entry) => entry.plannerSupport.accuracyGates)
-const promotedModernCount = gatedModernEntries.filter((entry) => entry.plannerSupport.status === 'full').length
+const gen67AccuracyGateIds = new Set([
+  'x', 'y', 'omega-ruby', 'alpha-sapphire',
+  'sun', 'moon', 'ultra-sun', 'ultra-moon',
+])
+const gen8AccuracyGateIds = new Set([
+  'lets-go-pikachu', 'lets-go-eevee',
+  'sword', 'shield',
+  'brilliant-diamond', 'shining-pearl',
+  'legends-arceus',
+])
+const gen67AccuracyEntries = gameCatalog.filter((entry) => gen67AccuracyGateIds.has(entry.id))
+const gen8AccuracyEntries = gameCatalog.filter((entry) => gen8AccuracyGateIds.has(entry.id))
+const promotedGen67Count = gen67AccuracyEntries.filter((entry) => entry.plannerSupport.status === 'full').length
+const promotedGen8Count = gen8AccuracyEntries.filter((entry) => entry.plannerSupport.status === 'full').length
+const fullSupportCount = gameCatalog.filter((entry) => entry.plannerSupport.status === 'full').length
+const catalogOnlyCount = gameCatalog.length - fullSupportCount
 const mechanicsFamilyKo = {
   classic: '클래식 본편',
+  'galar-wild-area': '가라르 와일드에리어·DLC',
   'lets-go': '레츠고 전용',
   legends: 'LEGENDS 전용',
 } as const
@@ -416,7 +432,7 @@ function App() {
     }
     const availability = getAvailability(species, game)
     const selectingChallengeStarter = Boolean(builder.challengeType && builder.requiredDexes.length === 0)
-    if (builder.challengeType && !speciesTypes(species, game.generation).includes(builder.challengeType)) {
+    if (builder.challengeType && !speciesTypes(species, game.generation, game).includes(builder.challengeType)) {
       setMessage(`${species.name}은(는) ${typeKo[builder.challengeType]} 타입을 공유하지 않아 현재 챌린지에 참가할 수 없습니다.`)
       return
     }
@@ -605,13 +621,13 @@ function App() {
     .filter(({ species }) =>
       query.trim()
       || !builder.challengeType
-      || speciesTypes(species, game.generation).includes(builder.challengeType),
+      || speciesTypes(species, game.generation, game).includes(builder.challengeType),
     )
     .sort((a, b) =>
       Number(
-        !builder.challengeType || speciesTypes(b.species, game.generation).includes(builder.challengeType),
+        !builder.challengeType || speciesTypes(b.species, game.generation, game).includes(builder.challengeType),
       ) - Number(
-        !builder.challengeType || speciesTypes(a.species, game.generation).includes(builder.challengeType),
+        !builder.challengeType || speciesTypes(a.species, game.generation, game).includes(builder.challengeType),
       )
       ||
       Number(b.availability.obtainable) - Number(a.availability.obtainable)
@@ -684,14 +700,14 @@ function App() {
         </nav>
         <div className="builder-intro" id="top">
           <div>
-            <span className="kicker">GENERATION I–V · 21 VERSIONS</span>
+            <span className="kicker">GENERATION I–VIII · {games.length} VERSIONS</span>
             <h1>좋아하는 포켓몬으로<br /><em>끝까지 가는 길.</em></h1>
             <p>좋아하는 멤버나 단일 타입 챌린지를 고르면 획득 시점, 보스 상성과 필드기를 계산해<br className="desktop-only" /> 맞춤 파티와 전용 스토리 로드맵을 만듭니다.</p>
           </div>
           <div className="hero-stat-grid">
             <span><b>{catalogCoverage?.nationalDex.count ?? 1025}</b><small>전국도감 데이터</small></span>
-            <span><b>21</b><small>원작 버전</small></span>
-            <span><b>8</b><small>스토리 패밀리</small></span>
+            <span><b>{games.length}</b><small>완전 지원 버전</small></span>
+            <span><b>{Object.keys(families).length}</b><small>스토리 패밀리</small></span>
             <span><b>0</b><small>런타임 API</small></span>
           </div>
         </div>
@@ -812,13 +828,16 @@ function App() {
           </div>
           <p className="data-note">ⓘ 6–9세대의 검수된 스토리·입수 데이터는 아래에서 미리볼 수 있습니다. 스토리·입수·버전별 기술 데이터가 모두 완비되기 전에는 파티 로드맵 생성을 열지 않습니다.</p>
           <p className="generation-promotion-summary">
-            Gen 6–8 정확성 승격 <strong>{promotedModernCount}/{gatedModernEntries.length}</strong>
+            Gen 6–7 정확성 승격 <strong>{promotedGen67Count}/{gen67AccuracyEntries.length}</strong>
+          </p>
+          <p className="generation-promotion-summary">
+            Gen 8 계열 정확성 승격 <strong>{promotedGen8Count}/{gen8AccuracyEntries.length}</strong>
           </p>
           {game.notes?.map((note) => <p className="data-note" key={note}>ⓘ {note}</p>)}
           <details className="version-catalog">
             <summary>
               <span>전 버전 지원 상태 보기</span>
-              <small>39개 버전 · 완전 지원 21 · 카탈로그 전용 18</small>
+              <small>{gameCatalog.length}개 버전 · 완전 지원 {fullSupportCount} · 카탈로그 전용 {catalogOnlyCount}</small>
             </summary>
             <div className="version-catalog-grid">
               {gameCatalog.map((entry) => {
@@ -882,9 +901,13 @@ function App() {
               <div className="preview-capabilities" aria-label="미리보기 지원 범위">
                 <span className="available">{mechanicsFamilyKo[previewGame.catalog.mechanicsFamily]}</span>
                 <span className={previewHasEncounterSnapshot ? 'available' : 'unavailable'}>
-                  {previewHasEncounterSnapshot ? '부분 입수 스냅샷' : '정확한 입수 스냅샷 없음'}
+                  {previewHasEncounterSnapshot
+                    ? previewGame.catalog.plannerSupport.status === 'full' ? '완전 입수 스냅샷' : '부분 입수 스냅샷'
+                    : '정확한 입수 스냅샷 없음'}
                 </span>
-                <span className="unavailable">파티 로드맵 생성 미지원</span>
+                <span className={previewGame.catalog.plannerSupport.status === 'full' ? 'available' : 'unavailable'}>
+                  {previewGame.catalog.plannerSupport.status === 'full' ? '파티 로드맵 완전 지원' : '파티 로드맵 생성 미지원'}
+                </span>
               </div>
               <p>{previewGame.catalog.plannerSupport.status === 'catalog-only' && previewGame.catalog.plannerSupport.reason}</p>
               {previewAccuracyGates && (
@@ -1058,7 +1081,7 @@ function App() {
           <div className="picker-grid" aria-busy={!catalogReady}>
             {!catalogReady && <p className="catalog-loading">전국도감 정적 데이터를 불러오는 중입니다…</p>}
             {results.map(({ species, availability }) => {
-              const challengeMismatch = Boolean(builder.challengeType && !speciesTypes(species, game.generation).includes(builder.challengeType))
+              const challengeMismatch = Boolean(builder.challengeType && !speciesTypes(species, game.generation, game).includes(builder.challengeType))
               const selectingChallengeStarter = Boolean(builder.challengeType && builder.requiredDexes.length === 0)
               const futureGeneration = species.generation > game.generation
               const selected = builder.requiredDexes.includes(species.dex)
@@ -1083,7 +1106,9 @@ function App() {
                     : `${species.name} 선택`}
                 >
                   <span className="picker-icon">{speciesIcon(species, game.generation)}</span>
-                  <span className="picker-name"><small>#{String(species.dex).padStart(3, '0')}</small><strong>{species.name}</strong><i>{speciesTypes(species, game.generation).map((type) => typeKo[type]).join(' · ')}</i></span>
+                  <span className="picker-name"><small>#{String(species.dex).padStart(3, '0')}</small><strong>{speciesDisplayName(species, game)}</strong><i>{availability.formChoices?.length
+                    ? availability.formChoices.map((choice) => choice.types.map((type) => typeKo[type]).join(' · ')).join(' / ')
+                    : speciesTypes(species, game.generation, game).map((type) => typeKo[type]).join(' · ')}</i></span>
                   <span className="picker-badges">
                     {selectingChallengeStarter && !challengeMismatch && !futureGeneration
                       ? <b className="modified-starter">Lv.5 개조 스타팅</b>
@@ -1166,7 +1191,9 @@ function App() {
                       <article className="generated-member" key={member.species.dex}>
                         <div className="member-top">
                           <span className="member-icon">{speciesIcon(member.species, game.generation)}</span>
-                          <div><small>#{String(member.species.dex).padStart(3, '0')}</small><h3>{member.species.name}</h3><p>{speciesTypes(member.species, game.generation).map((type) => typeKo[type]).join(' · ')}</p></div>
+                          <div><small>#{String(member.species.dex).padStart(3, '0')}</small><h3>{speciesDisplayName(member.species, game)}</h3><p>{member.availability.formChoices?.length
+                            ? member.availability.formChoices.map((choice) => choice.types.map((type) => typeKo[type]).join(' · ')).join(' / ')
+                            : speciesTypes(member.species, game.generation, game).map((type) => typeKo[type]).join(' · ')}</p></div>
                           <button onClick={() => toggleLock(member.species.dex)} disabled={member.required} title={member.required ? '필수 멤버는 항상 잠김' : '추천 멤버 잠금 전환'}>{member.locked ? '🔒' : '🔓'}</button>
                         </div>
                         <div className="member-flags"><span>{member.challengeStarter ? 'Lv.5 개조 스타팅' : member.required ? '필수 선택' : '자동 추천'}</span><b>{member.role}</b><i>점수 {Math.round(member.score)}</i></div>
@@ -1255,7 +1282,7 @@ function App() {
           <summary>데이터 및 추천 방법론 <span>DATA / METHODOLOGY</span></summary>
           <div>
             <section><h3>정적 데이터 출처</h3><p>{catalogSource}. {learnsetSource()}. 전국도감 #001–{catalogCoverage?.nationalDex.max ?? 1025}의 종·진화와 조우 장소·세부 구역·방식·조건, 버전별 자력기·TM/HM·기술가르침 호환 데이터를 빌드 전에 정규화했습니다. 브라우저는 외부 API를 호출하지 않습니다.</p></section>
-            <section><h3>현대 미리보기 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료와 버전별 공개 워크스루를 사용합니다. 미리보기는 출처가 확보된 범위만 표시하며 파티 로드맵 완전 지원을 뜻하지 않습니다.</p></section>
+            <section><h3>현대 미리보기 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료와 버전별 공개 워크스루를 사용합니다. 카탈로그 전용 게임의 미리보기는 출처가 확보된 범위만 표시합니다.</p></section>
             <section><h3>결정론 점수</h3><p>스토리 합류 시점, 남은 관장·사천왕 상성, 새 공격 타입, 종족값·역할, 공통 약점 감점, 버전별 필드기 기여를 합산합니다. 단일 타입 모드는 해당 타입을 공유하는 진화 계열 안에서만 같은 점수를 적용합니다.</p></section>
             <section><h3>한계와 품질 표시</h3><p>낚싯대·파도타기·바위깨기·박치기와 엔딩 후 조건은 실제 조우 방식의 해금 시점보다 앞당기지 않습니다. 시간대·계절·대량발생·포켓트레·라디오 같은 조건도 입수 안내에 표시합니다. 특수 심볼의 세부 이벤트나 일반 TM·기술가르침의 지도상 획득 시점을 완전히 확정할 수 없는 경우에는 “시점 추론”으로 구분합니다.</p></section>
           </div>

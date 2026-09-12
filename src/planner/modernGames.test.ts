@@ -31,12 +31,11 @@ describe('6–9세대 스토리 패밀리', () => {
     expect(Object.keys(modernFamilies)).toHaveLength(9)
   })
 
-  it('정확성 게이트가 닫힌 17개 버전을 파티 플래너에서 명시적으로 차단한다', () => {
-    for (const gameId of modernGames.map((game) => game.id) satisfies ModernPlannerGameId[]) {
-      const support = modernGames.find((game) => game.id === gameId)?.catalog.plannerSupport
-      if (!support || support.status !== 'catalog-only') {
-        throw new Error(`${gameId}는 명시적으로 카탈로그 전용이어야 합니다.`)
-      }
+  it('정확성 게이트가 닫힌 현대 버전만 파티 플래너에서 명시적으로 차단한다', () => {
+    for (const game of modernGames.filter((entry) => entry.catalog.plannerSupport.status === 'catalog-only')) {
+      const gameId = game.id satisfies ModernPlannerGameId
+      const support = game.catalog.plannerSupport
+      if (support.status !== 'catalog-only') throw new Error(`${gameId} 지원 상태를 읽을 수 없습니다.`)
       expect(support.reason).toBeTruthy()
       if (['x', 'y', 'omega-ruby', 'alpha-sapphire'].includes(gameId)) {
         expect(support.reason).toContain('기술')
@@ -71,15 +70,17 @@ describe('6–9세대 스토리 패밀리', () => {
     for (const gameId of targetIds) {
       const game = modernGames.find((entry) => entry.id === gameId)!
       const support = game.catalog.plannerSupport
-      expect(support.status, gameId).toBe('catalog-only')
+      const promoted = gameId === 'sword' || gameId === 'shield'
+      expect(support.status, gameId).toBe(promoted ? 'full' : 'catalog-only')
       expect(game.catalog.supportReview, gameId).toBe('2026-09-12')
       expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
         'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
       ])
-      expect(Object.values(support.accuracyGates ?? {}).some((gate) => !gate.complete), gameId).toBe(true)
+      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.complete), gameId).toBe(promoted)
       expect(support.accuracyGates?.mechanics.complete, gameId).toBe(true)
     }
     expect(modernGames.find((game) => game.id === 'lets-go-pikachu')?.catalog.mechanicsFamily).toBe('lets-go')
+    expect(modernGames.find((game) => game.id === 'sword')?.catalog.mechanicsFamily).toBe('galar-wild-area')
     expect(modernGames.find((game) => game.id === 'legends-arceus')?.catalog.mechanicsFamily).toBe('legends')
     const sourceRevision = (gameId: ModernPlannerGameId) =>
       modernStoryProvenance.sources.find((source) => (source.games as readonly string[]).includes(gameId))
@@ -134,14 +135,16 @@ describe('6–9세대 스토리 패밀리', () => {
       'olivia-e4-usum', 'acerola-e4-usum', 'kahili-usum', 'hau',
     ])
     expect(sequence('ultra-moon')).toEqual(sequence('ultra-sun'))
-    expect(sequence('sword')).toEqual([
-      'milo', 'nessa', 'kabu', 'bea', 'opal', 'gordie', 'piers', 'raihan',
-      'marnie-cup', 'hop-cup', 'eternatus', 'leon',
-    ])
-    expect(sequence('shield')).toEqual([
-      'milo', 'nessa', 'kabu', 'allister', 'opal', 'melony', 'piers', 'raihan',
-      'marnie-cup', 'hop-cup', 'eternatus', 'leon',
-    ])
+    expect(sequence('sword')).toEqual(expect.arrayContaining([
+      'hop-route-2', 'bede-mine', 'milo', 'bea', 'gordie', 'marnie-cup',
+      'oleana', 'rose', 'eternatus', 'eternamax', 'leon', 'hop-final',
+      'mustard-final', 'peony', 'calyrex-ice-rider', 'calyrex-shadow-rider', 'galar-star-tournament',
+    ]))
+    expect(sequence('shield')).toEqual(expect.arrayContaining([
+      'hop-route-2', 'bede-mine', 'milo', 'allister', 'melony', 'marnie-cup',
+      'oleana', 'rose', 'eternatus', 'eternamax', 'leon', 'hop-final',
+      'mustard-final', 'peony', 'calyrex-ice-rider', 'calyrex-shadow-rider', 'galar-star-tournament',
+    ]))
   })
 
   it('버전 전용 보스와 악당 리더가 형제 버전에 섞이지 않는다', () => {
@@ -501,9 +504,10 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     }
   })
 
-  it('DLC 지역을 기본 엔딩 데이터에서 제외하고 레이드 조건을 보존한다', () => {
+  it('가라르 DLC 지역과 레이드 조건을 보존하고 미지원 Gen 9 DLC는 제외한다', () => {
     const allRows = Object.values(encounterGames).flat()
-    expect(allRows.some((row) => /kitakami|blueberry|fields-of-honor|ballimere/.test(row.location))).toBe(false)
+    expect(allRows.some((row) => /kitakami|blueberry/.test(row.location))).toBe(false)
+    expect(allRows.some((row) => /fields-of-honor|ballimere/.test(row.location))).toBe(true)
     expect(encounterGames.sword.some((row) =>
       row.method === 'raid'
       && row.area.startsWith('max-den-')

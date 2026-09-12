@@ -8,6 +8,9 @@ import {
   registry,
 } from './pokeapi-source.mjs'
 
+const legacyPlannerVersionIds = plannerVersionIds.filter((versionId) =>
+  registry.games.some((game) => game.versionId === versionId && game.generation <= 5))
+
 const files = [
   'pokemon_species',
   'pokemon_species_names',
@@ -220,7 +223,7 @@ for (const row of encounterRows) {
   const method = slot
     ? encounterMethodById.get(Number(slot.encounter_method_id)) ?? 'unknown'
     : 'unknown'
-  if (plannerVersionIds.includes(versionId) && !plannerEncounterMethods.has(method)) continue
+  if (legacyPlannerVersionIds.includes(versionId) && !plannerEncounterMethods.has(method)) continue
   const locationName = location?.identifier || area?.identifier || 'unknown'
   const areaName = area?.identifier || locationName
   const conditions = [...(conditionsByEncounter.get(Number(row.id)) ?? [])].sort()
@@ -320,7 +323,7 @@ const species = selectedSpecies.map((entry) => {
     encounters: {
       ...Object.fromEntries(
         Object.entries(generated.encounters)
-          .filter(([versionId]) => !plannerVersionIds.includes(Number(versionId))),
+          .filter(([versionId]) => !legacyPlannerVersionIds.includes(Number(versionId))),
       ),
       ...legacy.encounters,
     },
@@ -338,7 +341,7 @@ const generationBoundaries = Object.fromEntries(
       Math.max(...species.filter((entry) => entry.generation === generation).map((entry) => entry.dex)),
     ]),
 )
-const catalogOnlyVersionIds = catalogVersionIds.filter((versionId) => !plannerVersionIds.includes(versionId))
+const catalogOnlyVersionIds = catalogVersionIds.filter((versionId) => !legacyPlannerVersionIds.includes(versionId))
 const serializedEncounterEntriesByVersion = Object.fromEntries(catalogVersionIds.map((versionId) => [
   versionId,
   species.reduce((total, entry) => total + (entry.encounters[String(versionId)]?.length ?? 0), 0),
@@ -356,7 +359,7 @@ await writeFile(
       encounterVersionIds: catalogVersionIds,
       encounterRowsByVersion,
       serializedEncounterEntriesByVersion,
-      plannerVersionIds,
+      plannerVersionIds: legacyPlannerVersionIds,
       plannerEncounterMethods: [...plannerEncounterMethods],
       catalogOnlyVersionIds,
       storyTiming: 'planner-version-ids-only',

@@ -56,10 +56,10 @@ describe('릴리스 레지스트리와 전국도감', () => {
 
   it('Gen 8 완전성 매니페스트도 모든 대상과 차단 근거를 fail-closed로 요구한다', () => {
     const malformed = structuredClone(gen8Completeness)
-    const blocked = malformed.families.galar8.gates.learnsets.requirements
+    const blocked = malformed.families.hisui8.gates.availability.requirements
       .find((requirement) => requirement.status === 'blocked')!
     blocked.missingFields = []
-    expect(() => validateGen8CompletenessManifest(malformed)).toThrow('galar8/learnsets')
+    expect(() => validateGen8CompletenessManifest(malformed)).toThrow('hisui8/availability')
 
     const missingGame = structuredClone(gen8Completeness)
     missingGame.families.hisui8.games = []
@@ -68,6 +68,19 @@ describe('릴리스 레지스트리와 전국도감', () => {
     const missingCategories = structuredClone(gen8Completeness)
     missingCategories.families.sinnoh8.requiredSourceCategories = []
     expect(() => validateGen8CompletenessManifest(missingCategories)).toThrow('필수 출처 범주')
+
+    const deletedRequirement = structuredClone(gen8Completeness)
+    deletedRequirement.families.galar8.gates.learnsets.requirements = []
+    expect(() => validateGen8CompletenessManifest(deletedRequirement)).toThrow('galar8/learnsets')
+
+    const renamedRequirement = structuredClone(gen8Completeness)
+    renamedRequirement.families.galar8.gates.learnsets.requirements[0].id = 'replacement-that-claims-complete'
+    expect(() => validateGen8CompletenessManifest(renamedRequirement)).toThrow('필수 요구사항 계약')
+
+    const deletedCategory = structuredClone(gen8Completeness)
+    deletedCategory.families.galar8.requiredSourceCategories =
+      deletedCategory.families.galar8.requiredSourceCategories!.filter((category) => category !== 'tr')
+    expect(() => validateGen8CompletenessManifest(deletedCategory)).toThrow('필수 출처 범주 계약')
   })
 
   it('Gen 7 입수 게이트를 조우율이 아니라 방식·도달 시점 근거로 차단한다', () => {
@@ -124,8 +137,9 @@ describe('릴리스 레지스트리와 전국도감', () => {
     for (const family of Object.values(gen8Completeness.families)) {
       for (const gameId of family.games) {
         const game = gameCatalog.find((entry) => entry.id === gameId)!
-        expect(game.plannerSupport.status, gameId).toBe('catalog-only')
-        expect(game.plannerSupport.accuracyGates?.integration.complete, gameId).toBe(false)
+        const familyComplete = Object.values(family.gates)
+          .every((gate) => gate.requirements.every((requirement) => requirement.status === 'complete'))
+        expect(game.plannerSupport.status, gameId).toBe(familyComplete ? 'full' : 'catalog-only')
         for (const [gateId, gate] of Object.entries(family.gates)) {
           const manifestComplete = gate.requirements.every((requirement) => requirement.status === 'complete')
           expect(game.plannerSupport.accuracyGates?.[gateId as keyof typeof game.plannerSupport.accuracyGates]?.complete, `${gameId}/${gateId}`)
@@ -143,27 +157,39 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(requirement('letsgo7', 'learnsets').missingFields).toEqual(expect.arrayContaining([
       'tm-acquisition-chapter', 'partner-tutor-acquisition-chapter',
     ]))
-    expect(requirement('galar8', 'learnsets').missingFields).toEqual(expect.arrayContaining([
-      'tr-watt-vendor-rotation', 'tr-raid-drop-source', 'resource-consumption',
-    ]))
+    const galarLearnsets = gen8Completeness.families.galar8.gates.learnsets.requirements[0]
+    expect(galarLearnsets.status).toBe('complete')
+    expect(galarLearnsets.evidence).toContain('daily rotation')
+    expect(galarLearnsets.evidence).toContain('resource-conflict')
     expect(requirement('sinnoh8', 'availability').missingFields).toEqual(expect.arrayContaining([
       'underground-story-gate', 'swarm-gate', 'poke-radar-gate',
     ]))
+    expect(requirement('sinnoh8', 'learnsets').missingFields).toEqual(expect.arrayContaining([
+      'tm-copy-quantity', 'tm-resource-conflicts',
+    ]))
+    expect(requirement('sinnoh8', 'learnsets').evidence).toContain('consumable TM')
     expect(requirement('hisui8', 'availability').missingFields).toEqual(expect.arrayContaining([
       'outbreak-unlock', 'space-time-distortion-unlock', 'research-rank-gate',
     ]))
 
     for (const gameId of Object.values(gen8Completeness.families).flatMap((family) => family.games)) {
-      expect(() => getPlannerCatalogGame(gameId as never), gameId).toThrow('플래너 지원 게임이 아닙니다')
-      expect(games.some((game) => game.id === gameId), gameId).toBe(false)
+      const promoted = registryJson.games.some((entry) =>
+        entry.id === gameId && entry.plannerSupport.status === 'full')
+      if (promoted) {
+        expect(() => getPlannerCatalogGame(gameId as never), gameId).not.toThrow()
+        expect(games.some((game) => game.id === gameId), gameId).toBe(true)
+      } else {
+        expect(() => getPlannerCatalogGame(gameId as never), gameId).toThrow('플래너 지원 게임이 아닙니다')
+        expect(games.some((game) => game.id === gameId), gameId).toBe(false)
+      }
     }
   })
 
   it('39개 스토리 게임과 지원 경계를 고유하고 상호 참조 가능하게 유지한다', () => {
     expect(gameCatalog).toHaveLength(39)
     expect(new Set(gameCatalog.map((game) => game.id)).size).toBe(39)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(21)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(18)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(23)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(16)
     expect(gameCatalog.some((game) => game.id === ('champions' as string))).toBe(false)
 
     const byId = new Map(gameCatalog.map((game) => [game.id, game]))
@@ -174,7 +200,9 @@ describe('릴리스 레지스트리와 전국도감', () => {
         expect(byId.get(pairedId)?.pairedWith, `${game.id}/${pairedId}`).toContain(game.id)
       }
       if (game.plannerSupport.status === 'full') {
-        expect(game.mechanicsFamily, game.id).toBe('classic')
+        expect(game.mechanicsFamily, game.id).toBe(
+          game.id === 'sword' || game.id === 'shield' ? 'galar-wild-area' : 'classic',
+        )
         expect(game.plannerFamilyId, game.id).toBeTruthy()
       } else {
         expect(game.plannerSupport.reason.trim().length, game.id).toBeGreaterThan(0)
@@ -189,12 +217,9 @@ describe('릴리스 레지스트리와 전국도감', () => {
       .filter(([, entries]) => entries.length > 1)
       .map(([versionId, entries]) => [versionId, entries.map((game) => game.id).sort()])
     expect(duplicateVersionIds).toEqual([[2, ['blue', 'green']]])
-    expect(modernGames.map((game) => game.id).sort()).toEqual(
-      gameCatalog
-        .filter((game) => game.plannerSupport.status === 'catalog-only' && game.id !== 'legends-z-a')
-        .map((game) => game.id)
-        .sort(),
-    )
+    expect(modernGames.every((game) => gameCatalog.some((entry) => entry.id === game.id))).toBe(true)
+    expect(modernGames.filter((game) => game.catalog.plannerSupport.status === 'full').map((game) => game.id).sort())
+      .toEqual(['shield', 'sword'])
   })
 
   it('전국도감 #001–1025를 누락과 중복 없이 유지한다', () => {
@@ -221,7 +246,7 @@ describe('21개 완전 지원 버전의 전체 생성 계약', () => {
         expect(
           roadmap.flatMap((chapter) => chapter.actions).filter((action) => action.kind === 'boss'),
           game.id,
-        ).toHaveLength(getBosses(game).length)
+        ).toHaveLength(new Set(getBosses(game).map((boss) => `${boss.chapter}:${boss.branchGroup ?? boss.id}`)).size)
 
         for (const member of plan.members) {
           expect(member.moves, `${game.id}/${member.species.id}`).toHaveLength(4)

@@ -11,7 +11,7 @@
     "test": "vitest run",
     "validate:data": "vitest run src/planner/dataValidation.test.ts",
     "generate:data": "node scripts/generate-catalog.mjs && node scripts/generate-learnsets.mjs && node scripts/generate-modern-encounters.mjs",
-    "generate:data:check": "npm run generate:data && git diff --exit-code -- src/generated/species.json src/generated/learnsets.json src/generated/gen67-legality.json src/generated/gen8-legality.json src/generated/modern-encounters.json",
+    "generate:data:check": "npm run generate:data && git diff --exit-code -- src/generated/species.json src/generated/learnsets.json src/generated/gen67-legality.json src/generated/gen8-legality.json src/generated/gen8-form-profiles.json src/generated/modern-encounters.json",
     "generate:learnsets": "node scripts/generate-learnsets.mjs",
     "generate:modern-encounters": "node scripts/generate-modern-encounters.mjs"
   },

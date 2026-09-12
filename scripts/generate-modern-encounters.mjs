@@ -29,6 +29,7 @@ const sources = {
 }
 const inputFiles = [
   ...Object.values(sources).flat(),
+  'legality/wild/Gen8/encounter_swsh_underground.pkl',
   'text/locations/gen6/text_xy_00000_en.txt',
   'text/locations/gen7/text_sm_00000_en.txt',
   'text/locations/gen7/text_sm_30000_en.txt',
@@ -61,29 +62,6 @@ const paldeaFormExclusive = {
 }
 
 const staticAcquisitions = [
-  ...[
-    ['sword', 810], ['sword', 813], ['sword', 816],
-    ['shield', 810], ['shield', 813], ['shield', 816],
-  ].map(([game, species]) => ({ game, species, location: 'postwick', area: 'starter-gift', method: 'gift', minLevel: 5, maxLevel: 5, conditions: ['mutually-exclusive-starter'] })),
-  ...['sword', 'shield'].flatMap((game) => [
-    { game, species: 848, location: 'route-5', area: 'nursery-gift', method: 'gift', minLevel: 1, maxLevel: 1, conditions: [] },
-    ...[880, 881, 882, 883].map((species) => ({
-      game,
-      species,
-      location: 'route-6',
-      area: 'fossil-restoration',
-      method: 'fossil',
-      minLevel: 10,
-      maxLevel: 10,
-      conditions: ['fossil-restoration'],
-    })),
-    { game, species: 772, location: 'battle-tower', area: 'lobby-gift', method: 'gift', minLevel: 50, maxLevel: 50, conditions: ['postgame'] },
-    { game, species: 4, location: 'postwick', area: 'leon-bedroom-gift', method: 'gift', minLevel: 5, maxLevel: 5, conditions: ['postgame'] },
-  ]),
-  { game: 'sword', species: 890, location: 'energy-plant', area: 'tower-summit', method: 'static', minLevel: 60, maxLevel: 60, conditions: ['story-climax'] },
-  { game: 'shield', species: 890, location: 'energy-plant', area: 'tower-summit', method: 'static', minLevel: 60, maxLevel: 60, conditions: ['story-climax'] },
-  { game: 'sword', species: 888, location: 'slumbering-weald', area: 'tower-summit', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame'] },
-  { game: 'shield', species: 889, location: 'slumbering-weald', area: 'tower-summit', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame'] },
   ...[
     ['brilliant-diamond', 387], ['brilliant-diamond', 390], ['brilliant-diamond', 393],
     ['shining-pearl', 387], ['shining-pearl', 390], ['shining-pearl', 393],
@@ -399,7 +377,6 @@ const weather9 = [
 
 function parseSwsh(buffer, locationNames, symbol) {
   return unpack(buffer).flatMap((area) => {
-    if (area[0] >= 164) return []
     const location = locationNames[area[0]] || `galar-location-${area[0]}`
     const result = []
     let offset = 2
@@ -411,7 +388,10 @@ function parseSwsh(buffer, locationNames, symbol) {
       const count = area[offset + 4]
       const slotType = area[offset + 5]
       offset += 6
-      const conditions = weather8.filter(([flag]) => (flags & flag) !== 0).map(([, label]) => label)
+      const conditions = [
+        ...swshContentConditions(area[0]),
+        ...weather8.filter(([flag]) => (flags & flag) !== 0).map(([, label]) => label),
+      ]
       const method = (flags & 1024) !== 0 || slotType === 12
         ? 'fishing'
         : (flags & 512) !== 0
@@ -444,8 +424,9 @@ function parseSwsh(buffer, locationNames, symbol) {
 
 function parseNestLocations(source) {
   const result = new Map()
+  const body = /GetNestLocations\(byte nestIndex\) => nestIndex switch\s*\{([\s\S]*?)\n\s*_ =>/.exec(source)?.[1] ?? ''
   const pattern = /^\s*(\d+)\s*=>\s*\[([^\]]*)\]/gm
-  for (const match of source.matchAll(pattern)) {
+  for (const match of body.matchAll(pattern)) {
     const locations = match[2].split(',').map((value) => Number.parseInt(value.trim(), 10)).filter(Number.isFinite)
     result.set(Number.parseInt(match[1], 10), locations)
   }
@@ -472,11 +453,10 @@ function parseSwshRaids(buffer, locationNames, nestLocations, inaccessibleNests)
     const species = buffer.readUInt16LE(offset)
     const decoded = normalizeForm(buffer[offset + 2])
     const nest = buffer[offset + 6]
-    if (nest >= 98) continue
     const minRank = buffer[offset + 7]
     const maxRank = buffer[offset + 8]
     const locations = nestLocations.get(nest) ?? []
-    for (const locationId of locations.filter((id) => id < 164)) {
+    for (const locationId of locations) {
       const location = locationNames[locationId] || `galar-location-${locationId}`
       const accessConditions = inaccessibleNests.has(`${locationId}:${nest}`) ? ['water-bike'] : []
       result.push(encounter(
@@ -487,9 +467,253 @@ function parseSwshRaids(buffer, locationNames, nestLocations, inaccessibleNests)
         levelCaps[minRank][0],
         levelCaps[maxRank][1],
         'raid',
-        ['max-raid', `badge-count-${requiredBadges[minRank]}`, `raid-stars-${minRank + 1}-${maxRank + 1}`, ...accessConditions, ...(decoded.condition ? [decoded.condition] : [])],
+        [
+          ...swshContentConditions(locationId),
+          'max-raid',
+          `badge-count-${requiredBadges[minRank]}`,
+          `raid-stars-${minRank + 1}-${maxRank + 1}`,
+          ...(buffer[offset + 5] !== 0 ? ['gigantamax-capable'] : []),
+          ...accessConditions,
+          ...(decoded.condition ? [decoded.condition] : []),
+        ],
       ))
     }
+  }
+  return result
+}
+
+const swshGiftKeys = new Set([
+  '6:810:0', '6:813:0', '6:816:0', '158:772:0', '40:848:0', '6:4:0',
+  '156:25:0', '156:133:0',
+  '196:1:0', '196:7:0', '196:137:0', '196:891:0',
+  '164:79:0', '164:722:0', '164:725:0', '164:728:0', '164:26:1',
+  '164:27:1', '164:37:1', '164:52:1', '164:103:1', '164:105:1', '164:50:1',
+  '206:789:0', '244:803:0',
+])
+
+const swshWeatherProperties = [
+  ['Heavy_Fog', 'weather-heavy-fog'],
+  ['Thunderstorm', 'weather-thunderstorm'],
+  ['Stormy', 'weather-rain'],
+  ['Raining', 'weather-rain'],
+  ['Intense_Sun', 'weather-intense-sun'],
+  ['Snowstorm', 'weather-snowstorm'],
+  ['Snowing', 'weather-snow'],
+  ['Sandstorm', 'weather-sandstorm'],
+  ['Overcast', 'weather-overcast'],
+  ['Icy', 'weather-snow'],
+  ['Normal', 'weather-normal'],
+]
+const isleDiglettGiftCounts = new Map([
+  ['52:1', 5], ['79:0', 10], ['37:1', 20], ['27:1', 30], ['26:1', 40],
+  ['105:1', 50], ['103:1', 75], ['722:0', 100], ['725:0', 100], ['728:0', 100],
+  ['50:1', 150],
+])
+
+function swshContentConditions(locationId) {
+  if (locationId >= 164 && locationId <= 202) return ['isle-of-armor', 'content-update-1.2.0', 'dlc-milestone-isle-access']
+  if (locationId >= 204 && locationId <= 246) return ['crown-tundra', 'content-update-1.3.0', 'dlc-milestone-crown-access']
+  return ['base-game', 'launch-version-1.0.0']
+}
+
+function swshStaticConditions(species, form, locationId, location, properties, method) {
+  const galarianLegendaryBird = [144, 145, 146].includes(species) && form === 1
+  const result = galarianLegendaryBird
+    ? ['crown-tundra', 'content-update-1.3.0', 'dlc-milestone-crown-legendary-clues']
+    : species === 79 && form === 1 && location === 'wedgehurst-station'
+    ? ['wedgehurst-station-preview', 'content-update-1.1.0', 'no-paid-dlc-required']
+    : swshContentConditions(locationId)
+  if ([810, 813, 816].includes(species)) result.push('choice-group-galar-starter')
+  const fossilParts = {
+    880: 'bird-and-drake',
+    881: 'bird-and-dino',
+    882: 'fish-and-drake',
+    883: 'fish-and-dino',
+  }
+  if (fossilParts[species]) {
+    result.push('fossil-restoration', `fossil-pair-${fossilParts[species]}`, 'resource-consumption-two-fossils')
+  }
+  if ([25, 133].includes(species) && locationId === 156) result.push('compatible-save-data-gift')
+  if ([1, 7].includes(species) && locationId === 196) {
+    result.push('choice-group-dojo-starter', 'dojo-first-trial-complete', 'dlc-milestone-isle-first-trial')
+  }
+  const diglettGiftCount = location === 'fields-of-honor' && method === 'gift'
+    ? isleDiglettGiftCounts.get(`${species}:${form}`)
+    : undefined
+  if (diglettGiftCount) {
+    result.push(`isle-diglett-found-${diglettGiftCount}`)
+    if (diglettGiftCount === 100) {
+      result.push('reward-matches-galar-starter', 'choice-group-galar-starter-reward')
+      if (species === 722) result.push('requires-galar-starter-810')
+      if (species === 725) result.push('requires-galar-starter-813')
+      if (species === 728) result.push('requires-galar-starter-816')
+    }
+  }
+  if ([896, 897].includes(species) && locationId === 220) {
+    result.push('choice-group-calyrex-steed', 'dlc-milestone-crown-calyrex-complete')
+  }
+  if (species === 891 && method === 'gift' && locationId >= 164 && locationId <= 202) {
+    result.push('dojo-trials-complete', 'dlc-milestone-isle-trials-complete')
+  }
+  if (species === 137 && method === 'gift' && locationId >= 164 && locationId <= 202) {
+    result.push('dojo-story-complete', 'dlc-milestone-isle-story-complete')
+  }
+  if ([894, 895].includes(species)) result.push('choice-group-regi-ruins', 'dlc-milestone-crown-legendary-clues')
+  if ([638, 639, 640].includes(species)) result.push('crown-tundra-footprints-100-percent', 'dlc-milestone-crown-legendary-clues')
+  if (galarianLegendaryBird) result.push('dyna-tree-roaming-quest', 'dlc-milestone-crown-legendary-clues')
+  if (species === 442 && locationId >= 204) result.push('talk-to-32-unique-online-players')
+  if (species === 486 && locationId >= 204) result.push('all-five-regis-in-party', 'opposite-regi-trade-required', 'dlc-milestone-crown-legendary-clues')
+  if (species === 647 && locationId >= 204) result.push('swords-of-justice-complete', 'cook-curry-with-trio', 'dlc-milestone-crown-legendary-clues')
+  if (species === 789 && locationId >= 204) result.push('calyrex-quest-complete', 'dlc-milestone-crown-calyrex-complete', 'postgame')
+  if (species === 803 && method === 'gift') result.push('catch-five-ultra-beasts', 'dlc-milestone-crown-ultra-beasts', 'postgame')
+  if ([772, 4].includes(species) && method === 'gift') result.push('postgame')
+  if ([888, 889].includes(species)) result.push('postgame')
+  if (/\bCanGigantamax\s*=\s*true\b/.test(properties)) result.push('gigantamax-capable')
+  if (species === 888) result.push('battle-form-rusted-sword')
+  if (species === 889) result.push('battle-form-rusted-shield')
+  if (species === 892) result.push('gigantamax-form-max-soup')
+  if (species === 898) result.push('fusion-form-reins-of-unity', 'steed-choice', 'dlc-milestone-crown-calyrex-complete', 'postgame')
+  for (const [property, condition] of swshWeatherProperties) {
+    if (new RegExp(`\\b${property}\\b`).test(properties)) result.push(condition)
+  }
+  return [...new Set(result)]
+}
+
+function parseSwshStaticSourceArray(source, name, games, locationNames) {
+  const rows = [...sourceArray(source, name).matchAll(/new\([^)]*\)\s*\{([^}]*)\}/g)].map((match) => {
+    const properties = match[1]
+    const number = (property, fallback = 0) => {
+      const value = new RegExp(`${property}\\s*=\\s*0*(\\d+)`).exec(properties)?.[1]
+      return value ? Number.parseInt(value, 10) : fallback
+    }
+    return {
+      species: number('Species'),
+      form: number('Form'),
+      level: number('Level'),
+      locationId: number('Location'),
+      crossoverLocationIds: /Crossover\s*=\s*new\(([^)]*)\)/.exec(properties)?.[1]
+        .split(',')
+        .map((value) => Number.parseInt(value.trim(), 10))
+        .filter(Number.isFinite) ?? [],
+      properties,
+    }
+  }).filter((row) => row.species && row.level && row.locationId)
+
+  return games.flatMap((game) => rows.flatMap((row) => [row.locationId, ...row.crossoverLocationIds].map((locationId) => {
+    const location = locationNames[locationId] || `galar-location-${locationId}`
+    const key = `${row.locationId}:${row.species}:${row.form}`
+    const method = [880, 881, 882, 883].includes(row.species)
+      ? 'fossil'
+      : swshGiftKeys.has(key)
+        ? 'gift'
+        : 'static'
+    return {
+      game,
+      row: encounter(
+        row.species,
+        row.form,
+        location,
+        `${slug(location)}-pkhex-${method}-${row.species}-${row.form}`,
+        row.level,
+        row.level,
+        method,
+        swshStaticConditions(row.species, row.form, locationId, slug(location), row.properties, method),
+      ),
+    }
+  })))
+}
+
+const swshTradeLocations = {
+  52: 'Turffield',
+  819: 'Motostoke',
+  546: 'Hulbury',
+  175: 'Hammerlocke',
+  856: 'Stow-on-Side',
+  859: 'Stow-on-Side',
+  562: 'Ballonlea',
+  538: 'Circhester',
+  539: 'Circhester',
+  122: 'Spikemuth',
+  884: 'Wyndon',
+}
+
+const swshRequestedTrades = {
+  52: 'meowth-galar',
+  819: 'bunnelby',
+  546: 'minccino',
+  175: 'toxel',
+  562: 'yamask-galar',
+  122: 'obstagoon',
+  884: 'frosmoth',
+  856: 'maractus',
+  859: 'maractus',
+  538: 'vanillish',
+  539: 'vanillish',
+}
+
+function parseSwshTradeSourceArray(source, name, games) {
+  return games.flatMap((game) =>
+    [...sourceArray(source, name).matchAll(/new\(([^)]*)\)\s*\{([^}]*)\}/g)].flatMap((match) => {
+      const args = match[1].split(',').map((value) => value.trim())
+      const sharedConstructor = args[1] === 'SWSH' || args[1] === 'SW' || args[1] === 'SH'
+      const speciesIndex = sharedConstructor ? 2 : 3
+      const species = Number.parseInt(args[speciesIndex], 10)
+      const level = Number.parseInt(args[speciesIndex + 1], 10)
+      if (!species || !level) return []
+      const form = Number.parseInt(/\bForm\s*=\s*(\d+)/.exec(match[2])?.[1] ?? '0', 10)
+      const isDlcTrade = match[1].includes('TradeOT_R1')
+      const location = isDlcTrade ? 'Fields of Honor' : swshTradeLocations[species] ?? 'Galar in-game trade'
+      const conditions = isDlcTrade
+        ? ['isle-of-armor', 'content-update-1.2.0', 'dlc-milestone-isle-access', 'regina-random-location', `requested-species-${species}`]
+        : ['base-game', 'launch-version-1.0.0', `requested-species-${swshRequestedTrades[species] ?? 'unresolved'}`]
+      return [{
+        game,
+        row: encounter(
+          species,
+          form,
+          location,
+          `${slug(location)}-pkhex-trade-${species}-${form}`,
+          level,
+          level,
+          'npc-trade',
+          conditions,
+        ),
+      }]
+    }))
+}
+
+const swordDynamaxAdventureExclusives = new Set([250, 381, 383, 483, 641, 643, 716, 791])
+const shieldDynamaxAdventureExclusives = new Set([249, 380, 382, 484, 642, 644, 717, 792])
+const dynamaxAdventureUltraBeasts = new Set([793, 794, 795, 796, 797, 798, 799, 803, 805, 806])
+
+function parseSwshDynamaxAdventures(buffer, game) {
+  const result = []
+  for (let offset = 0; offset + 13 < buffer.length; offset += 14) {
+    const species = buffer.readUInt16LE(offset)
+    const form = buffer[offset + 2]
+    const level = buffer[offset + 3]
+    const oppositeExclusive = game === 'sword'
+      ? shieldDynamaxAdventureExclusives.has(species)
+      : swordDynamaxAdventureExclusives.has(species)
+    result.push(encounter(
+      species,
+      form,
+      'Max Lair',
+      `max-lair-${species}-${form}`,
+      level,
+      level,
+      'dynamax-adventure',
+      [
+        'crown-tundra',
+        'content-update-1.3.0',
+        'dlc-milestone-crown-access',
+        'rental-team',
+        ...(level === 70 ? ['one-catch-per-legendary'] : []),
+        ...(dynamaxAdventureUltraBeasts.has(species) ? ['ultra-beast-clue-complete'] : []),
+        ...(oppositeExclusive ? ['multiplayer-opposite-version-host'] : ['native-version-path']),
+        ...(buffer[offset + 13] !== 0 ? ['gigantamax-capable'] : []),
+      ],
+    ))
   }
   return result
 }
@@ -629,6 +853,7 @@ const [
   xyStaticSource,
   orasStaticSource,
   xyAreaSource,
+  swshStaticSource,
 ] = await Promise.all([
   fetchText('text/locations/gen6/text_xy_00000_en.txt').then(names),
   fetchText('text/locations/gen7/text_sm_00000_en.txt').then(names),
@@ -640,6 +865,7 @@ const [
   fetchCode('Legality/Encounters/Data/Gen6/Encounters6XY.cs'),
   fetchCode('Legality/Encounters/Data/Gen6/Encounters6AO.cs'),
   fetchCode('Legality/Encounters/Templates/Gen6/EncounterArea6XY.cs'),
+  fetchCode('Legality/Encounters/Data/Gen8/Encounters8.cs'),
 ])
 const nestLocations = parseNestLocations(nestSource)
 const inaccessibleNests = parseInaccessibleNests(nestSource)
@@ -647,6 +873,15 @@ const inaccessibleNests = parseInaccessibleNests(nestSource)
 const rowsByGame = {}
 const xySpecial = parseXySpecialEncounters(xyStaticSource, xyAreaSource, gen6Names)
 const orasSpecial = parseOrasSpecialEncounters(orasStaticSource, gen6Names)
+const swshSpecial = [
+  ...parseSwshStaticSourceArray(swshStaticSource, 'StaticSWSH', ['sword', 'shield'], galarNames),
+  ...parseSwshStaticSourceArray(swshStaticSource, 'StaticSW', ['sword'], galarNames),
+  ...parseSwshStaticSourceArray(swshStaticSource, 'StaticSH', ['shield'], galarNames),
+  ...parseSwshTradeSourceArray(swshStaticSource, 'TradeSWSH', ['sword', 'shield']),
+  ...parseSwshTradeSourceArray(swshStaticSource, 'TradeSW', ['sword']),
+  ...parseSwshTradeSourceArray(swshStaticSource, 'TradeSH', ['shield']),
+]
+const swshDynamaxAdventures = await fetchBytes('legality/wild/Gen8/encounter_swsh_underground.pkl')
 for (const game of ['x', 'y', 'omega-ruby', 'alpha-sapphire']) {
   const [wild] = await Promise.all(sources[game].map(fetchBytes))
   const special = game === 'x'
@@ -664,11 +899,17 @@ for (const game of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
 }
 for (const game of ['sword', 'shield']) {
   const [hidden, symbol, raids] = await Promise.all(sources[game].map(fetchBytes))
-  rowsByGame[game] = deduplicate([
+  const swshRows = [
     ...parseSwsh(hidden, galarNames, false),
     ...parseSwsh(symbol, galarNames, true),
     ...parseSwshRaids(raids, galarNames, nestLocations, inaccessibleNests),
-  ])
+    ...parseSwshDynamaxAdventures(swshDynamaxAdventures, game),
+    ...swshSpecial.filter((entry) => entry.game === game).map((entry) => entry.row),
+  ]
+  rowsByGame[game] = deduplicate(swshRows.flatMap((row) =>
+    [592, 593].includes(row.species) && row.form === 0
+      ? [row, { ...row, form: 1, area: `${row.area}-female-form` }]
+      : [row]))
 }
 for (const game of ['brilliant-diamond', 'shining-pearl']) {
   const buffers = await Promise.all(sources[game].map(fetchBytes))
@@ -707,6 +948,26 @@ await writeFile(
       revision: pkhexRevision,
       license: 'GPL-3.0-or-later',
       files: [...new Set(inputFiles)].sort(),
+      authoredReachability: {
+        reviewedAt: '2026-09-12',
+        references: [
+          {
+            url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_Sword_and_Shield&oldid=4489916',
+            revision: '4489916',
+            use: 'reference-only story, DLC access and task cross-check',
+          },
+          {
+            url: 'https://bulbapedia.bulbagarden.net/wiki/Dynamax_Adventure',
+            reviewedAt: '2026-09-12',
+            use: 'reference-only Max Lair catch, rental, version-host and Ultra Beast rules',
+          },
+          {
+            url: 'https://www.serebii.net/swordshield/isleofarmordiglett.shtml',
+            reviewedAt: '2026-09-12',
+            use: 'reference-only Isle of Armor Diglett reward thresholds',
+          },
+        ],
+      },
       notes: [
         'X/Y and Omega Ruby/Alpha Sapphire slots preserve form, source-area, slot and disjoint level ranges from separate version resources; PKHeX Standard slots are retained as wild-unspecified because the resource does not distinguish grass, cave, surf and fishing methods.',
         'X/Y code-defined static, gift, fossil, in-game trade and Friend Safari tables are normalized from the pinned PKHeX source; unresolved fossil origin and calendar or postgame prerequisites remain explicit conditions.',
@@ -714,14 +975,16 @@ await writeFile(
         'Sun/Moon and Ultra Sun/Ultra Moon preserve separate version resources, forms, level ranges and SOS identity; ordinary Gen 7 slots are labeled wild-unspecified because the resource does not encode grass, cave, surf or fishing as distinct methods.',
         'Gen 7 code-defined static, gift, fossil, in-game trade, Island Scan/QR and Ultra Space tables are not included until their story prerequisites can be normalized without inference.',
         'Sword/Shield weather, method and level ranges are decoded from separate version resources.',
-        'Sword/Shield base-game raid dens preserve den subarea, star rank, badge gate and level range.',
-        'Sword/Shield base-game starters, fossils, Toxel, Type: Null and story legendaries are transcribed from the pinned PKHeX static table.',
+        'Sword/Shield base-game, Isle of Armor and Crown Tundra raid dens preserve den subarea, star rank, badge gate and level range.',
+        'Sword/Shield code-defined static, gift, fossil and in-game trade tables are normalized from the pinned PKHeX source with explicit base-game, Isle of Armor 1.2.0 and Crown Tundra 1.3.0 scope.',
+        'Sword/Shield Max Lair rows preserve rental-team access, one-catch legendary rules, opposite-version host paths and the post-clue Ultra Beast unlock; temporal distribution dens are intentionally excluded from permanent availability.',
+        'Independently authored reachability conditions cover Wedgehurst Slowpoke, Isle of Armor Diglett rewards, Crown Tundra footprints, roaming birds, Spiritomb, Regigigas, Keldeo, Cosmog and Poipole and are cross-checked against the reference-only URLs above.',
         'BDSP overworld level ranges are decoded from separate version resources.',
         'BDSP grass pools, Grand Underground, Trophy Garden and Great Marsh rows are excluded because the pinned encounter resource does not distinguish story, swarm, Poké Radar and National Pokédex gates.',
         'Scarlet/Violet base-Paldea wild slots are decoded from the shared resource and filtered by reviewed version exclusives.',
         'Concrete species forms are preserved exactly; PKHeX dynamic form sentinels are normalized to base form with explicit form-region-dependent or form-random conditions.',
         'Snapshot keys are stable planner game IDs, not PokéAPI or PKHeX numeric version identifiers.',
-        'DLC areas are excluded from base-game credits timing.',
+        'DLC rows retain explicit content-update conditions so optional Isle of Armor and Crown Tundra timing is not conflated with the base-game credits path.',
       ],
     },
     games: rowsByGame,

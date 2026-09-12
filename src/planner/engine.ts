@@ -1,6 +1,8 @@
 import { evolutionText, generationLineage, getAvailability, speciesByDex, speciesCatalog } from './catalog'
-import { getBosses, getFamily } from './games'
+import { getGen8DefaultFormProfile, getGen8FormProfile, getGen8FormProfileByIdentifier } from './gen8Forms'
+import { getBosses, getFamily, getMainStoryChapterCount } from './games'
 import { getLegalMoves, moveExistsInGeneration, type LegalMove } from './learnsets'
+import { getMoveAcquisition } from './moveResources'
 import { isStrongAgainst, typeCategory, weaknesses } from './typeChart'
 import type {
   CatalogSpecies,
@@ -45,7 +47,11 @@ const preFairyTypes: Record<number, string[]> = {
   303: ['steel'], 439: ['psychic'], 546: ['grass'], 547: ['grass'],
 }
 
-export function speciesTypes(species: CatalogSpecies, generation: number): string[] {
+export function speciesTypes(species: CatalogSpecies, generation: number, game?: GameConfig): string[] {
+  if (game) {
+    const formTypes = getAvailability(species, game).formTypes
+    if (formTypes?.length) return formTypes
+  }
   if (generation <= 5 && species.types.includes('fairy')) return preFairyTypes[species.dex] ?? species.types.filter((type) => type !== 'fairy')
   if (generation === 1 && (species.dex === 81 || species.dex === 82)) return ['electric']
   return species.types
@@ -53,6 +59,15 @@ export function speciesTypes(species: CatalogSpecies, generation: number): strin
 
 export function speciesIcon(species: CatalogSpecies, generation = 5): string {
   return typeEmoji[speciesTypes(species, generation)[0]] ?? '◉'
+}
+
+export function speciesDisplayName(species: CatalogSpecies, game: GameConfig): string {
+  const availability = getAvailability(species, game)
+  if (availability.formChoices?.length) {
+    return `${species.name} (${availability.formChoices.map((choice) => choice.formName ?? choice.formIdentifier).join('/')})`
+  }
+  const formName = availability.formName
+  return formName ? `${species.name} (${formName})` : species.name
 }
 
 export function effectiveChapter(species: CatalogSpecies, game: GameConfig): number {
@@ -64,7 +79,25 @@ function legalMovesForLineage(species: CatalogSpecies, game: GameConfig, include
   learnedBy: CatalogSpecies
 }[] {
   const stages = includeAncestors ? generationLineage(species, game.generation) : [species]
-  return stages.flatMap((learnedBy) => getLegalMoves(learnedBy, game).map((move) => ({ move, learnedBy })))
+  const availability = getAvailability(species, game)
+  return stages.flatMap((learnedBy) => {
+    const inheritedFormIndex = learnedBy.dex === species.dex
+      ? availability.formIndex
+      : availability.sourceFormIndex
+    const formIdentifier = learnedBy.dex === species.dex
+      ? availability.formIdentifier
+      : getGen8FormProfile(learnedBy.dex, inheritedFormIndex)?.identifier
+        ?? getGen8DefaultFormProfile(learnedBy.dex)?.identifier
+    const moves = getLegalMoves(learnedBy, game, formIdentifier)
+    if (learnedBy.dex !== species.dex || !availability.formChoices?.length) {
+      return moves.map((move) => ({ move, learnedBy }))
+    }
+    const legalInEveryForm = availability.formChoices
+      .map((choice) => new Set(getLegalMoves(learnedBy, game, choice.formIdentifier).map((move) => move.id)))
+    return moves
+      .filter((move) => legalInEveryForm.every((moveIds) => moveIds.has(move.id)))
+      .map((move) => ({ move, learnedBy }))
+  })
 }
 
 export function isMoveLegalForSpecies(species: CatalogSpecies, game: GameConfig, moveId: string): boolean {
@@ -114,7 +147,7 @@ export function validateRequired(
     }
     const availability = getAvailability(species, game)
     const modifiedStarter = Boolean(challengeType && index === 0)
-    if (challengeType && !speciesTypes(species, game.generation).includes(challengeType)) {
+    if (challengeType && !speciesTypes(species, game.generation, game).includes(challengeType)) {
       errors.push(`${species.name}: ${typeKo[challengeType]} 타입 챌린지 조건과 맞지 않습니다.`)
     }
     if (modifiedStarter && species.generation > game.generation) {
@@ -145,6 +178,21 @@ export function validateRequired(
   for (const entries of groups.values()) {
     if (entries.length > 1) errors.push(`동시에 선택할 수 없는 입수 선택지입니다: ${entries.join(', ')}`)
   }
+  const chosen = dexes.map((dex) => speciesByDex.get(dex)).filter((entry): entry is CatalogSpecies => Boolean(entry))
+  const starterChainIds = new Set(
+    game.starters.map((dex) => speciesByDex.get(dex)?.chainId).filter((chainId): chainId is number => chainId !== undefined),
+  )
+  const selectedStarter = chosen.find((species) => starterChainIds.has(species.chainId))
+  for (const species of chosen) {
+    const requiredStarterDex = getAvailability(species, game).requiredStarterDex
+    if (requiredStarterDex) {
+      if (!selectedStarter) {
+        errors.push(`${species.name}: 디그다 보상에 대응하는 가라르 스타팅을 함께 선택해야 합니다.`)
+      } else if (selectedStarter.chainId !== speciesByDex.get(requiredStarterDex)?.chainId) {
+        errors.push(`${species.name}: 선택한 가라르 스타팅 ${selectedStarter.name}의 디그다 보상과 일치하지 않습니다.`)
+      }
+    }
+  }
   if (challengeType && challengeStarter) {
     const count = challengeCandidateCount(game, preferences, challengeType, challengeStarter.dex)
     if (count < 6) warnings.push(`${typeKo[challengeType]} 타입의 개조 스타팅과 실제 입수 가능한 서로 다른 진화 계열을 합쳐 ${count}개라 ${count}인 파티로 생성됩니다.`)
@@ -152,16 +200,21 @@ export function validateRequired(
   return { errors, warnings }
 }
 
-function statTotal(species: CatalogSpecies): number {
-  return Object.values(species.stats).reduce((sum, value) => sum + value, 0)
+function statsFor(species: CatalogSpecies, game: GameConfig): Record<string, number> {
+  return getAvailability(species, game).formStats ?? species.stats
 }
 
-function memberRole(species: CatalogSpecies): string {
-  const attack = species.stats['2'] ?? 0
-  const defense = species.stats['3'] ?? 0
-  const specialAttack = species.stats['4'] ?? 0
-  const specialDefense = species.stats['5'] ?? 0
-  const speed = species.stats['6'] ?? 0
+function statTotal(species: CatalogSpecies, game: GameConfig): number {
+  return Object.values(statsFor(species, game)).reduce((sum, value) => sum + value, 0)
+}
+
+function memberRole(species: CatalogSpecies, game: GameConfig): string {
+  const stats = statsFor(species, game)
+  const attack = stats['2'] ?? 0
+  const defense = stats['3'] ?? 0
+  const specialAttack = stats['4'] ?? 0
+  const specialDefense = stats['5'] ?? 0
+  const speed = stats['6'] ?? 0
   if (speed >= 100 && Math.max(attack, specialAttack) >= 90) return '고속 에이스'
   if (defense + specialDefense >= 190) return '내구형 안정축'
   if (attack > specialAttack + 20) return '물리 공격수'
@@ -186,7 +239,7 @@ function chapterForLevel(level: number, game: GameConfig): number {
     const levels = chapter.level.match(/\d+/g)?.map(Number) ?? []
     return (levels.at(-1) ?? 0) >= level
   })
-  return index >= 0 ? index + 1 : family.chapters.length
+  return index >= 0 ? Math.min(index + 1, getMainStoryChapterCount(game)) : getMainStoryChapterCount(game)
 }
 
 export function generatedMoves(
@@ -232,21 +285,57 @@ export function generatedMoves(
       isReminderOnly(move, learnedBy) ? effectiveChapter(species, game) : 1,
       isReminderOnly(move, learnedBy) ? family.moveReminder?.chapter ?? 1 : 1,
     )
+  const eggParentTiming = (move: LegalMove) => move.eggParentIdentifiers
+    ?.flatMap((identifier) => {
+      const profile = getGen8FormProfileByIdentifier(identifier)
+      const parent = profile ? speciesByDex.get(profile.speciesId) : undefined
+      if (!profile || !parent) return []
+      const availability = getAvailability(parent, game, profile.formIndex)
+      if (!availability.obtainable || availability.postgameOnly) return []
+      const parentMove = getLegalMoves(parent, game, identifier)
+        .filter((entry) => entry.id === move.id && entry.method !== 'egg')
+        .map((entry) => {
+          const acquisition = getMoveAcquisition(game, entry)
+          const chapter = entry.method === 'level'
+            ? Math.max(availability.dlcFinalChapter ?? availability.finalChapter, chapterForLevel(entry.level, game))
+            : Math.max(availability.dlcFinalChapter ?? availability.finalChapter, acquisition?.dlcChapter ?? acquisition?.chapter ?? getMainStoryChapterCount(game))
+          return { chapter, parent }
+        })
+        .sort((a, b) => a.chapter - b.chapter)[0]
+      return parentMove ? [parentMove] : []
+    })
+    .sort((a, b) => a.chapter - b.chapter)[0]
   const legal = legalMovesForLineage(species, game, includeAncestors)
     .filter(({ move, learnedBy }) => {
       const reminderOnly = isReminderOnly(move, learnedBy)
+      const acquisition = getMoveAcquisition(game, move)
       return move.generation <= game.generation
         && !excludedStoryMoves.has(move.id)
         && !requiresDelayedEvolution(move, learnedBy)
         && (!reminderOnly || Boolean(family.moveReminder))
+        && (move.method !== 'egg' || Boolean(eggParentTiming(move)))
+        && (move.method === 'level' || !['sword', 'shield'].includes(game.id) || (
+          Boolean(acquisition) && acquisition!.chapter <= getMainStoryChapterCount(game)
+        ))
     })
   const bestSource = new Map<string, (typeof legal)[number]>()
-  const sourceRank = { level: 3, machine: 2, tutor: 1 }
+  const sourceRank = { level: 4, machine: 3, tutor: 2, egg: 1 }
   for (const entry of legal) {
     const current = bestSource.get(entry.move.id)
     const bothLevelMoves = entry.move.method === 'level' && current?.move.method === 'level'
+    const entryAcquisition = getMoveAcquisition(game, entry.move)
+    const currentAcquisition = current ? getMoveAcquisition(game, current.move) : undefined
+    const entryChapter = entry.move.method === 'level'
+      ? levelChapter(entry.move, entry.learnedBy)
+      : Math.max(entryAcquisition?.chapter ?? getMainStoryChapterCount(game), entry.move.method === 'egg' ? eggParentTiming(entry.move)?.chapter ?? getMainStoryChapterCount(game) : 1)
+    const currentChapter = !current
+      ? Number.POSITIVE_INFINITY
+      : current.move.method === 'level'
+        ? levelChapter(current.move, current.learnedBy)
+        : Math.max(currentAcquisition?.chapter ?? getMainStoryChapterCount(game), current.move.method === 'egg' ? eggParentTiming(current.move)?.chapter ?? getMainStoryChapterCount(game) : 1)
     if (
       !current
+      || (['sword', 'shield'].includes(game.id) && entryChapter < currentChapter)
       || (bothLevelMoves && levelChapter(entry.move, entry.learnedBy) < levelChapter(current.move, current.learnedBy))
       || (bothLevelMoves && levelChapter(entry.move, entry.learnedBy) === levelChapter(current.move, current.learnedBy) && entry.move.level < current.move.level)
       || (!bothLevelMoves && sourceRank[entry.move.method] > sourceRank[current.move.method])
@@ -254,8 +343,8 @@ export function generatedMoves(
     ) bestSource.set(entry.move.id, entry)
   }
   const candidates = [...bestSource.values()]
-  const ownTypes = speciesTypes(species, game.generation)
-  const bosses = getBosses(game)
+  const ownTypes = speciesTypes(species, game.generation, game)
+  const bosses = getBosses(game).filter((entry) => entry.chapter <= getMainStoryChapterCount(game))
   const score = ({ move }: (typeof candidates)[number]) => {
     if (move.category === '변화') return usefulStatusMoves.has(move.id) ? 75 : 12
     const stab = ownTypes.includes(move.type) ? 45 : 0
@@ -282,26 +371,37 @@ export function generatedMoves(
   }
   return selected.slice(0, 4).map(({ move, learnedBy }) => {
     const reminderOnly = isReminderOnly(move, learnedBy)
+    const acquisition = getMoveAcquisition(game, move)
+    const eggParent = move.method === 'egg' ? eggParentTiming(move) : undefined
     const availableChapter = move.method === 'level'
       ? levelChapter(move, learnedBy)
-      : Math.max(acquisitionChapter, Math.ceil(family.chapters.length * .7))
+      : Math.max(acquisitionChapter, acquisition?.chapter ?? Math.ceil(getMainStoryChapterCount(game) * .7), eggParent?.chapter ?? 1)
     const source = move.method === 'level'
       ? move.level <= 1
         ? reminderOnly
           ? `${family.moveReminder!.location} 기술 떠올리기 · ${family.moveReminder!.cost}`
           : `${learnedBy.name} Lv.1 기술 목록`
         : `${learnedBy.name} Lv.${move.level} 자력 습득${learnedBy.dex !== species.dex ? ' 후 유지' : ''}`
-      : move.method === 'machine'
+      : acquisition
+        ? `${acquisition.source}${eggParent ? ` · ${eggParent.parent.name} 부모 계열에서 유전` : ''}`
+        : move.method === 'machine'
         ? `${move.machine ?? '기술머신'} 호환 확인됨`
         : `${learnedBy.name} 기술가르침 호환 확인됨`
     return {
       id: move.id,
       name: move.name,
       type: move.type,
-      category: move.category === '변화' ? '변화' : typeCategory(move.type, game.generation),
+      category: game.generation >= 4 ? move.category : typeCategory(move.type, game.generation),
       source,
       availableChapter,
-      quality: move.method === 'level' ? 'verified' : 'inferred',
+      resourceId: acquisition?.resourceId,
+      dlcMilestone: acquisition?.dlcMilestone,
+      dlcChapter: acquisition?.dlcChapter,
+      reusable: acquisition?.reusable,
+      repeatable: acquisition?.repeatable,
+      unitCost: acquisition?.unitCost,
+      currency: acquisition?.currency,
+      quality: move.method === 'level' || acquisition ? 'verified' : 'inferred',
     }
   })
 }
@@ -314,18 +414,20 @@ function scoreCandidate(
 ): { score: number; reason: string } {
   const family = getFamily(game)
   const availability = getAvailability(species, game)
-  const selectedTypes = new Set(selected.flatMap((member) => speciesTypes(member, game.generation)))
-  const candidateTypes = speciesTypes(species, game.generation)
+  const selectedTypes = new Set(selected.flatMap((member) => speciesTypes(member, game.generation, game)))
+  const candidateTypes = speciesTypes(species, game.generation, game)
   const newTypes = candidateTypes.filter((type) => !selectedTypes.has(type))
-  const availableBosses = getBosses(game).filter((bossEntry) => bossEntry.chapter >= effectiveChapter(species, game))
+  const availableBosses = getBosses(game).filter((bossEntry) =>
+    bossEntry.chapter <= getMainStoryChapterCount(game)
+    && bossEntry.chapter >= effectiveChapter(species, game))
   const bossWins = availableBosses.filter((bossEntry) =>
     candidateTypes.some((type) => bossEntry.types.some((bossType) => isStrongAgainst(type, bossType))),
   ).length
-  const selectedWeaknesses = selected.flatMap((member) => weaknesses(speciesTypes(member, game.generation), game.generation))
+  const selectedWeaknesses = selected.flatMap((member) => weaknesses(speciesTypes(member, game.generation, game), game.generation))
   const sharedWeaknesses = weaknesses(candidateTypes, game.generation).filter((weakness) => selectedWeaknesses.includes(weakness)).length
   const fieldContribution = family.fieldMoves.filter((move) => canLearnFieldMove(species, move, game)).length
-  const earlyScore = Math.max(0, family.chapters.length + 1 - availability.chapter) * 7
-  const statsScore = Math.min(22, statTotal(species) / 28)
+  const earlyScore = Math.max(0, getMainStoryChapterCount(game) + 1 - availability.chapter) * 7
+  const statsScore = Math.min(22, statTotal(species, game) / 28)
   const coverageScore = newTypes.length * 15 + bossWins * 5
   const hmScore = preferences.hmConvenience ? fieldContribution * 3 : 0
   const legendaryPenalty = species.legendary ? -8 : 0
@@ -383,18 +485,18 @@ function assignFieldMoves(members: GeneratedMember[], game: GameConfig, enabled:
 
 function coverage(members: GeneratedMember[], game: GameConfig): CoverageSummary {
   const family = getFamily(game)
-  const offensiveTypes = [...new Set(members.flatMap((member) => speciesTypes(member.species, game.generation)))]
+  const offensiveTypes = [...new Set(members.flatMap((member) => speciesTypes(member.species, game.generation, game)))]
   const weaknessCounts: Record<string, number> = {}
   for (const member of members) {
-    for (const weakness of weaknesses(speciesTypes(member.species, game.generation), game.generation)) {
+    for (const weakness of weaknesses(speciesTypes(member.species, game.generation, game), game.generation)) {
       weaknessCounts[weakness] = (weaknessCounts[weakness] ?? 0) + 1
     }
   }
-  const bosses = getBosses(game)
+  const bosses = getBosses(game).filter((entry) => entry.chapter <= getMainStoryChapterCount(game))
   const bossCovered = bosses.filter((bossEntry) =>
     members.some((member) =>
       (member.challengeStarter ? 1 : effectiveChapter(member.species, game)) <= bossEntry.chapter
-      && speciesTypes(member.species, game.generation).some((type) => bossEntry.types.some((bossType) => isStrongAgainst(type, bossType))),
+      && speciesTypes(member.species, game.generation, game).some((type) => bossEntry.types.some((bossType) => isStrongAgainst(type, bossType))),
     ),
   ).length
   const fieldMovesCovered = [...new Set(members.flatMap((member) => member.fieldMoves))]
@@ -445,12 +547,13 @@ function isEligibleCandidate(
 ): boolean {
   const availability = getAvailability(species, game)
   if (!availability.obtainable) return false
+  if (game.familyId === 'galar8' && availability.dlcChapter) return false
   if (hasFeasibleEvolution(species, game, preferences)) return false
   if (preferences.noTrade && availability.tradeRequired) return false
   if (!preferences.allowPostgame && availability.postgameOnly) return false
   if (!preferences.allowLegendary && (species.legendary || species.mythical)) return false
   if (new Set(legalMovesForLineage(species, game).map((entry) => entry.move.id)).size < 4) return false
-  return !challengeType || speciesTypes(species, game.generation).includes(challengeType)
+  return !challengeType || speciesTypes(species, game.generation, game).includes(challengeType)
 }
 
 export function challengeCandidateCount(
@@ -467,6 +570,16 @@ export function challengeCandidateCount(
     return getAvailability(species, game).mutuallyExclusiveGroup !== 'starter'
   })
   return new Set(candidates.map((species) => species.chainId)).size + (challengeStarter ? 1 : 0)
+}
+
+function satisfiesStarterDependency(species: CatalogSpecies, selected: CatalogSpecies[], game: GameConfig): boolean {
+  const requiredDex = getAvailability(species, game).requiredStarterDex
+  if (!requiredDex) return true
+  const starterChainIds = new Set(
+    game.starters.map((dex) => speciesByDex.get(dex)?.chainId).filter((chainId): chainId is number => chainId !== undefined),
+  )
+  const selectedStarter = selected.find((member) => starterChainIds.has(member.chainId))
+  return Boolean(selectedStarter) && selectedStarter!.chainId === speciesByDex.get(requiredDex)?.chainId
 }
 
 export function generateParty(game: GameConfig, preferences: PlannerPreferences, options: GenerateOptions): GeneratedPlan {
@@ -490,6 +603,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
     if (availability.mutuallyExclusiveGroup && selected.some((member) =>
       getAvailability(member, game).mutuallyExclusiveGroup === availability.mutuallyExclusiveGroup
     )) return false
+    if (!satisfiesStarterDependency(species, selected, game)) return false
     return true
   })
 
@@ -503,6 +617,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
         const group = getAvailability(species, game).mutuallyExclusiveGroup
         return !group || !selected.some((member) => getAvailability(member, game).mutuallyExclusiveGroup === group)
       })
+      .filter((species) => satisfiesStarterDependency(species, selected, game))
       .map((species) => ({ species, ...scoreCandidate(species, game, selected, preferences) }))
       .sort((a, b) => b.score - a.score || a.species.dex - b.species.dex)
     if (!ranked.length) break
@@ -543,7 +658,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
         : required.has(species.dex)
         ? `사용자가 선택한 ${challengeType ? `${typeKo[challengeType]} 챌린지 ` : ''}필수 포켓몬`
         : `${challengeType ? `${typeKo[challengeType]} 타입 조건 · ` : ''}${scored.reason}`,
-      role: memberRole(species),
+      role: memberRole(species, game),
       moves: generatedMoves(species, game, availability.chapter, !challengeStarter),
       fieldMoves: [],
     }
@@ -561,6 +676,23 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
   const shared = Object.entries(summary.weaknesses).filter(([, count]) => count >= 3)
   if (shared.length) warnings.push(`공통 약점 주의: ${shared.map(([type, count]) => `${typeKo[type]} ${count}마리`).join(', ')}`)
   if (game.generation <= 4) warnings.push('이 세대의 기술머신은 대부분 1회용입니다. 동일 TM을 여러 멤버에게 배정하기 전 저장 데이터를 확인하세요.')
+  const consumableResources = new Map<string, GeneratedMove[]>()
+  for (const move of members.flatMap((member) => member.moves)) {
+    if (!move.resourceId || move.reusable !== false) continue
+    consumableResources.set(move.resourceId, [...(consumableResources.get(move.resourceId) ?? []), move])
+  }
+  if (game.id === 'sword' || game.id === 'shield') {
+    const trMoves = [...consumableResources.entries()].filter(([resourceId]) => resourceId.startsWith('TR'))
+    const totalWatts = trMoves.reduce((sum, [, moves]) =>
+      sum + moves.reduce((subtotal, move) => subtotal + (move.unitCost ?? 0), 0), 0)
+    if (trMoves.length) {
+      warnings.push(`TR은 1회용이며 와트숍 재고가 매일 순환합니다. 이 플랜은 ${trMoves.reduce((sum, [, moves]) => sum + moves.length, 0)}개 복사본·총 ${totalWatts.toLocaleString('ko-KR')}W가 필요하며, 같은 TR은 필요한 수만큼 따로 구매하거나 레이드 보상으로 확보해야 합니다.`)
+    }
+    const armoriteCount = [...consumableResources.values()].flat()
+      .filter((move) => move.currency === '갑옷광석')
+      .reduce((sum, move) => sum + (move.unitCost ?? 0), 0)
+    if (armoriteCount) warnings.push(`갑옷섬 기술가르침 비용 합계: 갑옷광석 ${armoriteCount}개.`)
+  }
   const shortMovesets = members.filter((member) => member.moves.length < 4)
   if (shortMovesets.length) {
     warnings.push(`${shortMovesets.map((member) => member.species.name).join(', ')}은(는) 이 버전의 실현 가능한 스토리 기술 후보가 4개 미만입니다. 존재하지 않는 기술로 채우지 않았습니다.`)
@@ -577,7 +709,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
       challengeStarter: false,
       score: entry.score,
       reason: entry.reason,
-      role: memberRole(entry.species),
+      role: memberRole(entry.species, game),
       moves: generatedMoves(entry.species, game),
       fieldMoves: [],
     })

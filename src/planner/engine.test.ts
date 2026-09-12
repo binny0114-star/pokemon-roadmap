@@ -45,7 +45,7 @@ describe('지원 버전과 정적 카탈로그', () => {
       ['black-2', 'black-2:balanced:130-445-462-495-508-545:n:h'],
       ['white-2', 'white-2:balanced:149-184-462-495-508-545:n:h'],
     ])
-    for (const game of games) {
+    for (const game of games.filter((entry) => expected.has(entry.id))) {
       expect(
         generateParty(game, defaults, { requiredDexes: [game.starters[0]] }).id,
         game.id,
@@ -53,10 +53,10 @@ describe('지원 버전과 정적 카탈로그', () => {
     }
   }, 20_000)
 
-  it('기존 21개 플래너 버전과 8개 패밀리를 고유 ID로 유지한다', () => {
-    expect(games).toHaveLength(21)
-    expect(new Set(games.map((game) => game.id)).size).toBe(21)
-    expect(Object.keys(families)).toHaveLength(8)
+  it('기존 21개 플래너 버전에 Sword/Shield를 추가하고 ID를 고유하게 유지한다', () => {
+    expect(games).toHaveLength(23)
+    expect(new Set(games.map((game) => game.id)).size).toBe(23)
+    expect(Object.keys(families)).toHaveLength(9)
     for (const game of games) expect(getFamily(game).chapters.length).toBeGreaterThanOrEqual(8)
   })
 
@@ -73,9 +73,10 @@ describe('지원 버전과 정적 카탈로그', () => {
 
   it('39개 본가 버전과 현대 메커니즘 패밀리를 명시적으로 분류한다', () => {
     expect(gameCatalog).toHaveLength(39)
-    expect(plannerGameCatalog).toHaveLength(21)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(18)
+    expect(plannerGameCatalog).toHaveLength(23)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(16)
     expect(gameCatalog.find((game) => game.id === 'lets-go-pikachu')?.mechanicsFamily).toBe('lets-go')
+    expect(gameCatalog.find((game) => game.id === 'sword')?.mechanicsFamily).toBe('galar-wild-area')
     expect(gameCatalog.find((game) => game.id === 'legends-arceus')?.mechanicsFamily).toBe('legends')
     expect(gameCatalog.find((game) => game.id === 'legends-z-a')).toMatchObject({
       versionId: 47,

@@ -3,7 +3,6 @@ import {
   catalogVersionGroupIds,
   fetchCsv,
   fetchLegacyPlannerSnapshot,
-  plannerVersionGroupIds,
   provenance,
   registry,
 } from './pokeapi-source.mjs'
@@ -20,11 +19,17 @@ const files = [
   'move_changelog',
   'version_groups',
 ]
+const gen8FormFiles = ['pokemon_forms', 'pokemon_form_names', 'pokemon_types', 'pokemon_stats', 'pokemon_egg_groups']
 
 const [
   movesRows,
   namesRows,
   pokemonRows,
+  pokemonFormRows,
+  pokemonFormNameRows,
+  pokemonTypeRows,
+  pokemonStatRows,
+  pokemonEggGroupRows,
   speciesRows,
   pokemonMoveRows,
   machineRows,
@@ -34,7 +39,7 @@ const [
   versionGroupRows,
   legacyLearnsetSnapshot,
 ] = await Promise.all([
-  ...files.map(fetchCsv),
+  ...[...files.slice(0, 3), ...gen8FormFiles, ...files.slice(3)].map(fetchCsv),
   fetchLegacyPlannerSnapshot(registry.legacyPlannerSnapshot.learnsetsPath),
 ])
 
@@ -42,6 +47,13 @@ const maxNationalDex = 1025
 const versionGroups = new Set(catalogVersionGroupIds)
 const completeLegalityVersionGroups = new Set([15, 16, 17, 18])
 const gen8LegalityVersionGroups = new Set([19, 20, 23, 24])
+const legacyPlannerVersionGroupIds = [
+  ...new Set(
+    registry.games
+      .filter((game) => game.generation <= 5 && game.plannerSupport.status === 'full')
+      .map((game) => game.versionGroupId),
+  ),
+].sort((a, b) => a - b)
 const auditedLegalityVersionGroups = new Set([
   ...completeLegalityVersionGroups,
   ...gen8LegalityVersionGroups,
@@ -88,6 +100,75 @@ const pokemonById = new Map(
       isDefault: row.is_default === '1',
     }]),
 )
+const pokemonByIdentifier = new Map([...pokemonById.values()].map((pokemon) => [pokemon.identifier, pokemon]))
+const speciesGenderRate = new Map(speciesRows.map((row) => [Number(row.id), Number(row.gender_rate)]))
+const speciesChildren = new Map()
+for (const row of speciesRows) {
+  const parent = Number(row.evolves_from_species_id)
+  if (!parent) continue
+  const children = speciesChildren.get(parent) ?? []
+  children.push(Number(row.id))
+  speciesChildren.set(parent, children)
+}
+const eggGroupsBySpecies = new Map()
+for (const row of pokemonEggGroupRows) {
+  const speciesId = Number(row.species_id)
+  const groups = eggGroupsBySpecies.get(speciesId) ?? new Set()
+  groups.add(Number(row.egg_group_id))
+  eggGroupsBySpecies.set(speciesId, groups)
+}
+function breedingEggGroups(speciesId) {
+  const ownGroups = eggGroupsBySpecies.get(speciesId)
+  if (ownGroups && [...ownGroups].some((eggGroup) => eggGroup !== 15)) return ownGroups
+  let frontier = speciesChildren.get(speciesId) ?? []
+  const visited = new Set([speciesId])
+  while (frontier.length) {
+    const next = []
+    const result = new Set()
+    for (const descendant of frontier) {
+      if (visited.has(descendant)) continue
+      visited.add(descendant)
+      const groups = eggGroupsBySpecies.get(descendant)
+      for (const eggGroup of groups ?? []) if (eggGroup !== 15) result.add(eggGroup)
+      next.push(...(speciesChildren.get(descendant) ?? []))
+    }
+    if (result.size) return result
+    frontier = next
+  }
+  return ownGroups
+}
+const pokemonFormsByPokemonId = new Map()
+for (const row of pokemonFormRows) {
+  const pokemonId = Number(row.pokemon_id)
+  const forms = pokemonFormsByPokemonId.get(pokemonId) ?? []
+  forms.push({
+    formId: Number(row.id),
+    identifier: row.identifier,
+    formIndex: Math.max(0, Number(row.form_order) - 1),
+    isDefault: row.is_default === '1',
+    battleOnly: row.is_battle_only === '1',
+  })
+  pokemonFormsByPokemonId.set(pokemonId, forms)
+}
+const pokemonFormNames = new Map(
+  pokemonFormNameRows
+    .filter((row) => row.local_language_id === '3')
+    .map((row) => [Number(row.pokemon_form_id), row.form_name]),
+)
+const pokemonTypes = new Map()
+for (const row of pokemonTypeRows) {
+  const pokemonId = Number(row.pokemon_id)
+  const entries = pokemonTypes.get(pokemonId) ?? []
+  entries.push({ slot: Number(row.slot), type: types.get(Number(row.type_id)) })
+  pokemonTypes.set(pokemonId, entries)
+}
+const pokemonStats = new Map()
+for (const row of pokemonStatRows) {
+  const pokemonId = Number(row.pokemon_id)
+  const stats = pokemonStats.get(pokemonId) ?? {}
+  stats[row.stat_id] = Number(row.base_stat)
+  pokemonStats.set(pokemonId, stats)
+}
 const versionGroupGeneration = new Map(
   versionGroupRows.map((row) => [Number(row.id), Number(row.generation_id)]),
 )
@@ -163,6 +244,38 @@ for (const row of pokemonMoveRows) {
   usedMoveIds.add(moveId)
 }
 
+for (const versionGroup of gen8LegalityVersionGroups) {
+  const group = completeLegality[versionGroup] ?? {}
+  const providersByMove = new Map()
+  for (const [identifier, entries] of Object.entries(group)) {
+    const pokemon = pokemonByIdentifier.get(identifier)
+    if (!pokemon?.isDefault || speciesGenderRate.get(pokemon.speciesId) === -1 || speciesGenderRate.get(pokemon.speciesId) === 8) continue
+    for (const [moveId, source] of entries) {
+      if (source === 'egg') continue
+      const providers = providersByMove.get(moveId) ?? []
+      providers.push(identifier)
+      providersByMove.set(moveId, providers)
+    }
+  }
+  for (const [identifier, entries] of Object.entries(group)) {
+    const target = pokemonByIdentifier.get(identifier)
+    const targetGroups = target ? breedingEggGroups(target.speciesId) : undefined
+    if (!target || !targetGroups || speciesGenderRate.get(target.speciesId) <= 0 || targetGroups.has(15)) continue
+    for (const entry of entries) {
+      if (entry[1] !== 'egg') continue
+      const directParents = (providersByMove.get(entry[0]) ?? []).filter((parentIdentifier) => {
+        const parent = pokemonByIdentifier.get(parentIdentifier)
+        const parentGroups = parent ? eggGroupsBySpecies.get(parent.speciesId) : undefined
+        return parent
+          && parent.speciesId !== 132
+          && parentGroups
+          && [...targetGroups].some((eggGroup) => eggGroup !== 13 && eggGroup !== 15 && parentGroups.has(eggGroup))
+      })
+      entry.push([...new Set(directParents)].sort())
+    }
+  }
+}
+
 for (const group of Object.values(completeLegality)) {
   for (const entries of Object.values(group)) {
     entries.sort((a, b) => a[1].localeCompare(b[1]) || a[2] - b[2] || a[0] - b[0])
@@ -208,7 +321,7 @@ for (const versionGroup of catalogVersionGroupIds) {
   }
   versions[versionGroup] = overrides
 }
-for (const versionGroup of plannerVersionGroupIds) {
+for (const versionGroup of legacyPlannerVersionGroupIds) {
   learnsets[versionGroup] = legacyLearnsetSnapshot.learnsets[versionGroup] ?? {}
   versions[versionGroup] = legacyLearnsetSnapshot.versions[versionGroup] ?? {}
 }
@@ -241,7 +354,25 @@ const gen8PokemonForms = Object.fromEntries(
   [...pokemonById.values()]
     .filter((pokemon) => (speciesGeneration.get(pokemon.speciesId) ?? 99) <= 8)
     .sort((a, b) => a.pokemonId - b.pokemonId)
-    .map((pokemon) => [pokemon.identifier, pokemon]),
+    .flatMap((pokemon) => (pokemonFormsByPokemonId.get(pokemon.pokemonId) ?? [{
+      formId: 0,
+      identifier: pokemon.identifier,
+      formIndex: 0,
+      isDefault: true,
+      battleOnly: false,
+    }]).map((form) => [form.identifier, {
+        ...pokemon,
+        pokemonIdentifier: pokemon.identifier,
+        identifier: form.identifier,
+        isDefault: pokemon.isDefault && form.isDefault,
+        formIndex: form.formIndex,
+        formName: pokemonFormNames.get(form.formId) ?? null,
+        battleOnly: form.battleOnly,
+        types: (pokemonTypes.get(pokemon.pokemonId) ?? [])
+          .sort((a, b) => a.slot - b.slot)
+          .map((entry) => entry.type),
+        stats: pokemonStats.get(pokemon.pokemonId) ?? {},
+      }])),
 )
 
 await mkdir(new URL('../src/generated/', import.meta.url), { recursive: true })
@@ -316,7 +447,7 @@ await writeFile(
   new URL('../src/generated/gen8-legality.json', import.meta.url),
   `${JSON.stringify({
     source: `PokéAPI CSV @ ${registry.source.revision} (pokemon, pokemon_moves)`,
-    provenance: provenance(files),
+    provenance: provenance([...files, ...gen8FormFiles]),
     coverage: {
       versionGroupIds: [...gen8LegalityVersionGroups],
       pokemonByVersionGroup: gen8LegalityPokemonByVersionGroup,
@@ -324,7 +455,7 @@ await writeFile(
       policy: {
         identity: 'pokemon-identifier',
         rows: 'unfiltered-source-rows',
-        pkhexFormIndexMapping: 'not-normalized',
+        pkhexFormIndexMapping: 'pokeapi-form-order',
         acquisitionTiming: 'not-ingested',
         resourceConsumption: 'not-ingested',
         masteryAndStyles: 'not-ingested',
@@ -340,6 +471,13 @@ await writeFile(
         completeLegality[versionGroup] ?? {},
       ]),
     ),
+  })}\n`,
+)
+await writeFile(
+  new URL('../src/generated/gen8-form-profiles.json', import.meta.url),
+  `${JSON.stringify({
+    provenance: provenance([...files, ...gen8FormFiles]),
+    pokemonForms: gen8PokemonForms,
   })}\n`,
 )
 console.log(`Generated ${Object.keys(moveData).length} moves across ${Object.keys(learnsets).length} version groups.`)

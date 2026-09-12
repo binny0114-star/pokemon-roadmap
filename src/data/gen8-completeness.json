@@ -122,11 +122,9 @@
             },
             {
               "id": "dlc-and-distribution-scope",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex"],
-              "evidence": "PKHeX provides distribution and DLC-era legality resources, but the current normalized snapshot excludes Isle of Armor and Crown Tundra areas and does not pin an in-game update/content revision per row.",
-              "missingFields": ["content-update-version", "isle-of-armor-chapter", "crown-tundra-chapter", "dlc-static-gift-trade-completeness"],
-              "attemptedAlternatives": ["PKHeX encounter_sw_dist/encounter_sh_dist", "PKHeX Encounters8 static tables", "PokéAPI DLC version IDs 35/36/50/51"]
+              "evidence": "Pinned PKHeX Isle of Armor and Crown Tundra wild, symbol, permanent den, static, gift, fossil and in-game trade rows are normalized with update 1.2.0/1.3.0, DLC access, catch-cap, water-bike and weather conditions. Wedgehurst Slowpoke is separately pinned to the free 1.1.0 preview. Temporal distribution dens are excluded from permanent availability. Max Lair rows preserve form, rental-team access, one-catch legendary scope and opposite-version host requirements."
             }
           ]
         },
@@ -134,11 +132,9 @@
           "requirements": [
             {
               "id": "galar-and-dlc-forms",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "Encounter and learnset sources preserve form indices, but the planner runtime cannot distinguish Galarian, Gigantamax, Urshifu or Calyrex fusion forms.",
-              "missingFields": ["runtime-form-types", "runtime-form-stats", "gigantamax-eligibility", "fusion-form-identity"],
-              "attemptedAlternatives": ["PokéAPI pokemon forms", "PKHeX personal_swsh"]
+              "evidence": "Form-indexed encounters and learnsets resolve through the pinned PokéAPI form profile to Korean name, type and stats. Battle-only profiles remain explicitly marked; Gigantamax eligibility and the Rusted Sword/Shield, Max Soup, Urshifu and Reins of Unity choice/form-change rules are preserved separately from persistent party identity."
             }
           ]
         },
@@ -146,11 +142,9 @@
           "requirements": [
             {
               "id": "level-egg-tm-tr-tutor",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX LearnSource8SWSH distinguishes level, shared egg, TM, consumable TR, type tutor, special tutor and form moves, but neither pinned legality source maps TM/TR/tutors to exact story, Watt vendor rotation, raid drop or DLC chapters.",
-              "missingFields": ["tm-acquisition-chapter", "tr-watt-vendor-rotation", "tr-raid-drop-source", "tutor-dlc-chapter", "resource-consumption"],
-              "attemptedAlternatives": ["PokéAPI groups 20-22 move rows", "PKHeX LearnSource8SWSH, lvlmove_swsh, eggmove_swsh and personal_swsh"]
+              "evidence": "Pinned game-specific legality distinguishes level, egg, reusable TM, consumable TR and tutor moves per form. The authored acquisition table maps all 100 TMs to locations/chapters, all 100 TRs to exact Watt cost and daily rotation, base tutors to story chapters, and 18 Armorite tutors to the first dojo trial and five-Ore repeat cost. Probabilistic raid rewards are disclosed but never used to advance deterministic move timing; duplicate TR/tutor copies produce resource-conflict warnings."
             }
           ]
         },
@@ -158,11 +152,9 @@
           "requirements": [
             {
               "id": "galar-evolution-reachability",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "Evolution source conditions exist, but exact earliest weather, location, friendship, item, move, spin, damage and regional-form reachability is not normalized to base-game and DLC chapters.",
-              "missingFields": ["weather-evolution-chapter", "item-acquisition-chapter", "location-evolution-chapter", "trade-alternative", "dlc-evolution-scope"],
-              "attemptedAlternatives": ["PokéAPI evolution chains", "PKHeX evos_ss"]
+              "evidence": "Game-specific evolution selection preserves level, friendship/time, held item, trade, known move, gender/stat, spin, three-critical-hit, 49-damage arch and regional-form rules. Authored item and location milestones cover all base and DLC evolution items, including one-of apple/tower/steed paths and the daily rotating Chipped Pot source."
             }
           ]
         },
@@ -176,11 +168,9 @@
             },
             {
               "id": "dlc-chronology",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["bulbapedia"],
-              "evidence": "Useful DLC endpoints are named, but mandatory Isle of Armor and Crown Tundra branches, level scaling and access prerequisites are not represented as machine-enforced chapters.",
-              "missingFields": ["dlc-mandatory-boss-order", "dlc-level-scaling", "dlc-access-prerequisites"],
-              "attemptedAlternatives": ["Bulbapedia Sword/Shield walkthrough", "existing postgame notes"]
+              "evidence": "Machine-enforced chapters split Isle entry, three trials, single Tower choice, Max Honey epilogue, Crown entry, Max Lair, Calyrex/steed choice, legendary clues and Galarian Star Tournament. Boss rows carry version branches, one-of groups, level scaling and win-required semantics."
             }
           ]
         },
@@ -198,11 +188,9 @@
           "requirements": [
             {
               "id": "full-planner-contract",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pokeapi", "pkhex"],
-              "evidence": "Story and partial encounter preview are integrated, but forms, DLC scope, TR resources and evolution timing prevent safe six-member/four-move generation and persistence promotion.",
-              "missingFields": ["form-aware-six-member-generation", "four-move-resource-conflicts", "dlc-progress-key", "unsupported-fallback-proof"],
-              "attemptedAlternatives": ["existing classic planner engine", "modern preview engine"]
+              "evidence": "Sword and Shield run through canonical six-member generation, form-aware four-move legality and Korean roadmaps. Reusable TM versus consumable TR/Ore conflicts are explicit, DLC chapters retain stable IDs, unsupported games still fail closed, and pokemon-roadmap:v3 persistence remains unchanged."
             }
           ]
         }
@@ -248,9 +236,9 @@
               "id": "level-egg-tm-tutor-reminder",
               "status": "blocked",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX LearnSource8BDSP distinguishes level-up, shared egg, reusable TM and tutor/form moves; pinned sources do not map every TM, tutor and move-reminder rule to exact acquisition chapters.",
-              "missingFields": ["tm-acquisition-chapter", "tutor-acquisition-chapter", "move-reminder-chapter", "move-reminder-cost"],
-              "attemptedAlternatives": ["PokéAPI group 23 move rows", "PKHeX LearnSource8BDSP, lvlmove_bdsp, eggmove_bdsp and personal_bdsp"]
+              "evidence": "PKHeX LearnSource8BDSP distinguishes level-up, shared egg, consumable TM and tutor/form moves; pinned sources do not map every TM, tutor and move-reminder rule to exact acquisition chapters or prove enough obtainable TM copies for duplicate recommendations.",
+              "missingFields": ["tm-acquisition-chapter", "tm-copy-quantity", "tm-resource-conflicts", "tutor-acquisition-chapter", "move-reminder-chapter", "move-reminder-cost"],
+              "attemptedAlternatives": ["PokéAPI group 23 move rows omit item quantities and acquisition locations", "PKHeX LearnSource8BDSP, lvlmove_bdsp, eggmove_bdsp and personal_bdsp provide legality but not story-time copy counts"]
             }
           ]
         },
@@ -295,7 +283,7 @@
               "status": "blocked",
               "sourceRefs": ["pokeapi", "pkhex"],
               "evidence": "The mechanics-aware preview is integrated, but conditional encounter pools, forms, move acquisition timing and evolution reachability prevent safe planner promotion.",
-              "missingFields": ["conditional-pool-fallback", "form-aware-six-member-generation", "four-move-acquisition-timing", "planner-progress-contract"],
+              "missingFields": ["conditional-pool-fallback", "form-aware-six-member-generation", "four-move-acquisition-timing", "four-move-resource-conflicts", "planner-progress-contract"],
               "attemptedAlternatives": ["existing Sinnoh classic planner family", "modern preview engine"]
             }
           ]

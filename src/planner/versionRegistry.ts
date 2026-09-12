@@ -96,6 +96,143 @@ type CompletenessManifest = {
   }>
 }
 
+type Gen8GateContract = Record<string, Record<AccuracyGateId, {
+  requirementIds: string[]
+  sourceCategories: string[]
+}>>
+
+const gen8GateContract: Gen8GateContract = {
+  letsgo7: {
+    availability: {
+      requirementIds: ['wild-static-gift-trade'],
+      sourceCategories: ['wild', 'overworld', 'static', 'gift', 'trade', 'catch-combo'],
+    },
+    forms: {
+      requirementIds: ['partner-and-alolan-forms'],
+      sourceCategories: [],
+    },
+    learnsets: {
+      requirementIds: ['level-tm-tutor-reminder'],
+      sourceCategories: ['level-up', 'tm', 'tutor', 'reminder'],
+    },
+    evolutions: {
+      requirementIds: ['letsgo-evolution-reachability'],
+      sourceCategories: ['evolution'],
+    },
+    story: {
+      requirementIds: ['mandatory-chronology'],
+      sourceCategories: ['story'],
+    },
+    mechanics: {
+      requirementIds: ['secret-techniques'],
+      sourceCategories: ['secret-techniques'],
+    },
+    integration: {
+      requirementIds: ['full-planner-contract'],
+      sourceCategories: [],
+    },
+  },
+  galar8: {
+    availability: {
+      requirementIds: ['base-wild-symbol-raid', 'dlc-and-distribution-scope'],
+      sourceCategories: [
+        'wild-hidden', 'overworld-symbol', 'raid', 'static', 'gift', 'egg', 'fossil', 'trade',
+        'weather', 'badges', 'bike', 'isle-of-armor', 'crown-tundra',
+      ],
+    },
+    forms: {
+      requirementIds: ['galar-and-dlc-forms'],
+      sourceCategories: [],
+    },
+    learnsets: {
+      requirementIds: ['level-egg-tm-tr-tutor'],
+      sourceCategories: ['level-up', 'tm', 'tr', 'tutor', 'reminder'],
+    },
+    evolutions: {
+      requirementIds: ['galar-evolution-reachability'],
+      sourceCategories: ['evolution'],
+    },
+    story: {
+      requirementIds: ['base-game-mandatory-chronology', 'dlc-chronology'],
+      sourceCategories: ['story'],
+    },
+    mechanics: {
+      requirementIds: ['bike-weather-badges-raids'],
+      sourceCategories: [],
+    },
+    integration: {
+      requirementIds: ['full-planner-contract'],
+      sourceCategories: [],
+    },
+  },
+  sinnoh8: {
+    availability: {
+      requirementIds: ['overworld-static', 'conditional-and-underground-pools'],
+      sourceCategories: [
+        'wild', 'overworld', 'static', 'gift', 'egg', 'fossil', 'trade', 'grand-underground',
+        'swarm', 'poke-radar', 'great-marsh', 'trophy-garden',
+      ],
+    },
+    forms: {
+      requirementIds: ['sinnoh-forms'],
+      sourceCategories: [],
+    },
+    learnsets: {
+      requirementIds: ['level-egg-tm-tutor-reminder'],
+      sourceCategories: ['level-up', 'tm', 'tutor', 'reminder'],
+    },
+    evolutions: {
+      requirementIds: ['bdsp-evolution-reachability'],
+      sourceCategories: ['evolution'],
+    },
+    story: {
+      requirementIds: ['mandatory-chronology'],
+      sourceCategories: ['story'],
+    },
+    mechanics: {
+      requirementIds: ['poketch-hidden-moves'],
+      sourceCategories: ['poketch-hidden-moves'],
+    },
+    integration: {
+      requirementIds: ['full-planner-contract'],
+      sourceCategories: [],
+    },
+  },
+  hisui8: {
+    availability: {
+      requirementIds: ['field-static-outbreak-distortion-task'],
+      sourceCategories: [
+        'field', 'overworld', 'static', 'gift', 'outbreak', 'space-time-distortion',
+        'request', 'research-rank', 'research-task', 'alpha',
+      ],
+    },
+    forms: {
+      requirementIds: ['hisui-and-alpha-forms'],
+      sourceCategories: [],
+    },
+    learnsets: {
+      requirementIds: ['level-shop-mastery-styles'],
+      sourceCategories: ['level-up', 'move-shop', 'mastery'],
+    },
+    evolutions: {
+      requirementIds: ['pla-evolution-reachability'],
+      sourceCategories: ['evolution'],
+    },
+    story: {
+      requirementIds: ['mandatory-chronology'],
+      sourceCategories: ['story'],
+    },
+    mechanics: {
+      requirementIds: ['survey-rank-rides-styles'],
+      sourceCategories: ['research-rank', 'ride', 'styles'],
+    },
+    integration: {
+      requirementIds: ['full-planner-contract'],
+      sourceCategories: [],
+    },
+  },
+}
+
 const gen67GatedGameIds = new Set([
   'x', 'y', 'omega-ruby', 'alpha-sapphire',
   'sun', 'moon', 'ultra-sun', 'ultra-moon',
@@ -177,6 +314,29 @@ function validateScopedCompletenessManifest(
     || [...targetGameIds].some((gameId) => !coveredGames.has(gameId))
   ) {
     throw new Error(`${scope} 완전성 매니페스트가 모든 대상 게임을 포함하지 않습니다.`)
+  }
+  if (scope === '8세대 계열') {
+    const familyIds = Object.keys(manifest.families).sort()
+    if (familyIds.join(',') !== Object.keys(gen8GateContract).sort().join(',')) {
+      throw new Error(`${scope} 필수 패밀리 계약이 올바르지 않습니다.`)
+    }
+    for (const [familyId, gateContract] of Object.entries(gen8GateContract)) {
+      const family = manifest.families[familyId]
+      for (const gateId of requiredAccuracyGates) {
+        const actualIds = family.gates[gateId].requirements.map((requirement) => requirement.id).sort()
+        const expectedIds = [...gateContract[gateId].requirementIds].sort()
+        if (actualIds.join(',') !== expectedIds.join(',')) {
+          throw new Error(`${scope} 필수 요구사항 계약이 올바르지 않습니다: ${familyId}/${gateId}`)
+        }
+      }
+      const expectedCategories = [...new Set(
+        requiredAccuracyGates.flatMap((gateId) => gateContract[gateId].sourceCategories),
+      )].sort()
+      const actualCategories = [...(family.requiredSourceCategories ?? [])].sort()
+      if (actualCategories.join(',') !== expectedCategories.join(',')) {
+        throw new Error(`${scope} 필수 출처 범주 계약이 올바르지 않습니다: ${familyId}`)
+      }
+    }
   }
   return manifest as CompletenessManifest
 }

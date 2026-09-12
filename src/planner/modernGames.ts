@@ -39,6 +39,7 @@ export interface ModernFamilyConfig {
   bosses: PlannerBoss[]
   fieldMoves: FieldMove[]
   moveReminder?: { chapter: number; location: string; cost: string }
+  mainStoryChapterCount?: number
   postgame: string[]
   storyProgression?: {
     mode: 'recommended-open-world'
@@ -78,7 +79,8 @@ const boss = (
   chapterIndex: number,
   types: string[],
   level: string,
-): PlannerBoss => ({ id, name, title, chapter: chapterIndex, types, level })
+  details: Partial<PlannerBoss> = {},
+): PlannerBoss => ({ id, name, title, chapter: chapterIndex, types, level, winRequired: true, ...details })
 
 const kalosChapters = [
   chapter('kal-1', '조아마을 → 백단시티', '첫 파트너와 버그배지', 'Lv.5–12', ['vaniville', 'aquacorde', 'route-2', 'santalune-forest', 'route-3', 'santalune'], ['스타터와 관동 스타터 선택', '백단체육관 비올라 격파']),
@@ -242,20 +244,79 @@ const galarChapters = [
   chapter('gal-7', '키르쿠스마을', '바위/얼음배지', 'Lv.37–42', ['route-7', 'route-8', 'circhester', 'route-9'], ['소드에서는 마쿠와, 실드에서는 멜론 격파'], ['수상 로토무자전거']),
   chapter('gal-8', '스파이크마을', '악배지', 'Lv.40–46', ['spikemuth'], ['스파이크체육관 두송 격파']),
   chapter('gal-9', '너클시티', '드래곤배지와 챔피언컵 진출', 'Lv.45–49', ['route-10', 'hammerlocke'], ['너클스타디움 금랑 격파']),
-  chapter('gal-10', '슛시티와 에너지플랜트', '챔피언컵·무한다이노·단델', 'Lv.47–65', ['wyndon', 'rose-tower', 'energy-plant', 'slumbering-weald'], ['챔피언컵 예선과 본선 통과', '무한다이노 격파', '챔피언 단델 격파']),
+  chapter('gal-10', '슛시티와 에너지플랜트', '챔피언컵·무한다이노·단델', 'Lv.47–65', ['wyndon', 'rose-tower', 'energy-plant', 'slumbering-weald', 'tower-summit'], ['챔피언컵 예선과 본선 통과', '무한다이노 격파', '챔피언 단델 격파']),
+  chapter('gal-11', '챔피언 이후 가라르', '전설의 검·방패 사건', 'Lv.58–70', ['slumbering-weald', 'wedgehurst', 'hammerlocke-stadium'], ['소드워드/실디와트 사건 해결', '자시안/자마젠타 포획', '호브의 마지막 승부'], ['배틀타워', '본토 안개 날씨']),
+  chapter('gal-12', '갑옷섬 입문', '도장 도착과 첫 번째 수행', 'Lv.10–65 · 진행도 스케일링', ['fields-of-honor', 'master-dojo'], ['도장 라이벌 첫 승부', '빠르기 야돈 3마리 포획'], ['갑옷섬 기술가르침', '갑옷광석']),
+  chapter('gal-13', '갑옷섬 수행', '버섯 채집과 다이버섯 전투', 'Lv.20–68 · 진행도 스케일링', ['forest-of-focus', 'warm-up-tunnel', 'master-dojo'], ['두 번째 수행', '라이벌 다이맥스 승부', '치고마 받기'], ['다이수프']),
+  chapter('gal-14', '쌍권의 탑', '치고마와 물/악의 탑 선택', 'Lv.30–70 · 진행도 스케일링', ['challenge-road', 'tower-of-darkness', 'tower-of-waters'], ['치고마와 친밀도 올리기', '물의 탑 또는 악의 탑 한 곳만 선택', '우라오스 진화'], ['우라오스']),
+  chapter('gal-15', '갑옷섬 후일담', '다이꿀과 마스터드 최종전', 'Lv.70–75', ['honeycalm-island', 'master-dojo'], ['다이꿀 획득', '마스터드 최종전'], ['우라오스 거다이맥스']),
+  chapter('gal-16', '왕관설원 입문', '피오니와 맥스다이맥스 어드벤처', 'Lv.60–70', ['slippery-slope', 'freezington', 'max-lair'], ['피오니 탐험대 합류', '렌탈 포켓몬으로 맥스다이맥스 어드벤처 진행'], ['왕관패스와 업데이트 1.3.0 필요']),
+  chapter('gal-17', '풍요의 왕', '버드렉스와 애마 선택', 'Lv.65–80', ['freezington', 'old-cemetery', 'snowslide-slope', 'crown-shrine'], ['당근밭 한 곳만 선택', '블리자포스 또는 레이스포스 분기', '버드렉스 포획'], ['유대의고삐 폼체인지']),
+  chapter('gal-18', '왕관설원 전설 탐사', '거인·새·울트라비스트', 'Lv.70–80', ['giants-bed', 'split-decision-ruins', 'dyna-tree-hill', 'max-lair'], ['레지에레키/레지드래고 한 쪽 선택', '가라르 전설의 새 조사', '피오니의 단서 완료'], ['가라르 스타 토너먼트']),
 ]
 
 const galarBosses = [
+  boss('hop-route-2', '호브', '2번도로 라이벌전', 1, ['normal'], 'Lv.5–7', { sequence: 1 }),
+  boss('hop-motostoke', '호브', '엔진시티 라이벌전', 2, ['normal'], 'Lv.11–14', { sequence: 2 }),
+  boss('bede-mine', '비트', '가라르광산 라이벌전', 2, ['psychic'], 'Lv.13–16', { sequence: 3 }),
   boss('milo', '아킬', '터프 스타디움', 2, ['grass'], 'Lv.19–20'),
+  boss('hop-route-5', '호브', '5번도로 라이벌전', 3, ['normal'], 'Lv.18–21', { sequence: 5 }),
   boss('nessa', '야청', '바우 스타디움', 3, ['water'], 'Lv.22–24'),
+  boss('bede-mine-2', '비트', '제2광산 라이벌전', 4, ['psychic'], 'Lv.21–24'),
+  boss('marnie-motostoke', '마리', '엔진시티 라이벌전', 4, ['dark'], 'Lv.24–26'),
   boss('kabu', '순무', '엔진 스타디움', 4, ['fire'], 'Lv.25–27'),
+  boss('hop-stow', '호브', '래터럴마을 라이벌전', 5, ['normal'], 'Lv.29–33'),
+  boss('bede-stow', '비트', '래터럴마을 라이벌전', 5, ['psychic', 'fairy'], 'Lv.32–35'),
+  boss('bea', '채두', '래터럴 스타디움', 5, ['fighting'], 'Lv.34–36', { gameIds: ['sword'], branchGroup: 'version-gym' }),
+  boss('allister', '어니언', '래터럴 스타디움', 5, ['ghost'], 'Lv.34–36', { gameIds: ['shield'], branchGroup: 'version-gym' }),
   boss('opal', '포플러', '아라베스크 스타디움', 6, ['fairy'], 'Lv.36–38'),
+  boss('hop-route-7', '호브', '7번도로 라이벌전', 7, ['normal'], 'Lv.34–37'),
+  boss('gordie', '마쿠와', '키르쿠스 스타디움', 7, ['rock'], 'Lv.40–42', { gameIds: ['sword'], branchGroup: 'version-gym' }),
+  boss('melony', '멜론', '키르쿠스 스타디움', 7, ['ice'], 'Lv.40–42', { gameIds: ['shield'], branchGroup: 'version-gym' }),
+  boss('hop-circhester', '호브', '키르쿠스마을 라이벌전', 7, ['normal'], 'Lv.40–41'),
+  boss('marnie-spikemuth', '마리', '스파이크마을 라이벌전', 8, ['dark'], 'Lv.42–44'),
   boss('piers', '두송', '스파이크 체육관', 8, ['dark'], 'Lv.44–46'),
   boss('raihan', '금랑', '너클 스타디움', 9, ['dragon'], 'Lv.46–48'),
   boss('marnie-cup', '마리', '챔피언컵 준결승', 10, ['dark'], 'Lv.47–49'),
   boss('hop-cup', '호브', '챔피언컵 준결승', 10, ['normal'], 'Lv.48–49'),
-  boss('eternatus', '무한다이노', '에너지플랜트', 10, ['poison', 'dragon'], 'Lv.60'),
+  boss('oleana', '올리브', '로즈타워', 10, ['steel', 'ice'], 'Lv.50–52'),
+  boss('bede-finals', '비트', '챔피언컵 난입전', 10, ['fairy'], 'Lv.51–53'),
+  boss('nessa-finals', '루리나', '챔피언컵 결승', 10, ['water'], 'Lv.51–53'),
+  boss('bea-finals', '채두', '챔피언컵 결승', 10, ['fighting'], 'Lv.52–54', { gameIds: ['sword'], branchGroup: 'version-finals' }),
+  boss('allister-finals', '어니언', '챔피언컵 결승', 10, ['ghost'], 'Lv.52–54', { gameIds: ['shield'], branchGroup: 'version-finals' }),
+  boss('raihan-finals', '금랑', '챔피언컵 결승', 10, ['dragon'], 'Lv.53–55'),
+  boss('rose', '로즈', '에너지플랜트', 10, ['steel'], 'Lv.55–57'),
+  boss('eternatus', '무한다이노', '블랙나이트 1차전', 10, ['poison', 'dragon'], 'Lv.60'),
+  boss('eternamax', '무한다이노', '무한다이맥스 협동전', 10, ['poison', 'dragon'], 'Lv.60'),
   boss('leon', '단델', '챔피언', 10, ['fire', 'dragon'], 'Lv.62–65'),
+  boss('zacian-capture', '자시안', '포스트게임 전설 포획전', 11, ['fairy'], 'Lv.70', { gameIds: ['sword'], branchGroup: 'version-box-legend' }),
+  boss('zamazenta-capture', '자마젠타', '포스트게임 전설 포획전', 11, ['fighting'], 'Lv.70', { gameIds: ['shield'], branchGroup: 'version-box-legend' }),
+  boss('hop-final', '호브', '포스트게임 마지막 승부', 11, ['normal'], 'Lv.58–70'),
+  boss('klara-1', '도정', '갑옷섬 첫 라이벌전', 12, ['poison'], '진행도 스케일링', { gameIds: ['sword'], branchGroup: 'version-dojo-rival' }),
+  boss('avery-1', '세이버리', '갑옷섬 첫 라이벌전', 12, ['psychic'], '진행도 스케일링', { gameIds: ['shield'], branchGroup: 'version-dojo-rival' }),
+  boss('mustard-dojo', '마스터드', '마스터 도장 입문전', 12, ['fighting'], '진행도 스케일링'),
+  boss('klara-2', '도정', '두 번째 수행', 13, ['poison'], '진행도 스케일링', { gameIds: ['sword'], branchGroup: 'version-dojo-rival' }),
+  boss('avery-2', '세이버리', '두 번째 수행', 13, ['psychic'], '진행도 스케일링', { gameIds: ['shield'], branchGroup: 'version-dojo-rival' }),
+  boss('klara-3', '도정', '도장 다이맥스전', 13, ['poison'], '진행도 스케일링', { gameIds: ['sword'], branchGroup: 'version-dojo-rival' }),
+  boss('avery-3', '세이버리', '도장 다이맥스전', 13, ['psychic'], '진행도 스케일링', { gameIds: ['shield'], branchGroup: 'version-dojo-rival' }),
+  boss('mustard-tower', '마스터드', '쌍권의 탑 정상', 14, ['fighting'], 'Lv.30 또는 Lv.70', { branchGroup: 'single-tower-choice', warning: '두 탑 중 한 곳만 선택할 수 있습니다.' }),
+  boss('vespiquen-max-honey', '다이맥스 비퀸', '다이꿀 수급 전투', 15, ['bug', 'flying'], 'Lv.80'),
+  boss('mustard-final', '마스터드', '갑옷섬 최종전', 15, ['fighting'], 'Lv.73–75'),
+  boss('peony', '피오니', '왕관설원역', 16, ['steel'], 'Lv.70', { winRequired: false, warning: '패배해도 왕관설원 스토리가 진행됩니다.' }),
+  boss('calyrex-first', '버드렉스', '프리즈마을 첫 전투', 17, ['psychic', 'grass'], 'Lv.70', { warning: '첫 전투에서는 포획할 수 없습니다.' }),
+  boss('glastrier-freezington', '블리자포스', '프리즈마을 습격', 17, ['ice'], 'Lv.75', { branchGroup: 'steed-choice-prelude', warning: '블리자포스 경로에서만 진행합니다.' }),
+  boss('spectrier-freezington', '레이스포스', '프리즈마을 습격', 17, ['ghost'], 'Lv.75', { branchGroup: 'steed-choice-prelude', warning: '레이스포스 경로에서만 진행합니다.' }),
+  boss('calyrex-ice-rider', '버드렉스 백마 탄 모습', '왕관의 사당', 17, ['psychic', 'ice'], 'Lv.80', { branchGroup: 'steed-choice', warning: '블리자포스 경로를 골랐을 때만 진행합니다.' }),
+  boss('calyrex-shadow-rider', '버드렉스 흑마 탄 모습', '왕관의 사당', 17, ['psychic', 'ghost'], 'Lv.80', { branchGroup: 'steed-choice', warning: '레이스포스 경로를 골랐을 때만 진행합니다.' }),
+  boss('regirock-capture', '레지락', '바위산의 유적', 18, ['rock'], 'Lv.70'),
+  boss('regice-capture', '레지아이스', '빙산의 유적', 18, ['ice'], 'Lv.70'),
+  boss('registeel-capture', '레지스틸', '흑철의 유적', 18, ['steel'], 'Lv.70'),
+  boss('regieleki-capture', '레지에레키', '선택의 유적', 18, ['electric'], 'Lv.70', { branchGroup: 'split-decision-regi', warning: '레지드래고와 동시에 선택할 수 없습니다.' }),
+  boss('regidrago-capture', '레지드래고', '선택의 유적', 18, ['dragon'], 'Lv.70', { branchGroup: 'split-decision-regi', warning: '레지에레키와 동시에 선택할 수 없습니다.' }),
+  boss('articuno-galar-capture', '가라르 프리져', '왕관설원 배회 포획', 18, ['psychic', 'flying'], 'Lv.70'),
+  boss('zapdos-galar-capture', '가라르 썬더', '와일드에리어 배회 포획', 18, ['fighting', 'flying'], 'Lv.70'),
+  boss('moltres-galar-capture', '가라르 파이어', '갑옷섬 배회 포획', 18, ['dark', 'flying'], 'Lv.70'),
+  boss('galar-star-tournament', '가라르 스타 토너먼트', '왕관설원 최종 토너먼트', 18, ['normal'], 'Lv.72–80'),
 ]
 
 const sinnohRemakeChapters = [
@@ -379,7 +440,7 @@ export const modernFamilies: Record<ModernFamilyId, ModernFamilyConfig> = {
   alola7: { id: 'alola7', generation: 7, region: '알로라', chapters: alolaChapters, bosses: alolaBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['울트라비스트 포획 임무', '배틀트리', '수호신과 네크로즈마'] },
   'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
   letsgo7: { id: 'letsgo7', generation: 7, region: '관동', chapters: letsGoChapters, bosses: letsGoBosses, fieldMoves: [], postgame: ['블루와 체육관 관장 재대결', '블루시티동굴의 뮤츠', '마스터 트레이너와 레드'] },
-  galar8: { id: 'galar8', generation: 8, region: '가라르', chapters: galarChapters, bosses: galarBosses, fieldMoves: [], moveReminder: { chapter: 2, location: '모든 포켓몬센터', cost: '무료' }, postgame: ['소드·실드 전설 에피소드', '배틀타워', '갑옷섬·왕관설원 DLC는 본편 엔딩 조건과 분리'] },
+  galar8: { id: 'galar8', generation: 8, region: '가라르', chapters: galarChapters, bosses: galarBosses, fieldMoves: [], moveReminder: { chapter: 1, location: '모든 포켓몬센터', cost: '무료' }, mainStoryChapterCount: 10, postgame: ['소드·실드 전설 에피소드', '배틀타워', '갑옷섬 마스터 도장', '왕관설원 전설의 메모'] },
   sinnoh8: { id: 'sinnoh8', generation: 8, region: '신오', chapters: sinnohRemakeChapters, bosses: sinnohRemakeBosses, fieldMoves: [], moveReminder: { chapter: 4, location: '들판시티', cost: '하트비늘 10회 이후 무료' }, postgame: ['전국도감과 파이트에리어', '배틀타워', '라마나스파크와 하드마운틴'] },
   hisui8: { id: 'hisui8', generation: 8, region: '히스이', chapters: hisuiChapters, bosses: hisuiBosses, fieldMoves: [], moveReminder: { chapter: 1, location: '기술 변경 메뉴', cost: '무료' }, postgame: ['모든 석판과 월로·기라티나', '히스이도감 완성과 아르세우스', '대량발생·시공의 뒤틀림·서브 임무'] },
   paldea9: {
@@ -479,20 +540,8 @@ export const modernBossOverrides: Partial<Record<ModernPlannerGameId, PlannerBos
     boss('archie-as', '아강', '아쿠아단 리더 최종전', 8, ['water', 'dark'], 'Lv.41–43'),
     ...orasBosses.slice(7),
   ],
-  sword: [
-    ...galarBosses.slice(0, 3),
-    boss('bea', '채두', '래터럴 스타디움', 5, ['fighting'], 'Lv.34–36'),
-    ...galarBosses.slice(3, 4),
-    boss('gordie', '마쿠와', '키르쿠스 스타디움', 7, ['rock'], 'Lv.40–42'),
-    ...galarBosses.slice(4),
-  ],
-  shield: [
-    ...galarBosses.slice(0, 3),
-    boss('allister', '어니언', '래터럴 스타디움', 5, ['ghost'], 'Lv.34–36'),
-    ...galarBosses.slice(3, 4),
-    boss('melony', '멜론', '키르쿠스 스타디움', 7, ['ice'], 'Lv.40–42'),
-    ...galarBosses.slice(4),
-  ],
+  sword: galarBosses.filter((entry) => !entry.gameIds || entry.gameIds.includes('sword')),
+  shield: galarBosses.filter((entry) => !entry.gameIds || entry.gameIds.includes('shield')),
   scarlet: paldeaBosses.map((entry) =>
     entry.id === 'quaking-earth-titan'
       ? { ...entry, name: '위대한엄니', types: ['ground', 'fighting'] }
@@ -645,9 +694,10 @@ export function modernEncounterChapter(
   minLevel = 1,
 ): number | null {
   const family = modernFamilies[familyId]
-  if (conditions.includes('postgame')) return family.chapters.length + 1
+  const mainStoryChapterCount = family.mainStoryChapterCount ?? family.chapters.length
+  if (conditions.includes('postgame')) return mainStoryChapterCount + 1
   if ((postgameLocationTokens[familyId] ?? []).some((token) => tokenMatches(location, token))) {
-    return family.chapters.length + 1
+    return mainStoryChapterCount + 1
   }
   const override = Object.entries(locationChapterOverrides[familyId] ?? {})
     .find(([token]) => tokenMatches(location, token))
@@ -666,9 +716,12 @@ export function modernEncounterChapter(
     if (conditions.includes('story-progress-primal-defeated')) prerequisiteChapter = Math.max(prerequisiteChapter, 9)
   }
   if (familyId === 'galar8') {
+    const isDlcArea = conditions.includes('isle-of-armor') || conditions.includes('crown-tundra')
+    if (conditions.includes('ultra-beast-clue-complete')) return 18
+    if (method === 'dynamax-adventure') return 1
     const weatherConditions = conditions.filter((condition) => condition.startsWith('weather-'))
-    if (weatherConditions.length === 1 && weatherConditions[0] === 'weather-heavy-fog') {
-      return family.chapters.length + 1
+    if (!isDlcArea && weatherConditions.length === 1 && weatherConditions[0] === 'weather-heavy-fog') {
+      return mainStoryChapterCount + 1
     }
     const catchLevelChapter = minLevel <= 20 ? 1
       : minLevel <= 25 ? 3
@@ -680,6 +733,10 @@ export function modernEncounterChapter(
                   : minLevel <= 55 ? 9
                     : 10
     prerequisiteChapter = Math.max(prerequisiteChapter, catchLevelChapter)
+    if (!isDlcArea && conditions.some((condition) =>
+      condition === 'weather-sandstorm' || condition === 'weather-snowstorm')) {
+      prerequisiteChapter = Math.max(prerequisiteChapter, 5)
+    }
     if (conditions.includes('water-bike')) prerequisiteChapter = Math.max(prerequisiteChapter, 7)
     if (tokenMatches(location, 'slumbering-weald') && minLevel >= 20) {
       prerequisiteChapter = Math.max(prerequisiteChapter, 10)
@@ -689,6 +746,8 @@ export function modernEncounterChapter(
       .find((value) => value !== undefined)
     const badgeChapter: Record<string, number> = { '0': 1, '1': 3, '3': 5, '6': 8, '8': 10 }
     if (badgeCount) prerequisiteChapter = Math.max(prerequisiteChapter, badgeChapter[badgeCount] ?? 1)
+    if (conditions.includes('isle-of-armor')) return prerequisiteChapter
+    if (conditions.includes('crown-tundra')) return Math.max(prerequisiteChapter, 10)
   }
   if (override) return Math.max(override[1], prerequisiteChapter)
   for (const [index, story] of family.chapters.entries()) {
