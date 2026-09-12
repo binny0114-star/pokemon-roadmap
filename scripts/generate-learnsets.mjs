@@ -41,6 +41,11 @@ const [
 const maxNationalDex = 1025
 const versionGroups = new Set(catalogVersionGroupIds)
 const completeLegalityVersionGroups = new Set([15, 16, 17, 18])
+const gen8LegalityVersionGroups = new Set([19, 20, 23, 24])
+const auditedLegalityVersionGroups = new Set([
+  ...completeLegalityVersionGroups,
+  ...gen8LegalityVersionGroups,
+])
 const completeLegalityMethods = new Map([
   [1, 'level'],
   [2, 'egg'],
@@ -110,6 +115,7 @@ const machines = new Map(
 const learnsets = {}
 const completeLegality = {}
 const usedMoveIds = new Set()
+const gen8LegalityMoveIds = new Set()
 for (const row of pokemonMoveRows) {
   const pokemon = pokemonById.get(Number(row.pokemon_id))
   const speciesId = speciesByDefaultPokemon.get(Number(row.pokemon_id))
@@ -126,7 +132,7 @@ for (const row of pokemonMoveRows) {
     || (speciesGeneration.get(pokemon.speciesId) ?? 99) > groupGeneration
   ) continue
 
-  if (completeLegalityVersionGroups.has(versionGroup) && completeLegalityMethods.has(method)) {
+  if (auditedLegalityVersionGroups.has(versionGroup) && completeLegalityMethods.has(method)) {
     const machine = method === 4 ? machines.get(`${versionGroup}:${moveId}`) : undefined
     const source = completeLegalityMethods.get(method)
     const level = method === 1 ? Number(row.level) : 0
@@ -134,7 +140,8 @@ for (const row of pokemonMoveRows) {
     const entries = group[pokemon.identifier] ??= []
     const entry = [moveId, source, level, machine ?? null]
     if (!entries.some((current) => current.join(':') === entry.join(':'))) entries.push(entry)
-    usedMoveIds.add(moveId)
+    if (completeLegalityVersionGroups.has(versionGroup)) usedMoveIds.add(moveId)
+    else gen8LegalityMoveIds.add(moveId)
   }
 
   if (!speciesId || !versionGroups.has(versionGroup) || ![1, 3, 4].includes(method)) continue
@@ -218,9 +225,21 @@ const completeLegalityPokemonByVersionGroup = Object.fromEntries(
     Object.keys(completeLegality[versionGroup] ?? {}).length,
   ]),
 )
+const gen8LegalityPokemonByVersionGroup = Object.fromEntries(
+  [...gen8LegalityVersionGroups].map((versionGroup) => [
+    versionGroup,
+    Object.keys(completeLegality[versionGroup] ?? {}).length,
+  ]),
+)
 const pokemonForms = Object.fromEntries(
   [...pokemonById.values()]
     .filter((pokemon) => (speciesGeneration.get(pokemon.speciesId) ?? 99) <= 7)
+    .sort((a, b) => a.pokemonId - b.pokemonId)
+    .map((pokemon) => [pokemon.identifier, pokemon]),
+)
+const gen8PokemonForms = Object.fromEntries(
+  [...pokemonById.values()]
+    .filter((pokemon) => (speciesGeneration.get(pokemon.speciesId) ?? 99) <= 8)
     .sort((a, b) => a.pokemonId - b.pokemonId)
     .map((pokemon) => [pokemon.identifier, pokemon]),
 )
@@ -285,7 +304,42 @@ await writeFile(
       },
     },
     pokemonForms,
-    learnsets: completeLegality,
+    learnsets: Object.fromEntries(
+      [...completeLegalityVersionGroups].map((versionGroup) => [
+        versionGroup,
+        completeLegality[versionGroup] ?? {},
+      ]),
+    ),
+  })}\n`,
+)
+await writeFile(
+  new URL('../src/generated/gen8-legality.json', import.meta.url),
+  `${JSON.stringify({
+    source: `PokéAPI CSV @ ${registry.source.revision} (pokemon, pokemon_moves)`,
+    provenance: provenance(files),
+    coverage: {
+      versionGroupIds: [...gen8LegalityVersionGroups],
+      pokemonByVersionGroup: gen8LegalityPokemonByVersionGroup,
+      methods: [...completeLegalityMethods.values()],
+      policy: {
+        identity: 'pokemon-identifier',
+        rows: 'unfiltered-source-rows',
+        pkhexFormIndexMapping: 'not-normalized',
+        acquisitionTiming: 'not-ingested',
+        resourceConsumption: 'not-ingested',
+        masteryAndStyles: 'not-ingested',
+      },
+    },
+    pokemonForms: gen8PokemonForms,
+    moves: Object.fromEntries(
+      [...gen8LegalityMoveIds].sort((a, b) => a - b).map((id) => [id, moves.get(id)]),
+    ),
+    learnsets: Object.fromEntries(
+      [...gen8LegalityVersionGroups].map((versionGroup) => [
+        versionGroup,
+        completeLegality[versionGroup] ?? {},
+      ]),
+    ),
   })}\n`,
 )
 console.log(`Generated ${Object.keys(moveData).length} moves across ${Object.keys(learnsets).length} version groups.`)

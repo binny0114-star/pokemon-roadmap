@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "pokeapi": {
+      "repository": "https://github.com/PokeAPI/pokeapi",
+      "revision": "3a588cf66475bd05a34aba29bd538480889829fb",
+      "license": "BSD-3-Clause",
+      "notice": "THIRD_PARTY_NOTICES.md#pokeapi-derived-data-snapshots"
+    },
+    "pkhex": {
+      "repository": "https://github.com/kwsch/PKHeX",
+      "revision": "77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5",
+      "license": "GPL-3.0-or-later",
+      "notice": "THIRD_PARTY_NOTICES.md#pkhex-derived-encounter-snapshot"
+    },
+    "bulbapedia": {
+      "repository": "https://bulbapedia.bulbagarden.net/wiki/Category:Walkthroughs",
+      "revision": "lgpe-4247959;swsh-4489916;bdsp-4577633;pla-4315902",
+      "use": "reference-only; no page assets or prose redistributed"
+    }
+  },
+  "families": {
+    "letsgo7": {
+      "games": ["lets-go-pikachu", "lets-go-eevee"],
+      "requiredSourceCategories": ["wild", "overworld", "static", "gift", "trade", "catch-combo", "secret-techniques", "level-up", "tm", "tutor", "reminder", "evolution", "story"],
+      "gates": {
+        "availability": {
+          "requirements": [
+            {
+              "id": "wild-static-gift-trade",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX exposes separate GP/GE wild tables plus static, gift and in-game trade tables with species, form, level and location, but no normalized catch-combo spawn modifier or planner chapter key.",
+              "missingFields": ["catch-combo-state", "lure-state", "sky-spawn-gate", "planner-chapter"],
+              "attemptedAlternatives": ["PokéAPI version 31/32 encounters", "PKHeX Encounters7GG and encounter resources"]
+            }
+          ]
+        },
+        "forms": {
+          "requirements": [
+            {
+              "id": "partner-and-alolan-forms",
+              "status": "blocked",
+              "sourceRefs": ["pkhex"],
+              "evidence": "PKHeX preserves partner Pikachu form 8, partner Eevee form 1 and Alolan trade forms, while the application species runtime remains default-form-only.",
+              "missingFields": ["runtime-form-types", "runtime-form-stats", "form-aware-party-identity"],
+              "attemptedAlternatives": ["PokéAPI pokemon forms", "PKHeX personal_gg"]
+            }
+          ]
+        },
+        "learnsets": {
+          "requirements": [
+            {
+              "id": "level-tm-tutor-reminder",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX LearnSource7GG identifies level-up, 60 TM moves, partner tutors and the all-level move-reminder rule with no HMs; neither pinned source supplies exact TM and partner-tutor acquisition chapters.",
+              "missingFields": ["tm-acquisition-chapter", "partner-tutor-acquisition-chapter", "resource-reusability-timing"],
+              "attemptedAlternatives": ["PokéAPI version group 19 move rows", "PKHeX LearnSource7GG and lvlmove_gg"]
+            }
+          ]
+        },
+        "evolutions": {
+          "requirements": [
+            {
+              "id": "letsgo-evolution-reachability",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Pinned evolution tables provide conditions but not the earliest item, friendship, trade-alternative or location reachability in the Let's Go story.",
+              "missingFields": ["evolution-item-chapter", "friendship-earliest-chapter", "trade-alternative", "regional-form-evolution-context"],
+              "attemptedAlternatives": ["PokéAPI evolution chains", "PKHeX evos_gg"]
+            }
+          ]
+        },
+        "story": {
+          "requirements": [
+            {
+              "id": "mandatory-chronology",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia"],
+              "evidence": "The Korean preview enumerates the eight gyms, Silph Co., Viridian Gym, Elite Four and rival champion endpoint, but does not yet encode every mandatory rival and Team Rocket battle or route warning as boss actions.",
+              "missingFields": ["mandatory-rival-battles", "mandatory-team-rocket-battles", "story-warnings"],
+              "attemptedAlternatives": ["Bulbapedia LGPE walkthrough revision 4247959", "PKHeX Encounters7GG"]
+            }
+          ]
+        },
+        "mechanics": {
+          "requirements": [
+            {
+              "id": "secret-techniques",
+              "status": "complete",
+              "sourceRefs": ["bulbapedia", "pkhex"],
+              "evidence": "The preview models Chop Down, Light Up, Sky Dash, Strong Push and Sea Skim as partner Secret Techniques and does not create party HM slots."
+            }
+          ]
+        },
+        "integration": {
+          "requirements": [
+            {
+              "id": "full-planner-contract",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "The mechanics-aware catalog preview is integrated, but form-aware six-member planning and four-move timing cannot run while availability, forms, learnsets and evolutions are blocked.",
+              "missingFields": ["form-aware-six-member-generation", "four-move-acquisition-timing", "planner-progress-contract"],
+              "attemptedAlternatives": ["existing classic planner engine", "catalog preview integration"]
+            }
+          ]
+        }
+      }
+    },
+    "galar8": {
+      "games": ["sword", "shield"],
+      "requiredSourceCategories": ["wild-hidden", "overworld-symbol", "raid", "static", "gift", "egg", "fossil", "trade", "weather", "badges", "bike", "isle-of-armor", "crown-tundra", "level-up", "tm", "tr", "tutor", "reminder", "evolution", "story"],
+      "gates": {
+        "availability": {
+          "requirements": [
+            {
+              "id": "base-wild-symbol-raid",
+              "status": "complete",
+              "sourceRefs": ["pkhex"],
+              "evidence": "Separate Sword and Shield hidden, symbol and base-den resources preserve species, form, location, weather, method, level, raid stars and badge gates."
+            },
+            {
+              "id": "dlc-and-distribution-scope",
+              "status": "blocked",
+              "sourceRefs": ["pkhex"],
+              "evidence": "PKHeX provides distribution and DLC-era legality resources, but the current normalized snapshot excludes Isle of Armor and Crown Tundra areas and does not pin an in-game update/content revision per row.",
+              "missingFields": ["content-update-version", "isle-of-armor-chapter", "crown-tundra-chapter", "dlc-static-gift-trade-completeness"],
+              "attemptedAlternatives": ["PKHeX encounter_sw_dist/encounter_sh_dist", "PKHeX Encounters8 static tables", "PokéAPI DLC version IDs 35/36/50/51"]
+            }
+          ]
+        },
+        "forms": {
+          "requirements": [
+            {
+              "id": "galar-and-dlc-forms",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Encounter and learnset sources preserve form indices, but the planner runtime cannot distinguish Galarian, Gigantamax, Urshifu or Calyrex fusion forms.",
+              "missingFields": ["runtime-form-types", "runtime-form-stats", "gigantamax-eligibility", "fusion-form-identity"],
+              "attemptedAlternatives": ["PokéAPI pokemon forms", "PKHeX personal_swsh"]
+            }
+          ]
+        },
+        "learnsets": {
+          "requirements": [
+            {
+              "id": "level-egg-tm-tr-tutor",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX LearnSource8SWSH distinguishes level, shared egg, TM, consumable TR, type tutor, special tutor and form moves, but neither pinned legality source maps TM/TR/tutors to exact story, Watt vendor rotation, raid drop or DLC chapters.",
+              "missingFields": ["tm-acquisition-chapter", "tr-watt-vendor-rotation", "tr-raid-drop-source", "tutor-dlc-chapter", "resource-consumption"],
+              "attemptedAlternatives": ["PokéAPI groups 20-22 move rows", "PKHeX LearnSource8SWSH, lvlmove_swsh, eggmove_swsh and personal_swsh"]
+            }
+          ]
+        },
+        "evolutions": {
+          "requirements": [
+            {
+              "id": "galar-evolution-reachability",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Evolution source conditions exist, but exact earliest weather, location, friendship, item, move, spin, damage and regional-form reachability is not normalized to base-game and DLC chapters.",
+              "missingFields": ["weather-evolution-chapter", "item-acquisition-chapter", "location-evolution-chapter", "trade-alternative", "dlc-evolution-scope"],
+              "attemptedAlternatives": ["PokéAPI evolution chains", "PKHeX evos_ss"]
+            }
+          ]
+        },
+        "story": {
+          "requirements": [
+            {
+              "id": "base-game-mandatory-chronology",
+              "status": "complete",
+              "sourceRefs": ["bulbapedia"],
+              "evidence": "The preview fixes all eight version-aware gyms, Champion Cup, Rose Tower, Eternatus and Leon in chronological chapters."
+            },
+            {
+              "id": "dlc-chronology",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia"],
+              "evidence": "Useful DLC endpoints are named, but mandatory Isle of Armor and Crown Tundra branches, level scaling and access prerequisites are not represented as machine-enforced chapters.",
+              "missingFields": ["dlc-mandatory-boss-order", "dlc-level-scaling", "dlc-access-prerequisites"],
+              "attemptedAlternatives": ["Bulbapedia Sword/Shield walkthrough", "existing postgame notes"]
+            }
+          ]
+        },
+        "mechanics": {
+          "requirements": [
+            {
+              "id": "bike-weather-badges-raids",
+              "status": "complete",
+              "sourceRefs": ["pkhex", "bulbapedia"],
+              "evidence": "The base preview and encounter snapshot preserve bike upgrades, weather, badge-count raid gates and no party HM requirement."
+            }
+          ]
+        },
+        "integration": {
+          "requirements": [
+            {
+              "id": "full-planner-contract",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "Story and partial encounter preview are integrated, but forms, DLC scope, TR resources and evolution timing prevent safe six-member/four-move generation and persistence promotion.",
+              "missingFields": ["form-aware-six-member-generation", "four-move-resource-conflicts", "dlc-progress-key", "unsupported-fallback-proof"],
+              "attemptedAlternatives": ["existing classic planner engine", "modern preview engine"]
+            }
+          ]
+        }
+      }
+    },
+    "sinnoh8": {
+      "games": ["brilliant-diamond", "shining-pearl"],
+      "requiredSourceCategories": ["wild", "overworld", "static", "gift", "egg", "fossil", "trade", "grand-underground", "swarm", "poke-radar", "great-marsh", "trophy-garden", "poketch-hidden-moves", "level-up", "tm", "tutor", "reminder", "evolution", "story"],
+      "gates": {
+        "availability": {
+          "requirements": [
+            {
+              "id": "overworld-static",
+              "status": "complete",
+              "sourceRefs": ["pkhex"],
+              "evidence": "Separate BD and SP overworld resources preserve species, form, location and level, and the pinned static table identifies gifts and version mascots."
+            },
+            {
+              "id": "conditional-and-underground-pools",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX includes version-specific Grand Underground resources, but the available tables do not provide planner-ready story, badge, National Dex, Diglett bonus, hideaway, statue or conditional overworld pool activation keys.",
+              "missingFields": ["underground-story-gate", "underground-hideaway-identity", "national-dex-gate", "swarm-gate", "poke-radar-gate", "great-marsh-daily-gate", "trophy-garden-daily-gate"],
+              "attemptedAlternatives": ["PKHeX encounter_bd/sp_underground", "PokéAPI version 37/38 encounters", "PKHeX Encounters8b"]
+            }
+          ]
+        },
+        "forms": {
+          "requirements": [
+            {
+              "id": "sinnoh-forms",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX legality data preserves forms, but the application planner species runtime remains default-form-only.",
+              "missingFields": ["runtime-form-types", "runtime-form-stats", "form-aware-party-identity"],
+              "attemptedAlternatives": ["PokéAPI pokemon forms", "PKHeX personal_bdsp"]
+            }
+          ]
+        },
+        "learnsets": {
+          "requirements": [
+            {
+              "id": "level-egg-tm-tutor-reminder",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX LearnSource8BDSP distinguishes level-up, shared egg, reusable TM and tutor/form moves; pinned sources do not map every TM, tutor and move-reminder rule to exact acquisition chapters.",
+              "missingFields": ["tm-acquisition-chapter", "tutor-acquisition-chapter", "move-reminder-chapter", "move-reminder-cost"],
+              "attemptedAlternatives": ["PokéAPI group 23 move rows", "PKHeX LearnSource8BDSP, lvlmove_bdsp, eggmove_bdsp and personal_bdsp"]
+            }
+          ]
+        },
+        "evolutions": {
+          "requirements": [
+            {
+              "id": "bdsp-evolution-reachability",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Evolution conditions are available, but exact earliest item, friendship, move, time, location and trade-alternative reachability is not normalized to BDSP chapters.",
+              "missingFields": ["item-acquisition-chapter", "location-evolution-chapter", "friendship-earliest-chapter", "trade-alternative"],
+              "attemptedAlternatives": ["PokéAPI evolution chains", "PKHeX evos_bs"]
+            }
+          ]
+        },
+        "story": {
+          "requirements": [
+            {
+              "id": "mandatory-chronology",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia"],
+              "evidence": "The preview enumerates all eight gyms, Galactic headquarters, Spear Pillar, Elite Four and Cynthia endpoint, but not every mandatory rival, Galactic commander and double battle or route warning.",
+              "missingFields": ["mandatory-rival-battles", "mandatory-galactic-battles", "mandatory-double-battles", "story-warnings"],
+              "attemptedAlternatives": ["Bulbapedia BDSP walkthrough revision 4577633", "existing DPPt planner chronology"]
+            }
+          ]
+        },
+        "mechanics": {
+          "requirements": [
+            {
+              "id": "poketch-hidden-moves",
+              "status": "complete",
+              "sourceRefs": ["bulbapedia"],
+              "evidence": "Rock Smash, Cut, Fly, Defog, Surf, Strength, Rock Climb and Waterfall are represented as Pokétch app unlocks and never consume party move slots."
+            }
+          ]
+        },
+        "integration": {
+          "requirements": [
+            {
+              "id": "full-planner-contract",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "The mechanics-aware preview is integrated, but conditional encounter pools, forms, move acquisition timing and evolution reachability prevent safe planner promotion.",
+              "missingFields": ["conditional-pool-fallback", "form-aware-six-member-generation", "four-move-acquisition-timing", "planner-progress-contract"],
+              "attemptedAlternatives": ["existing Sinnoh classic planner family", "modern preview engine"]
+            }
+          ]
+        }
+      }
+    },
+    "hisui8": {
+      "games": ["legends-arceus"],
+      "requiredSourceCategories": ["field", "overworld", "static", "gift", "outbreak", "space-time-distortion", "request", "research-rank", "research-task", "alpha", "ride", "level-up", "move-shop", "mastery", "styles", "evolution", "story"],
+      "gates": {
+        "availability": {
+          "requirements": [
+            {
+              "id": "field-static-outbreak-distortion-task",
+              "status": "blocked",
+              "sourceRefs": ["pkhex"],
+              "evidence": "PKHeX provides PLA field and static resources with species, form, level, location and alpha identity, but planner timing requires outbreak, space-time distortion, request, research-rank and task gates absent from the encounter rows.",
+              "missingFields": ["outbreak-unlock", "space-time-distortion-unlock", "request-prerequisite", "research-rank-gate", "task-completion-gate"],
+              "attemptedAlternatives": ["PKHeX encounter_la and Encounters8a", "PokéAPI version 39 encounters", "PKHeX researchtask_la"]
+            }
+          ]
+        },
+        "forms": {
+          "requirements": [
+            {
+              "id": "hisui-and-alpha-forms",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX preserves Hisuian forms, Unown forms and alpha identity, but the planner runtime cannot represent their form-specific types, stats or alpha distinction.",
+              "missingFields": ["runtime-form-types", "runtime-form-stats", "alpha-identity", "form-aware-party-identity"],
+              "attemptedAlternatives": ["PokéAPI pokemon forms", "PKHeX personal_la"]
+            }
+          ]
+        },
+        "learnsets": {
+          "requirements": [
+            {
+              "id": "level-shop-mastery-styles",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX LearnSource8PLA exposes level-up, move-shop and separate mastery tables, but exact shop unlock, mastery seed/rank timing and agile/strong style availability are not mapped to story chapters.",
+              "missingFields": ["move-shop-unlock-chapter", "move-shop-cost", "mastery-level", "mastery-seed-rank", "style-availability"],
+              "attemptedAlternatives": ["PokéAPI group 24 move rows", "PKHeX LearnSource8PLA, lvlmove_la, mastery_la and personal_la"]
+            }
+          ]
+        },
+        "evolutions": {
+          "requirements": [
+            {
+              "id": "pla-evolution-reachability",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX and PokéAPI preserve PLA-specific move/style, damage and item evolution conditions, but not exact earliest request, merit-point, distortion, item or move-mastery reachability.",
+              "missingFields": ["item-source-chapter", "merit-point-earliest-chapter", "distortion-item-source", "move-style-mastery-chapter", "trade-item-alternative"],
+              "attemptedAlternatives": ["PokéAPI evolution chains", "PKHeX evos_la"]
+            }
+          ]
+        },
+        "story": {
+          "requirements": [
+            {
+              "id": "mandatory-chronology",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia"],
+              "evidence": "The Korean preview follows the five area nobles, three lakes, Commander Kamado and Temple of Sinnoh origin-form climax, but not every mandatory warden, bandit and clan battle or survey-rank warning.",
+              "missingFields": ["mandatory-warden-battles", "mandatory-bandit-battles", "mandatory-clan-battles", "survey-rank-warnings"],
+              "attemptedAlternatives": ["Bulbapedia PLA walkthrough revision 4315902", "PKHeX Encounters8a"]
+            }
+          ]
+        },
+        "mechanics": {
+          "requirements": [
+            {
+              "id": "survey-rank-rides-styles",
+              "status": "complete",
+              "sourceRefs": ["pkhex", "bulbapedia"],
+              "evidence": "The preview uses survey-area chapters and Wyrdeer, Ursaluna, Basculegion, Sneasler and Braviary ride unlocks; no gyms or classic HM slots are synthesized."
+            }
+          ]
+        },
+        "integration": {
+          "requirements": [
+            {
+              "id": "full-planner-contract",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "The distinct Legends preview is integrated, but task-gated encounters, forms, mastery/styles and evolution timing prevent the classic planner from generating valid parties or progress actions.",
+              "missingFields": ["task-aware-party-generation", "style-aware-four-move-generation", "research-rank-progress-key", "unsupported-fallback-proof"],
+              "attemptedAlternatives": ["existing classic planner engine", "mechanics-aware catalog preview"]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

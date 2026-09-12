@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import legalitySnapshot from '../generated/gen67-legality.json'
+import gen8LegalitySnapshot from '../generated/gen8-legality.json'
 import learnsetSnapshot from '../generated/learnsets.json'
 import modernEncounterSnapshot from '../generated/modern-encounters.json'
 import { catalogCoverage, encounterMethodUnlockChapter, getAvailability, loadCatalog, speciesByDex, speciesCatalog, supportedEncounterMethods } from './catalog'
@@ -164,6 +165,35 @@ describe('정적 데이터셋 검증 스크립트', () => {
     )).toBe(true)
     expect(Object.values(legalitySnapshot.learnsets['15']).flat().some((row) => row[1] === 'form-change')).toBe(true)
     expect(Object.values(legalitySnapshot.learnsets['17']).flat().some((row) => row[1] === 'zygarde-cube')).toBe(true)
+  })
+
+  it('Gen 8 계열 합법성 원본 행을 게임별 폼 식별자와 습득법으로 격리한다', () => {
+    expect(gen8LegalitySnapshot.coverage.versionGroupIds).toEqual([19, 20, 23, 24])
+    expect(gen8LegalitySnapshot.coverage.pokemonByVersionGroup).toEqual({
+      19: 188,
+      20: 750,
+      23: 491,
+      24: 247,
+    })
+    const expectedMethods = {
+      19: ['level', 'machine', 'tutor'],
+      20: ['egg', 'form-change', 'level', 'machine', 'tutor'],
+      23: ['egg', 'level', 'machine', 'tutor'],
+      24: ['level', 'tutor'],
+    } as const
+    for (const groupId of ['19', '20', '23', '24'] as const) {
+      const methods = [...new Set(Object.values(gen8LegalitySnapshot.learnsets[groupId]).flat().map((row) => row[1]))].sort()
+      expect(methods, groupId).toEqual(expectedMethods[Number(groupId) as keyof typeof expectedMethods])
+    }
+    expect(gen8LegalitySnapshot.coverage.policy).toMatchObject({
+      acquisitionTiming: 'not-ingested',
+      resourceConsumption: 'not-ingested',
+      masteryAndStyles: 'not-ingested',
+    })
+    expect(gen8LegalitySnapshot.pokemonForms['meowth-galar']).toMatchObject({
+      speciesId: 52,
+      isDefault: false,
+    })
   })
 
   it('21개 버전의 선택 입수 경로가 방식 해금과 엔딩 경계를 지킨다', () => {

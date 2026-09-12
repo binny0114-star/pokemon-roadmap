@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import registryJson from '../data/version-registry.json'
 import legalitySnapshot from '../generated/gen67-legality.json'
+import gen8LegalitySnapshot from '../generated/gen8-legality.json'
 import speciesSnapshot from '../generated/species.json'
 import { getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
 import { canLearnFieldMove, generateParty, isMoveLegalForSpecies, validateRequired } from './engine'
@@ -8,7 +9,15 @@ import { families, games, getBosses, getFamily } from './games'
 import { modernGames } from './modernGames'
 import { composeRoadmap, roadmapReferencesAreAvailable } from './roadmap'
 import type { PlannerPreferences } from './types'
-import { gameCatalog, gen67Completeness, validateCompletenessManifest, validateRegistry } from './versionRegistry'
+import {
+  gameCatalog,
+  getPlannerCatalogGame,
+  gen67Completeness,
+  gen8Completeness,
+  validateCompletenessManifest,
+  validateGen8CompletenessManifest,
+  validateRegistry,
+} from './versionRegistry'
 
 const defaults: PlannerPreferences = {
   noTrade: true,
@@ -43,6 +52,22 @@ describe('릴리스 레지스트리와 전국도감', () => {
       .find((requirement) => requirement.status === 'blocked')!
     blocked.attemptedAlternatives = []
     expect(() => validateCompletenessManifest(malformed)).toThrow('kalos6/availability')
+  })
+
+  it('Gen 8 완전성 매니페스트도 모든 대상과 차단 근거를 fail-closed로 요구한다', () => {
+    const malformed = structuredClone(gen8Completeness)
+    const blocked = malformed.families.galar8.gates.learnsets.requirements
+      .find((requirement) => requirement.status === 'blocked')!
+    blocked.missingFields = []
+    expect(() => validateGen8CompletenessManifest(malformed)).toThrow('galar8/learnsets')
+
+    const missingGame = structuredClone(gen8Completeness)
+    missingGame.families.hisui8.games = []
+    expect(() => validateGen8CompletenessManifest(missingGame)).toThrow('hisui8')
+
+    const missingCategories = structuredClone(gen8Completeness)
+    missingCategories.families.sinnoh8.requiredSourceCategories = []
+    expect(() => validateGen8CompletenessManifest(missingCategories)).toThrow('필수 출처 범주')
   })
 
   it('Gen 7 입수 게이트를 조우율이 아니라 방식·도달 시점 근거로 차단한다', () => {
@@ -89,6 +114,51 @@ describe('릴리스 레지스트리와 전국도감', () => {
     }
   })
 
+  it('Gen 8 계열은 행 수만으로 승격하지 않고 기계 게이트와 원본 공백을 일치시킨다', () => {
+    expect(gen8LegalitySnapshot.coverage.pokemonByVersionGroup).toEqual({
+      19: 188,
+      20: 750,
+      23: 491,
+      24: 247,
+    })
+    for (const family of Object.values(gen8Completeness.families)) {
+      for (const gameId of family.games) {
+        const game = gameCatalog.find((entry) => entry.id === gameId)!
+        expect(game.plannerSupport.status, gameId).toBe('catalog-only')
+        expect(game.plannerSupport.accuracyGates?.integration.complete, gameId).toBe(false)
+        for (const [gateId, gate] of Object.entries(family.gates)) {
+          const manifestComplete = gate.requirements.every((requirement) => requirement.status === 'complete')
+          expect(game.plannerSupport.accuracyGates?.[gateId as keyof typeof game.plannerSupport.accuracyGates]?.complete, `${gameId}/${gateId}`)
+            .toBe(manifestComplete)
+        }
+      }
+    }
+  })
+
+  it('Gen 8 자원·조건 공백과 unsupported fallback을 구체적으로 고정한다', () => {
+    const requirement = (familyId: keyof typeof gen8Completeness.families, gateId: 'availability' | 'learnsets') =>
+      gen8Completeness.families[familyId].gates[gateId].requirements
+        .find((entry) => entry.status === 'blocked')!
+
+    expect(requirement('letsgo7', 'learnsets').missingFields).toEqual(expect.arrayContaining([
+      'tm-acquisition-chapter', 'partner-tutor-acquisition-chapter',
+    ]))
+    expect(requirement('galar8', 'learnsets').missingFields).toEqual(expect.arrayContaining([
+      'tr-watt-vendor-rotation', 'tr-raid-drop-source', 'resource-consumption',
+    ]))
+    expect(requirement('sinnoh8', 'availability').missingFields).toEqual(expect.arrayContaining([
+      'underground-story-gate', 'swarm-gate', 'poke-radar-gate',
+    ]))
+    expect(requirement('hisui8', 'availability').missingFields).toEqual(expect.arrayContaining([
+      'outbreak-unlock', 'space-time-distortion-unlock', 'research-rank-gate',
+    ]))
+
+    for (const gameId of Object.values(gen8Completeness.families).flatMap((family) => family.games)) {
+      expect(() => getPlannerCatalogGame(gameId as never), gameId).toThrow('플래너 지원 게임이 아닙니다')
+      expect(games.some((game) => game.id === gameId), gameId).toBe(false)
+    }
+  })
+
   it('39개 스토리 게임과 지원 경계를 고유하고 상호 참조 가능하게 유지한다', () => {
     expect(gameCatalog).toHaveLength(39)
     expect(new Set(gameCatalog.map((game) => game.id)).size).toBe(39)
@@ -121,7 +191,7 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(duplicateVersionIds).toEqual([[2, ['blue', 'green']]])
     expect(modernGames.map((game) => game.id).sort()).toEqual(
       gameCatalog
-        .filter((game) => game.plannerSupport.status === 'catalog-only' && game.mechanicsFamily === 'classic')
+        .filter((game) => game.plannerSupport.status === 'catalog-only' && game.id !== 'legends-z-a')
         .map((game) => game.id)
         .sort(),
     )

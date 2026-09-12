@@ -25,13 +25,13 @@ interface ModernEncounterRow {
 const encounterGames = modernEncounterSnapshot.games as Record<string, ModernEncounterRow[]>
 
 describe('6–9세대 스토리 패밀리', () => {
-  it('14개 본편 버전과 7개 독립 패밀리를 제공한다', () => {
-    expect(modernGames).toHaveLength(14)
-    expect(new Set(modernGames.map((game) => game.id)).size).toBe(14)
-    expect(Object.keys(modernFamilies)).toHaveLength(7)
+  it('17개 검수 버전과 9개 독립 패밀리를 제공한다', () => {
+    expect(modernGames).toHaveLength(17)
+    expect(new Set(modernGames.map((game) => game.id)).size).toBe(17)
+    expect(Object.keys(modernFamilies)).toHaveLength(9)
   })
 
-  it('세 기능이 완비되지 않은 14개 버전을 파티 플래너에서 명시적으로 차단한다', () => {
+  it('정확성 게이트가 닫힌 17개 버전을 파티 플래너에서 명시적으로 차단한다', () => {
     for (const gameId of modernGames.map((game) => game.id) satisfies ModernPlannerGameId[]) {
       const support = modernGames.find((game) => game.id === gameId)?.catalog.plannerSupport
       if (!support || support.status !== 'catalog-only') {
@@ -59,6 +59,34 @@ describe('6–9세대 스토리 패밀리', () => {
       expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.evidence.trim()), gameId).toBe(true)
       expect(Object.values(support.accuracyGates ?? {}).some((gate) => !gate.complete), gameId).toBe(true)
     }
+  })
+
+  it('Gen 8 계열 7개 버전은 모든 정확성 게이트와 전용 메커니즘 근거가 있다', () => {
+    const targetIds: ModernPlannerGameId[] = [
+      'lets-go-pikachu', 'lets-go-eevee',
+      'sword', 'shield',
+      'brilliant-diamond', 'shining-pearl',
+      'legends-arceus',
+    ]
+    for (const gameId of targetIds) {
+      const game = modernGames.find((entry) => entry.id === gameId)!
+      const support = game.catalog.plannerSupport
+      expect(support.status, gameId).toBe('catalog-only')
+      expect(game.catalog.supportReview, gameId).toBe('2026-09-12')
+      expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
+        'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
+      ])
+      expect(Object.values(support.accuracyGates ?? {}).some((gate) => !gate.complete), gameId).toBe(true)
+      expect(support.accuracyGates?.mechanics.complete, gameId).toBe(true)
+    }
+    expect(modernGames.find((game) => game.id === 'lets-go-pikachu')?.catalog.mechanicsFamily).toBe('lets-go')
+    expect(modernGames.find((game) => game.id === 'legends-arceus')?.catalog.mechanicsFamily).toBe('legends')
+    const sourceRevision = (gameId: ModernPlannerGameId) =>
+      modernStoryProvenance.sources.find((source) => (source.games as readonly string[]).includes(gameId))
+    expect(sourceRevision('lets-go-pikachu')).toMatchObject({ revision: '4247959' })
+    expect(sourceRevision('sword')).toMatchObject({ revision: '4489916' })
+    expect(sourceRevision('brilliant-diamond')).toMatchObject({ revision: '4577633' })
+    expect(sourceRevision('legends-arceus')).toMatchObject({ revision: '4315902' })
   })
 
   it('모든 보스가 실제 챕터에 연대순으로 연결된다', () => {
@@ -189,6 +217,23 @@ describe('6–9세대 스토리 패밀리', () => {
     }
   })
 
+  it('레츠고 비전기술과 PLA 라이드를 클래식 HM·체육관으로 오인하지 않는다', () => {
+    expect(modernFamilies.letsgo7.fieldMoves).toEqual([])
+    const letsGoObjectives = modernFamilies.letsgo7.chapters.flatMap((entry) => entry.objectives)
+    for (const technique of ['풀베기', '빛내기', '하늘날기', '밀어내기', '물결타기']) {
+      expect(letsGoObjectives.some((objective) => objective.includes(`비전기술 ${technique}`)), technique).toBe(true)
+    }
+    expect(modernFamilies.hisui8.fieldMoves).toEqual([])
+    expect(modernFamilies.hisui8.chapters.slice(0, 5).map((entry) => entry.objectives.at(-2))).toEqual([
+      '신비록 라이드 해금', '다투곰 라이드 해금', '대쓰여너 라이드 해금', '포푸니크 라이드 해금', '워글 라이드 해금',
+    ])
+    expect(getModernBosses('legends-arceus').map((entry) => entry.id)).toEqual([
+      'kleavor', 'lilligant-hisui', 'arcanine-hisui', 'electrode-hisui',
+      'avalugg-hisui', 'kamado', 'space-time-legend', 'origin-legend',
+    ])
+    expect(getModernBosses('legends-arceus').some((entry) => entry.title.includes('체육관'))).toBe(false)
+  })
+
   it('Gen 6 기술 떠올리기 위치와 최초 장을 고정한다', () => {
     expect(modernFamilies.kalos6.moveReminder).toEqual({
       chapter: 7,
@@ -267,7 +312,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'x',
       'y',
     ])
-    expect(modernGames.filter((game) => !encounterGameIds.has(game.id))).toEqual([])
+    expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
+      'legends-arceus', 'lets-go-eevee', 'lets-go-pikachu',
+    ])
   })
 
   it('Gen 7 버전별 야생·SOS 자원과 폼을 보존한다', () => {

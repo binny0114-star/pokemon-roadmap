@@ -106,8 +106,13 @@ const accuracyGateKo: Record<AccuracyGateId, string> = {
   integration: '플래너·저장 통합',
 }
 const modernPreviewGameIds = new Set<string>(modernGames.map((entry) => entry.id))
-const gatedGen67Entries = gameCatalog.filter((entry) => entry.plannerSupport.accuracyGates)
-const promotedGen67Count = gatedGen67Entries.filter((entry) => entry.plannerSupport.status === 'full').length
+const gatedModernEntries = gameCatalog.filter((entry) => entry.plannerSupport.accuracyGates)
+const promotedModernCount = gatedModernEntries.filter((entry) => entry.plannerSupport.status === 'full').length
+const mechanicsFamilyKo = {
+  classic: '클래식 본편',
+  'lets-go': '레츠고 전용',
+  legends: 'LEGENDS 전용',
+} as const
 const modernMethodKo: Record<string, string> = {
   walk: '일반 조우',
   grass: '풀숲',
@@ -807,7 +812,7 @@ function App() {
           </div>
           <p className="data-note">ⓘ 6–9세대의 검수된 스토리·입수 데이터는 아래에서 미리볼 수 있습니다. 스토리·입수·버전별 기술 데이터가 모두 완비되기 전에는 파티 로드맵 생성을 열지 않습니다.</p>
           <p className="generation-promotion-summary">
-            Gen 6–7 정확성 승격 <strong>{promotedGen67Count}/{gatedGen67Entries.length}</strong>
+            Gen 6–8 정확성 승격 <strong>{promotedModernCount}/{gatedModernEntries.length}</strong>
           </p>
           {game.notes?.map((note) => <p className="data-note" key={note}>ⓘ {note}</p>)}
           <details className="version-catalog">
@@ -825,7 +830,7 @@ function App() {
                 const encounterPreviewAvailable = encounterPreviewGameIds.has(entry.id)
                 return (
                   <article key={entry.id}>
-                    <span>{entry.generation}세대 · {entry.region}</span>
+                    <span>{entry.generation}세대 · {entry.region} · {mechanicsFamilyKo[entry.mechanicsFamily]}</span>
                     <strong>{entry.shortName}</strong>
                     <b className={full ? 'support-full' : 'support-catalog'}>
                       {full ? '파티·로드맵 지원' : '카탈로그 전용'}
@@ -875,6 +880,7 @@ function App() {
             </label>
             <div>
               <div className="preview-capabilities" aria-label="미리보기 지원 범위">
+                <span className="available">{mechanicsFamilyKo[previewGame.catalog.mechanicsFamily]}</span>
                 <span className={previewHasEncounterSnapshot ? 'available' : 'unavailable'}>
                   {previewHasEncounterSnapshot ? '부분 입수 스냅샷' : '정확한 입수 스냅샷 없음'}
                 </span>

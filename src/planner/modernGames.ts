@@ -6,8 +6,10 @@ export type ModernFamilyId =
   | 'hoenn6'
   | 'alola7'
   | 'alola7-ultra'
+  | 'letsgo7'
   | 'galar8'
   | 'sinnoh8'
+  | 'hisui8'
   | 'paldea9'
 
 export type ModernPlannerGameId =
@@ -19,10 +21,13 @@ export type ModernPlannerGameId =
   | 'moon'
   | 'ultra-sun'
   | 'ultra-moon'
+  | 'lets-go-pikachu'
+  | 'lets-go-eevee'
   | 'sword'
   | 'shield'
   | 'brilliant-diamond'
   | 'shining-pearl'
+  | 'legends-arceus'
   | 'scarlet'
   | 'violet'
 
@@ -199,6 +204,34 @@ const ultraBosses = [
   boss('hau', '하우', '챔피언 결정전', 8, ['electric'], 'Lv.59–60'),
 ]
 
+const letsGoChapters = [
+  chapter('lg-1', '태초마을 → 회색시티', '파트너와 회색배지', 'Lv.5–12', ['pallet-town', 'route-1', 'viridian-city', 'route-2', 'viridian-forest', 'pewter-city'], ['파트너 피카츄/이브이와 출발', '회색체육관 웅 격파']),
+  chapter('lg-2', '달맞이산 → 블루시티', '달맞이산과 블루배지', 'Lv.10–21', ['route-3', 'mt-moon', 'route-4', 'cerulean-city', 'route-24', 'route-25'], ['달맞이산에서 로켓단 격퇴', '블루체육관 이슬 격파', '이수재를 도와 승선티켓 획득']),
+  chapter('lg-3', '갈색시티 → 무지개시티', '오렌지배지와 비전기술', 'Lv.16–34', ['route-5', 'underground-path', 'route-6', 'vermilion-city', 'ss-anne', 'digletts-cave', 'route-9', 'rock-tunnel', 'lavender-town', 'route-8', 'celadon-city'], ['상트앙느호에서 비전기술 풀베기 습득', '갈색체육관 마티스 격파', '비전기술 빛내기 습득', '포켓몬타워의 유령 확인']),
+  chapter('lg-4', '무지개시티 → 포켓몬타워', '레인보우배지와 포켓몬피리', 'Lv.30–36', ['celadon-city', 'rocket-game-corner', 'pokemon-tower', 'lavender-town'], ['무지개체육관 민화 격파', '로켓단 아지트에서 실프스코프 획득', '비전기술 하늘날기 습득', '포켓몬타워 구출과 포켓몬피리 획득']),
+  chapter('lg-5', '연분홍시티', '핑크배지와 물길', 'Lv.34–44', ['route-12', 'route-13', 'route-14', 'route-15', 'fuchsia-city', 'go-park'], ['잠만보를 깨우고 연분홍시티 도착', '비전기술 밀어내기 습득', '비전기술 물결타기 습득', '연분홍체육관 독수 격파']),
+  chapter('lg-6', '노랑시티와 실프주식회사', '로켓단과 골드배지', 'Lv.38–44', ['saffron-city', 'silph-co'], ['실프주식회사에서 로켓단과 비주기 격파', '노랑체육관 초련 격파']),
+  chapter('lg-7', '홍련마을 → 상록시티', '크림슨배지와 그린배지', 'Lv.40–50', ['route-19', 'seafoam-islands', 'route-20', 'cinnabar-island', 'pokemon-mansion', 'route-21', 'viridian-city'], ['포켓몬저택에서 비밀의열쇠 획득', '홍련체육관 강연 격파', '상록체육관 비주기 최종전 승리']),
+  chapter('lg-8', '챔피언로드 → 포켓몬리그', '사천왕과 라이벌 챔피언', 'Lv.45–57', ['route-22', 'route-23', 'victory-road', 'indigo-plateau'], ['챔피언로드 돌파', '사천왕 격파', '라이벌과 챔피언 결정전 승리']),
+]
+
+const letsGoBosses = [
+  boss('brock-lg', '웅', '회색 체육관', 1, ['rock'], 'Lv.11–12'),
+  boss('misty-lg', '이슬', '블루 체육관', 2, ['water'], 'Lv.18–19'),
+  boss('surge-lg', '마티스', '갈색 체육관', 3, ['electric'], 'Lv.25–26'),
+  boss('erika-lg', '민화', '무지개 체육관', 4, ['grass'], 'Lv.33–34'),
+  boss('koga-lg', '독수', '연분홍 체육관', 5, ['poison'], 'Lv.43–44'),
+  boss('giovanni-silph-lg', '비주기', '실프주식회사', 6, ['ground'], 'Lv.39–41'),
+  boss('sabrina-lg', '초련', '노랑 체육관', 6, ['psychic'], 'Lv.43–44'),
+  boss('blaine-lg', '강연', '홍련 체육관', 7, ['fire'], 'Lv.47–48'),
+  boss('giovanni-gym-lg', '비주기', '상록 체육관', 7, ['ground'], 'Lv.49–50'),
+  boss('lorelei-lg', '칸나', '사천왕', 8, ['ice', 'water'], 'Lv.51–52'),
+  boss('bruno-lg', '시바', '사천왕', 8, ['fighting'], 'Lv.52'),
+  boss('agatha-lg', '국화', '사천왕', 8, ['ghost', 'poison'], 'Lv.53'),
+  boss('lance-lg', '목호', '사천왕', 8, ['dragon'], 'Lv.54'),
+  boss('trace-lg', '라이벌', '챔피언', 8, ['normal'], 'Lv.56–57'),
+]
+
 const galarChapters = [
   chapter('gal-1', '펄롱마을 → 엔진시티', '파트너와 체육관 챌린지', 'Lv.5–15', ['postwick', 'slumbering-weald', 'route-1', 'wedgehurst', 'route-2', 'wild-area', 'motostoke'], ['스타터 선택', '와일드에리어 통과', '체육관 챌린지 개막']),
   chapter('gal-2', '터검니호 동쪽 → 터프마을', '풀배지', 'Lv.14–20', ['rolling-fields', 'dappled-grove', 'watchtower-ruins', 'east-lake-axewell', 'route-3', 'galar-mine', 'route-4', 'turffield'], ['터프스타디움 아킬 격파'], ['물 위 자전거 이전 와일드에리어 남부']),
@@ -250,6 +283,27 @@ const sinnohRemakeBosses = [
   boss('flint-bdsp', '대엽', '사천왕', 8, ['fire'], 'Lv.58–61'),
   boss('lucian-bdsp', '오엽', '사천왕', 8, ['psychic'], 'Lv.59–63'),
   boss('cynthia-bdsp', '난천', '챔피언', 8, ['dragon'], 'Lv.60–66'),
+]
+
+const hisuiChapters = [
+  chapter('his-1', '축복마을 → 흑요 들판', '조사단 입단과 숲의 왕', 'Lv.5–18', ['jubilife-village', 'obsidian-fieldlands', 'grandtree-arena'], ['스타터 선택과 조사단 입단', '신비록 라이드 해금', '진화한 숲의 왕 사마자르 진정']),
+  chapter('his-2', '홍련 습지', '금강단·진주단과 늪지의 여왕', 'Lv.18–30', ['crimson-mirelands', 'solaceon-ruins', 'brava-arena'], ['미도의 의뢰 해결', '다투곰 라이드 해금', '진화한 늪지의 여왕 드레디어 진정']),
+  chapter('his-3', '군청 해안', '화산섬과 섬의 왕', 'Lv.29–36', ['cobalt-coastlands', 'firespit-island', 'molten-arena'], ['유라의 사건과 해안 조사', '대쓰여너 라이드 해금', '진화한 섬의 왕 윈디 진정']),
+  chapter('his-4', '천관산 기슭', '동굴과 동굴의 왕', 'Lv.35–46', ['coronet-highlands', 'ancient-quarry', 'moonview-arena'], ['전목의 시험을 통과해 산 정상 진입', '포푸니크 라이드 해금', '진화한 동굴의 왕 붐볼 진정']),
+  chapter('his-5', '순백 동토', '설원과 동토의 왕', 'Lv.45–56', ['alabaster-icelands', 'snowpoint-temple', 'icepeak-arena'], ['선단신전의 수수께끼 해결', '워글 라이드 해금', '진화한 동토의 왕 크레베이스 진정']),
+  chapter('his-6', '세 호수와 추방', '붉은 사슬 제작', 'Lv.55–60', ['lake-verity', 'lake-valor', 'lake-acuity', 'ancient-retreat'], ['세 호수의 시련 완수', '붉은 사슬 제작', '축복마을 귀환']),
+  chapter('his-7', '신오신전', '전목과 시공의 균열 최종전', 'Lv.60–65', ['temple-of-sinnoh', 'coronet-highlands'], ['전목 격파', '디아루가/펄기아 포획', '오리진폼 디아루가/펄기아 진정']),
+]
+
+const hisuiBosses = [
+  boss('kleavor', '사마자르', '숲의 왕', 1, ['bug', 'rock'], 'Lv.18'),
+  boss('lilligant-hisui', '드레디어(히스이의 모습)', '늪지의 여왕', 2, ['grass', 'fighting'], 'Lv.30'),
+  boss('arcanine-hisui', '윈디(히스이의 모습)', '섬의 왕', 3, ['fire', 'rock'], 'Lv.36'),
+  boss('electrode-hisui', '붐볼(히스이의 모습)', '동굴의 왕', 4, ['electric', 'grass'], 'Lv.46'),
+  boss('avalugg-hisui', '크레베이스(히스이의 모습)', '동토의 왕', 5, ['ice', 'rock'], 'Lv.56'),
+  boss('kamado', '전목', '은하단 단장', 7, ['normal', 'fighting'], 'Lv.60–61'),
+  boss('space-time-legend', '디아루가/펄기아', '신오신전', 7, ['steel', 'water'], 'Lv.65'),
+  boss('origin-legend', '오리진폼 디아루가/펄기아', '최종 진정', 7, ['steel', 'water'], 'Lv.65'),
 ]
 
 const paldeaChapters = [
@@ -324,8 +378,10 @@ export const modernFamilies: Record<ModernFamilyId, ModernFamilyConfig> = {
   hoenn6: { id: 'hoenn6', generation: 6, region: '호연', chapters: orasChapters, bosses: orasBosses, fieldMoves: orasFields, moveReminder: { chapter: 4, location: '단풍마을', cost: '하트비늘 1개' }, postgame: ['에피소드 델타와 레쿠쟈·테오키스', '배틀리조트', '환상의 장소와 전설 포켓몬'] },
   alola7: { id: 'alola7', generation: 7, region: '알로라', chapters: alolaChapters, bosses: alolaBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['울트라비스트 포획 임무', '배틀트리', '수호신과 네크로즈마'] },
   'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
+  letsgo7: { id: 'letsgo7', generation: 7, region: '관동', chapters: letsGoChapters, bosses: letsGoBosses, fieldMoves: [], postgame: ['블루와 체육관 관장 재대결', '블루시티동굴의 뮤츠', '마스터 트레이너와 레드'] },
   galar8: { id: 'galar8', generation: 8, region: '가라르', chapters: galarChapters, bosses: galarBosses, fieldMoves: [], moveReminder: { chapter: 2, location: '모든 포켓몬센터', cost: '무료' }, postgame: ['소드·실드 전설 에피소드', '배틀타워', '갑옷섬·왕관설원 DLC는 본편 엔딩 조건과 분리'] },
   sinnoh8: { id: 'sinnoh8', generation: 8, region: '신오', chapters: sinnohRemakeChapters, bosses: sinnohRemakeBosses, fieldMoves: [], moveReminder: { chapter: 4, location: '들판시티', cost: '하트비늘 10회 이후 무료' }, postgame: ['전국도감과 파이트에리어', '배틀타워', '라마나스파크와 하드마운틴'] },
+  hisui8: { id: 'hisui8', generation: 8, region: '히스이', chapters: hisuiChapters, bosses: hisuiBosses, fieldMoves: [], moveReminder: { chapter: 1, location: '기술 변경 메뉴', cost: '무료' }, postgame: ['모든 석판과 월로·기라티나', '히스이도감 완성과 아르세우스', '대량발생·시공의 뒤틀림·서브 임무'] },
   paldea9: {
     id: 'paldea9',
     generation: 9,
@@ -369,10 +425,13 @@ const modernGameDefinitions: ModernGameDefinition[] = [
   { id: 'moon', familyId: 'alola7', endpoint: '챔피언 결정전 쿠쿠이', accent: '#4e5da8', starters: [722, 725, 728], fossils: [], notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.'] },
   { id: 'ultra-sun', familyId: 'alola7-ultra', endpoint: '챔피언 결정전 하우', accent: '#e6792b', starters: [722, 725, 728], fossils: [], notes: ['울트라네크로즈마와 마츠리카 시련을 포함한 울트라 버전 전용 순서입니다.'] },
   { id: 'ultra-moon', familyId: 'alola7-ultra', endpoint: '챔피언 결정전 하우', accent: '#5964b7', starters: [722, 725, 728], fossils: [], notes: ['울트라네크로즈마와 마츠리카 시련을 포함한 울트라 버전 전용 순서입니다.'] },
+  { id: 'lets-go-pikachu', familyId: 'letsgo7', endpoint: '라이벌 챔피언', accent: '#f4c430', starters: [25], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '포획 콤보·유인향·공중 출현은 완전성 게이트가 닫혀 있어 추천에 사용하지 않습니다.'] },
+  { id: 'lets-go-eevee', familyId: 'letsgo7', endpoint: '라이벌 챔피언', accent: '#9b6b43', starters: [133], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '포획 콤보·유인향·공중 출현은 완전성 게이트가 닫혀 있어 추천에 사용하지 않습니다.'] },
   { id: 'sword', familyId: 'galar8', endpoint: '챔피언 단델', accent: '#39a7d7', starters: [810, 813, 816], fossils: [], notes: ['채두·마쿠와가 등장하며, DLC 포켓몬은 본편 엔딩 파티에 필수로 추천하지 않습니다.'] },
   { id: 'shield', familyId: 'galar8', endpoint: '챔피언 단델', accent: '#d84b89', starters: [810, 813, 816], fossils: [], notes: ['어니언·멜론이 등장하며, DLC 포켓몬은 본편 엔딩 파티에 필수로 추천하지 않습니다.'] },
   { id: 'brilliant-diamond', familyId: 'sinnoh8', endpoint: '챔피언 난천', accent: '#5c8eba', starters: [387, 390, 393], fossils: [[408, 410]], notes: ['비전기술은 포켓치의 야생 포켓몬 호출로 사용하며 파티 기술칸을 차지하지 않습니다.'] },
   { id: 'shining-pearl', familyId: 'sinnoh8', endpoint: '챔피언 난천', accent: '#c9799d', starters: [387, 390, 393], fossils: [[408, 410]], notes: ['비전기술은 포켓치의 야생 포켓몬 호출로 사용하며 파티 기술칸을 차지하지 않습니다.'] },
+  { id: 'legends-arceus', familyId: 'hisui8', endpoint: '신오신전 오리진폼 결전', accent: '#547b73', starters: [722, 155, 501], fossils: [], notes: ['조사 지역·라이드·왕/여왕 진정 순서를 사용하며 체육관이나 HM을 만들지 않습니다.', '도감 과제·대량발생·시공의 뒤틀림·기술 숙달은 완전성 게이트가 닫혀 있어 추천에 사용하지 않습니다.'] },
   { id: 'scarlet', familyId: 'paldea9', endpoint: '낙원방어프로토콜', accent: '#c9483d', starters: [906, 909, 912], fossils: [], notes: ['권장 레벨에 따른 18개 배지 순서를 사용하며, 토진의 주인은 위대한엄니입니다.', 'DLC 지역은 본편 엔딩 타이밍과 분리합니다.'] },
   { id: 'violet', familyId: 'paldea9', endpoint: '낙원방어프로토콜', accent: '#7657ad', starters: [906, 909, 912], fossils: [], notes: ['권장 레벨에 따른 18개 배지 순서를 사용하며, 토진의 주인은 무쇠바퀴입니다.', 'DLC 지역은 본편 엔딩 타이밍과 분리합니다.'] },
 ]
@@ -498,6 +557,7 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
   },
   alola7: alolaLocationChapterOverrides,
   'alola7-ultra': alolaLocationChapterOverrides,
+  letsgo7: {},
   galar8: {
     'west-lake-axewell': 1,
     'axews-eye': 7,
@@ -530,6 +590,7 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
     'sunyshore-city': 8,
     'trophy-garden': 4,
   },
+  hisui8: {},
   paldea9: {
     'inlet-grotto': 1,
     'south-province-area-four': 2,
@@ -556,11 +617,13 @@ const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
   'alola7-ultra': [
     'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
   ],
+  letsgo7: [],
   galar8: [],
   sinnoh8: [
     'route-224', 'route-225', 'route-226', 'route-227', 'route-228', 'route-229', 'route-230',
     'resort-area', 'sendoff-spring', 'snowpoint-temple', 'stark-mountain', 'turnback-cave',
   ],
+  hisui8: [],
   paldea9: [],
 }
 
@@ -591,8 +654,10 @@ export function modernEncounterChapter(
   const methodUnlocks: Partial<Record<ModernFamilyId, Record<string, number>>> = {
     kalos6: { 'old-rod': 2, 'good-rod': 4, 'super-rod': 7, surf: 3, 'rock-smash': 2, 'friend-safari': 10 },
     hoenn6: { 'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 5, 'rock-smash': 3 },
+    letsgo7: {},
     galar8: { surf: 7 },
     sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 9, surf: 5, 'rock-smash': 1 },
+    hisui8: {},
   }
   let prerequisiteChapter = methodUnlocks[familyId]?.[method] ?? 1
   if (familyId === 'hoenn6') {
@@ -641,8 +706,10 @@ export const modernStoryProvenance = {
     { games: ['omega-ruby', 'alpha-sapphire'], revision: '4247537', url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_Omega_Ruby_and_Alpha_Sapphire&oldid=4247537' },
     { games: ['sun', 'moon'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Sun_and_Moon' },
     { games: ['ultra-sun', 'ultra-moon'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Ultra_Sun_and_Ultra_Moon' },
-    { games: ['sword', 'shield'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Sword_and_Shield' },
-    { games: ['brilliant-diamond', 'shining-pearl'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Brilliant_Diamond_and_Shining_Pearl' },
+    { games: ['lets-go-pikachu', 'lets-go-eevee'], revision: '4247959', url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon:_Let%27s_Go,_Pikachu!_and_Let%27s_Go,_Eevee!&oldid=4247959' },
+    { games: ['sword', 'shield'], revision: '4489916', url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_Sword_and_Shield&oldid=4489916' },
+    { games: ['brilliant-diamond', 'shining-pearl'], revision: '4577633', url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_Brilliant_Diamond_and_Shining_Pearl&oldid=4577633' },
+    { games: ['legends-arceus'], revision: '4315902', url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_Legends:_Arceus&oldid=4315902' },
     { games: ['scarlet', 'violet'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Scarlet_and_Violet' },
   ],
 } as const
