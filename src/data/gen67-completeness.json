@@ -1,0 +1,474 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "pokeapi": {
+      "repository": "https://github.com/PokeAPI/pokeapi",
+      "revision": "3a588cf66475bd05a34aba29bd538480889829fb"
+    },
+    "pkhex": {
+      "repository": "https://github.com/kwsch/PKHeX",
+      "revision": "77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5"
+    },
+    "bulbapedia-xy": {
+      "repository": "https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_X_and_Y&oldid=4315929",
+      "revision": "4315929"
+    },
+    "bulbapedia-oras": {
+      "repository": "https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_Omega_Ruby_and_Alpha_Sapphire&oldid=4247537",
+      "revision": "4247537"
+    },
+    "walkthrough-review": {
+      "repository": "https://bulbapedia.bulbagarden.net/wiki/Category:Walkthroughs",
+      "revision": "reviewed-2026-09-11"
+    }
+  },
+  "families": {
+    "kalos6": {
+      "games": ["x", "y"],
+      "gates": {
+        "availability": {
+          "requirements": [
+            {
+              "id": "method-specific-wild",
+              "status": "complete",
+              "sourceRefs": ["pokeapi"],
+              "evidence": "Pinned encounters.csv contains 1,446 X and 1,456 Y method-specific rows across 18 encounter methods.",
+              "expected": { "x": 1446, "y": 1456 }
+            },
+            {
+              "id": "static-gift-fossil-trade",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Pinned PKHeX tables expose species, form, level and met location; the planner has not normalized every choice and prerequisite.",
+              "missingFields": ["acquisition-kind", "requested-trade-species", "choice-group", "earliest-story-prerequisite"],
+              "attemptedAlternatives": ["PokeAPI encounters.csv omits in-game trades and old-fossil restoration prerequisites.", "PKHeX EncounterStatic6 and EncounterTrade6 do not encode planner story chapters."]
+            },
+            {
+              "id": "earliest-reachability",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia-xy"],
+              "evidence": "Location order exists, but conditional access such as Waterfall, daily events and postgame locks is not complete for every row.",
+              "missingFields": ["required-field-move", "required-badge-or-event", "time-or-day", "pre-champion-access"],
+              "attemptedAlternatives": ["Location-token matching was rejected because it cannot prove conditional subarea access."]
+            }
+          ]
+        },
+        "forms": {
+          "requirements": [
+            {
+              "id": "encounter-form-identity",
+              "status": "blocked",
+              "sourceRefs": ["pkhex"],
+              "evidence": "Concrete PKHeX form, source-area and slot values are preserved including Standard rows, but Standard has no submethod and dynamic Burmy, Furfrou and Vivillon sentinels still require deterministic planner policies.",
+              "missingFields": ["standard-slot-submethod", "lossless-form-to-method-join", "resolved-dynamic-form", "form-change-availability", "cosmetic-versus-battle-form"],
+              "attemptedAlternatives": ["Standard rows are retained as wild-unspecified instead of inventing a grass, cave, surf or rod method.", "Pinned PokéAPI method rows omit form and source-slot identity.", "pk3DS requires user-extracted ROM data; no XY decomp exists; other located dumps have no clear redistribution license.", "Flattening dynamic sentinels was rejected for promotion."]
+            },
+            {
+              "id": "form-personal-data",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "The runtime species catalog still exposes default-form types and stats.",
+              "missingFields": ["form-types", "form-base-stats", "form-display-name"],
+              "attemptedAlternatives": ["PokeAPI non-default pokemon rows are available but are not mapped to PKHeX form indexes."]
+            },
+            {
+              "id": "form-move-evolution-legality",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "Meowstic gender, Pumpkaboo size and other form-specific move/evolution contracts are not represented by planner member identity.",
+              "missingFields": ["planner-form-key", "form-learnset", "base-form-id", "evolved-form-id"],
+              "attemptedAlternatives": ["Unioning form moves was rejected because it can recommend illegal moves."]
+            }
+          ]
+        },
+        "learnsets": {
+          "requirements": [
+            {
+              "id": "all-source-methods",
+              "status": "complete",
+              "sourceRefs": ["pokeapi"],
+              "evidence": "Version group 15 preserves unfiltered level, egg, tutor and machine rows for 784 separate Pokemon identifiers.",
+              "expected": { "15": 784 }
+            },
+            {
+              "id": "egg-moves",
+              "status": "complete",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "pokemon_move_method_id=2 rows are preserved under the same form-separated Pokemon identifiers as other move methods."
+            },
+            {
+              "id": "tm-tutor-reminder-timing",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia-xy"],
+              "evidence": "Compatibility exists, but every TM/HM, tutor and reminder move lacks a pinned earliest-chapter manifest.",
+              "missingFields": ["source-location", "source-prerequisite", "earliest-chapter", "reminder-eligibility"],
+              "attemptedAlternatives": ["A fixed 70% story fallback remains preview-only and cannot pass this requirement."]
+            }
+          ]
+        },
+        "evolutions": {
+          "requirements": [
+            {
+              "id": "condition-legality",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi"],
+              "evidence": "Species-level evolution fields are present, but game-valid method boundaries and forms are not complete.",
+              "missingFields": ["version-valid-method", "base-form-id", "evolved-form-id"],
+              "attemptedAlternatives": ["Earliest historical method selection was rejected for version-specific promotion."]
+            },
+            {
+              "id": "requirement-story-timing",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia-xy"],
+              "evidence": "Stone, location, affection, friendship, time, move and trade requirements are not all mapped to earliest chapters.",
+              "missingFields": ["item-earliest-chapter", "location-earliest-chapter", "affection-system-unlock", "move-source-earliest-chapter"],
+              "attemptedAlternatives": ["Defaulting unknown requirements to the final chapter was rejected as non-evidence."]
+            }
+          ]
+        },
+        "story": {
+          "requirements": [
+            {
+              "id": "mandatory-battle-sequence",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia-xy"],
+              "evidence": "Gyms, Lysandre, Elite Four and Champion are modeled, but all mandatory rival and Team Flare battles are not enumerated.",
+              "missingFields": ["mandatory-rival-battles", "mandatory-admin-battles", "version-team-variants", "opponent-levels"],
+              "attemptedAlternatives": ["Gym-only summaries were rejected as a complete mandatory chronology."]
+            },
+            {
+              "id": "warnings-and-postgame",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia-xy"],
+              "evidence": "Key postgame is summarized but one-way segments, temporary lockouts and irreversible choices are not complete.",
+              "missingFields": ["one-way-warning", "temporary-lockout", "choice-warning", "postgame-prerequisite"],
+              "attemptedAlternatives": ["Free-text chapter objectives cannot prove warning coverage."]
+            }
+          ]
+        },
+        "mechanics": {
+          "requirements": [
+            {
+              "id": "classic-hm-progression",
+              "status": "complete",
+              "sourceRefs": ["bulbapedia-xy", "pokeapi"],
+              "evidence": "Cut, Strength, Surf and Waterfall are required; Fly and Rock Smash are optional traversal aids with version-group legality."
+            }
+          ]
+        },
+        "integration": {
+          "requirements": [
+            {
+              "id": "planner-runtime",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "Kalos remains in the preview-only ModernGameConfig path.",
+              "missingFields": ["GameConfig-entry", "form-aware-member-key", "exact-move-chapter-runtime"],
+              "attemptedAlternatives": ["Changing the registry flag alone is rejected by runtime generation tests."]
+            },
+            {
+              "id": "regression-and-persistence",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "No exhaustive starter/form/version-exclusive generation and v3 reload matrix exists for X/Y.",
+              "missingFields": ["all-starter-contracts", "representative-form-contracts", "v3-reload-contract"],
+              "attemptedAlternatives": ["Preview tests do not exercise party generation or roadmap persistence."]
+            }
+          ]
+        }
+      }
+    },
+    "hoenn6": {
+      "games": ["omega-ruby", "alpha-sapphire"],
+      "gates": {
+        "availability": {
+          "requirements": [
+            {
+              "id": "all-wild-methods",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "PKHeX Standard rows retain exact area, slot, form and level but do not identify grass/cave/surf/fishing/DexNav; PokeAPI omits Surf, rods and DexNav pools for ORAS.",
+              "missingFields": ["standard-slot-submethod", "dexnav-prerequisite", "lossless-form-to-method-join", "surf-and-rod-rows"],
+              "attemptedAlternatives": ["Standard rows are retained as wild-unspecified instead of inventing a submethod.", "PKHeX SlotType6 exposes only Standard for the ambiguous pool.", "Pinned PokeAPI has only 296 ORAS rows, no Surf, rod or DexNav method pools, and no form/slot identity.", "pk3DS requires user-extracted ROM data; no ORAS decomp exists; other located dumps have no clear redistribution license."]
+            },
+            {
+              "id": "static-gift-fossil-trade-mirage",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Code-defined rows exist but Mirage Spot, soaring, party, time and postgame prerequisites are not normalized.",
+              "missingFields": ["mirage-spot-cycle", "soaring-unlock", "party-species-prerequisite", "time-window", "earliest-story-prerequisite"],
+              "attemptedAlternatives": ["PKHeX legality templates validate met data but do not encode story reachability."]
+            }
+          ]
+        },
+        "forms": {
+          "requirements": [
+            {
+              "id": "cosplay-mega-primal-form-policy",
+              "status": "blocked",
+              "sourceRefs": ["pkhex"],
+              "evidence": "Cosplay Pikachu forms are present upstream; planner identity and battle-only Mega/Primal exclusions are not normalized.",
+              "missingFields": ["planner-form-key", "form-types-and-stats", "form-moves", "battle-form-policy"],
+              "attemptedAlternatives": ["Flattening Cosplay Pikachu was rejected because each costume has an exclusive move."]
+            }
+          ]
+        },
+        "learnsets": {
+          "requirements": [
+            {
+              "id": "all-methods-and-form-identifiers",
+              "status": "complete",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "Version group 16 preserves unfiltered level, egg, tutor and machine rows for 811 separate Pokemon identifiers.",
+              "expected": { "16": 811 }
+            },
+            {
+              "id": "tm-tutor-reminder-timing",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia-oras"],
+              "evidence": "Every TM/HM, Battle Resort tutor and reminder source still requires an exact earliest-chapter manifest.",
+              "missingFields": ["source-location", "source-prerequisite", "earliest-chapter", "reminder-eligibility"],
+              "attemptedAlternatives": ["Using generic late-story timing was rejected."]
+            }
+          ]
+        },
+        "evolutions": {
+          "requirements": [
+            {
+              "id": "conditions-and-story-timing",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "bulbapedia-oras"],
+              "evidence": "Version-valid form and location conditions are not mapped to exact ORAS story chapters.",
+              "missingFields": ["version-valid-method", "form-transition", "location-and-item-earliest-chapter"],
+              "attemptedAlternatives": ["Generation-only evolution filtering cannot establish ORAS availability."]
+            }
+          ]
+        },
+        "story": {
+          "requirements": [
+            {
+              "id": "mandatory-versioned-chronology",
+              "status": "blocked",
+              "sourceRefs": ["bulbapedia-oras"],
+              "evidence": "Gyms and league are modeled, but every Brendan/May and Magma/Aqua mandatory battle plus Delta Episode warnings are not complete.",
+              "missingFields": ["mandatory-rival-battles", "versioned-villain-battles", "opponent-levels", "delta-episode-sequence", "lockout-warnings"],
+              "attemptedAlternatives": ["Shared RSE chronology was rejected because ORAS story battles differ."]
+            }
+          ]
+        },
+        "mechanics": {
+          "requirements": [
+            {
+              "id": "classic-hm-progression",
+              "status": "complete",
+              "sourceRefs": ["bulbapedia-oras", "pokeapi"],
+              "evidence": "Cut, Rock Smash, Strength, Surf, Dive and Waterfall story use is separated from optional Fly."
+            }
+          ]
+        },
+        "integration": {
+          "requirements": [
+            {
+              "id": "planner-runtime-tests-and-v3",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "ORAS remains preview-only and has no complete form-aware generation or persistence matrix.",
+              "missingFields": ["GameConfig-entry", "form-aware-member-key", "all-starter-tests", "v3-reload-contract"],
+              "attemptedAlternatives": ["Registry-only promotion is rejected."]
+            }
+          ]
+        }
+      }
+    },
+    "alola7": {
+      "games": ["sun", "moon"],
+      "gates": {
+        "availability": {
+          "requirements": [
+            {
+              "id": "wild-sos-slots",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Separate Sun and Moon resources preserve area, slot, form and disjoint level ranges, but PKHeX legality records collapse ordinary table/SOS context and omit the table identity needed to prove planner-relevant method and reachability. Missing encounter rates alone do not block promotion.",
+              "missingFields": ["ordinary-encounter-method", "encounter-table-identity", "sos-call-prerequisite", "lossless-pokeapi-slot-join"],
+              "attemptedAlternatives": ["Pinned PokéAPI has documented Gen 7 encounter gaps and no lossless PKHeX area/slot/form join.", "pk3DS requires user-extracted ROM data; other located dumps have no clear redistribution license.", "Labeling ordinary rows wild-unspecified avoids inventing a method but cannot pass the exact reachability gate."]
+            },
+            {
+              "id": "static-gift-trade-scan-qr-ultra-space",
+              "status": "blocked",
+              "sourceRefs": ["pkhex"],
+              "evidence": "Code-defined special tables and their story prerequisites are not normalized.",
+              "missingFields": ["acquisition-kind", "island-scan-day", "qr-prerequisite", "ultra-space-prerequisite", "earliest-story-chapter"],
+              "attemptedAlternatives": ["Wild resource row counts do not cover code-defined encounters."]
+            }
+          ]
+        },
+        "forms": {
+          "requirements": [
+            {
+              "id": "regional-totem-battle-form-policy",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Alolan encounter forms are preserved, but form personal data, moves and non-obtainable Totem/battle forms are not classified.",
+              "missingFields": ["form-personal-data", "form-learnsets", "obtainable-form-policy"],
+              "attemptedAlternatives": ["Default-species flattening was rejected."]
+            }
+          ]
+        },
+        "learnsets": {
+          "requirements": [
+            {
+              "id": "all-methods-forms-and-timing",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex", "walkthrough-review"],
+              "evidence": "Group 17 preserves unfiltered form-identifier level, egg, TM, tutor, Light Ball egg, form-change and Zygarde Cube rows, but the planner runtime and exact TM/tutor/reminder story timing are not connected.",
+              "missingFields": ["form-aware-runtime-key", "tm-and-tutor-earliest-chapter", "reminder-eligibility-and-earliest-chapter"],
+              "attemptedAlternatives": ["Generic timing was rejected."]
+            }
+          ]
+        },
+        "evolutions": {
+          "requirements": [
+            {
+              "id": "conditions-and-story-timing",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "walkthrough-review"],
+              "evidence": "Regional form, time, affection and magnetic-location conditions are not all story-mapped.",
+              "missingFields": ["base-and-evolved-form", "time", "affection", "special-location-earliest-chapter"],
+              "attemptedAlternatives": ["Species-only methods were rejected."]
+            }
+          ]
+        },
+        "story": {
+          "requirements": [
+            {
+              "id": "mandatory-versioned-chronology",
+              "status": "blocked",
+              "sourceRefs": ["walkthrough-review"],
+              "evidence": "Trials and league are modeled, but mandatory Hau, Gladion, Skull and Aether battles and warnings are incomplete.",
+              "missingFields": ["mandatory-rival-battles", "mandatory-faction-battles", "versioned-totem-allies", "lockout-warnings"],
+              "attemptedAlternatives": ["Trial-only summaries were rejected."]
+            }
+          ]
+        },
+        "mechanics": {
+          "requirements": [
+            {
+              "id": "ride-progression",
+              "status": "complete",
+              "sourceRefs": ["walkthrough-review"],
+              "evidence": "Poké Ride traversal is modeled without requiring party HM moves."
+            }
+          ]
+        },
+        "integration": {
+          "requirements": [
+            {
+              "id": "planner-runtime-tests-and-v3",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "Sun/Moon remains preview-only without complete form-aware generation and persistence tests.",
+              "missingFields": ["GameConfig-entry", "form-aware-member-key", "starter-tests", "v3-reload-contract"],
+              "attemptedAlternatives": ["Registry-only promotion is rejected."]
+            }
+          ]
+        }
+      }
+    },
+    "alola7-ultra": {
+      "games": ["ultra-sun", "ultra-moon"],
+      "gates": {
+        "availability": {
+          "requirements": [
+            {
+              "id": "wild-sos-slots",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Separate Ultra Sun and Ultra Moon resources preserve area, slot, form and disjoint level ranges, but PKHeX legality records collapse ordinary table/SOS context and omit the table identity needed to prove planner-relevant method and reachability. Missing encounter rates alone do not block promotion.",
+              "missingFields": ["ordinary-encounter-method", "encounter-table-identity", "sos-call-prerequisite", "lossless-pokeapi-slot-join"],
+              "attemptedAlternatives": ["Pinned PokéAPI has documented Gen 7 encounter gaps and no lossless PKHeX area/slot/form join.", "pk3DS requires user-extracted ROM data; other located dumps have no clear redistribution license.", "Labeling ordinary rows wild-unspecified avoids inventing a method but cannot pass the exact reachability gate."]
+            },
+            {
+              "id": "static-gift-trade-scan-qr-ultra-warp",
+              "status": "blocked",
+              "sourceRefs": ["pkhex"],
+              "evidence": "Code-defined special encounters and Ultra Warp Ride prerequisites are not normalized.",
+              "missingFields": ["acquisition-kind", "island-scan-day", "qr-prerequisite", "warp-color-rarity", "story-prerequisite"],
+              "attemptedAlternatives": ["Wild/SOS resources do not contain these tables."]
+            }
+          ]
+        },
+        "forms": {
+          "requirements": [
+            {
+              "id": "regional-totem-ultra-form-policy",
+              "status": "blocked",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Regional forms are preserved in encounters; personal data, moves and obtainable Totem forms are not complete.",
+              "missingFields": ["form-personal-data", "form-learnsets", "obtainable-totem-form-policy"],
+              "attemptedAlternatives": ["Default-species flattening was rejected."]
+            }
+          ]
+        },
+        "learnsets": {
+          "requirements": [
+            {
+              "id": "all-methods-forms-and-timing",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex", "walkthrough-review"],
+              "evidence": "Group 18 preserves unfiltered form-identifier level, egg, TM, tutor, Light Ball egg, form-change and Zygarde Cube rows, but the planner runtime and exact TM/tutor/reminder story timing are not connected.",
+              "missingFields": ["form-aware-runtime-key", "tm-and-tutor-earliest-chapter", "reminder-eligibility-and-earliest-chapter"],
+              "attemptedAlternatives": ["Generic timing was rejected."]
+            }
+          ]
+        },
+        "evolutions": {
+          "requirements": [
+            {
+              "id": "conditions-and-story-timing",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "walkthrough-review"],
+              "evidence": "Regional form, time, affection and special-location requirements are not all story-mapped.",
+              "missingFields": ["base-and-evolved-form", "time", "affection", "special-location-earliest-chapter"],
+              "attemptedAlternatives": ["Species-only methods were rejected."]
+            }
+          ]
+        },
+        "story": {
+          "requirements": [
+            {
+              "id": "mandatory-versioned-chronology",
+              "status": "blocked",
+              "sourceRefs": ["walkthrough-review"],
+              "evidence": "Trials, Ultra Necrozma and league are modeled, but all mandatory rival/faction battles and warnings are incomplete.",
+              "missingFields": ["mandatory-rival-battles", "mandatory-faction-battles", "ultra-recon-battles", "lockout-warnings"],
+              "attemptedAlternatives": ["Trial-only summaries were rejected."]
+            }
+          ]
+        },
+        "mechanics": {
+          "requirements": [
+            {
+              "id": "ride-progression",
+              "status": "complete",
+              "sourceRefs": ["walkthrough-review"],
+              "evidence": "Poké Ride traversal is modeled without requiring party HM moves."
+            }
+          ]
+        },
+        "integration": {
+          "requirements": [
+            {
+              "id": "planner-runtime-tests-and-v3",
+              "status": "blocked",
+              "sourceRefs": ["pokeapi", "pkhex"],
+              "evidence": "USUM remains preview-only without complete form-aware generation and persistence tests.",
+              "missingFields": ["GameConfig-entry", "form-aware-member-key", "starter-tests", "v3-reload-contract"],
+              "attemptedAlternatives": ["Registry-only promotion is rejected."]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

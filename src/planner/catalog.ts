@@ -54,6 +54,7 @@ interface ModernEncounterSnapshot {
     repository: string
     revision: string
     license: string
+    files: string[]
     notes: string[]
   }
   games: Record<string, ({
@@ -103,7 +104,12 @@ export function loadCatalog(): Promise<void> {
     ]).then(([module, modernModule]) => {
       const data = readSnapshot(module.default)
       const modern = modernModule.default as ModernEncounterSnapshot
-      if (!/^[a-f0-9]{40}$/.test(modern.provenance.revision) || modern.provenance.license !== 'GPL-3.0') {
+      if (
+        !/^[a-f0-9]{40}$/.test(modern.provenance.revision)
+        || modern.provenance.license !== 'GPL-3.0-or-later'
+        || !Array.isArray(modern.provenance.files)
+        || modern.provenance.files.length === 0
+      ) {
         throw new Error('현대 버전 조우 스냅샷 메타데이터가 올바르지 않습니다.')
       }
       catalogSource = data.source

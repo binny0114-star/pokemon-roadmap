@@ -103,6 +103,21 @@ describe('지원 버전과 정적 카탈로그', () => {
     expect(learnsetCoverage?.isolatedVersionGroups).toBe(true)
     expect(learnsetCoverage?.learnsetSpeciesByVersionGroup['30']).toBe(0)
     expect(learnsetCoverage?.learnsetSpeciesByVersionGroup['31']).toBe(0)
+    expect(learnsetCoverage?.learnsetSpeciesByVersionGroup).toMatchObject({
+      15: 721,
+      16: 721,
+      17: 802,
+      18: 807,
+    })
+    expect(learnsetCoverage?.plannerDataPolicy).toEqual({
+      speciesForms: 'default-form-only',
+      levelUp: 'source-rows',
+      machines: 'useful-moves-only',
+      tutors: 'useful-moves-only',
+      eggMoves: 'not-ingested',
+      reminderRules: 'not-normalized',
+      acquisitionTiming: 'not-ingested',
+    })
     expect(catalogCoverage?.forms).toMatchObject({ policy: 'default-form-only', planning: 'unsupported' })
     expect(learnsetCoverage?.forms).toMatchObject({ policy: 'default-form-only', planning: 'unsupported' })
   })

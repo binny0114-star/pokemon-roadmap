@@ -1,4 +1,5 @@
 import registryJson from '../data/version-registry.json'
+import completenessJson from '../data/gen67-completeness.json'
 import type { FamilyId, PlannerGameId } from './types'
 
 export type CatalogGameId =
@@ -10,9 +11,28 @@ export type CatalogGameId =
 
 export type MechanicsFamily = 'classic' | 'lets-go' | 'legends'
 export type ReleaseKind = 'original' | 'third' | 'enhanced' | 'sequel' | 'remake'
+export type AccuracyGateId =
+  | 'availability'
+  | 'forms'
+  | 'learnsets'
+  | 'evolutions'
+  | 'story'
+  | 'mechanics'
+  | 'integration'
+export interface AccuracyGate {
+  complete: boolean
+  evidence: string
+}
 export type PlannerSupport =
-  | { status: 'full' }
-  | { status: 'catalog-only'; reason: string }
+  | {
+      status: 'full'
+      accuracyGates?: Record<AccuracyGateId, AccuracyGate>
+    }
+  | {
+      status: 'catalog-only'
+      reason: string
+      accuracyGates?: Record<AccuracyGateId, AccuracyGate>
+    }
 
 export interface GameCatalogEntry {
   id: CatalogGameId
@@ -29,6 +49,7 @@ export interface GameCatalogEntry {
   dataVersionGroupIds: number[]
   pairedWith: CatalogGameId[]
   dataAlias?: string
+  supportReview?: string
   plannerSupport: PlannerSupport
   plannerFamilyId?: FamilyId
 }
@@ -54,7 +75,100 @@ export interface LegacyPlannerSnapshot {
   reason: string
 }
 
-function validateRegistry(value: unknown): {
+type CompletenessRequirement = {
+  id: string
+  status: 'complete' | 'blocked'
+  sourceRefs: string[]
+  evidence: string
+  expected?: Record<string, number>
+  missingFields?: string[]
+  attemptedAlternatives?: string[]
+}
+
+type CompletenessManifest = {
+  schemaVersion: number
+  sources: Record<string, { repository: string; revision: string }>
+  families: Record<string, {
+    games: string[]
+    gates: Record<AccuracyGateId, { requirements: CompletenessRequirement[] }>
+  }>
+}
+
+const gatedGameIds = new Set([
+  'x', 'y', 'omega-ruby', 'alpha-sapphire',
+  'sun', 'moon', 'ultra-sun', 'ultra-moon',
+])
+const requiredAccuracyGates: AccuracyGateId[] = [
+  'availability', 'forms', 'learnsets', 'evolutions', 'story', 'mechanics', 'integration',
+]
+
+export function validateCompletenessManifest(value: unknown): CompletenessManifest {
+  if (!value || typeof value !== 'object') throw new Error('6–7세대 완전성 매니페스트가 객체가 아닙니다.')
+  const manifest = value as Partial<CompletenessManifest>
+  if (
+    manifest.schemaVersion !== 1
+    || !manifest.sources
+    || !manifest.families
+  ) {
+    throw new Error('6–7세대 완전성 매니페스트 스키마가 올바르지 않습니다.')
+  }
+  for (const [sourceId, source] of Object.entries(manifest.sources)) {
+    if (!source.repository || !source.revision) {
+      throw new Error(`6–7세대 완전성 출처가 올바르지 않습니다: ${sourceId}`)
+    }
+  }
+  const coveredGames = new Set<string>()
+  for (const [familyId, family] of Object.entries(manifest.families)) {
+    if (!family.games.length) throw new Error(`6–7세대 완전성 게임이 없습니다: ${familyId}`)
+    for (const gameId of family.games) {
+      if (!gatedGameIds.has(gameId) || coveredGames.has(gameId)) {
+        throw new Error(`6–7세대 완전성 게임 범위가 올바르지 않습니다: ${gameId}`)
+      }
+      coveredGames.add(gameId)
+    }
+    for (const gateId of requiredAccuracyGates) {
+      const gate = family.gates[gateId]
+      if (!gate?.requirements.length) {
+        throw new Error(`6–7세대 완전성 요구사항이 없습니다: ${familyId}/${gateId}`)
+      }
+      const requirementIds = new Set<string>()
+      for (const requirement of gate.requirements) {
+        if (
+          !requirement.id
+          || requirementIds.has(requirement.id)
+          || !['complete', 'blocked'].includes(requirement.status)
+          || !requirement.evidence.trim()
+          || !requirement.sourceRefs.length
+          || requirement.sourceRefs.some((sourceId) => !manifest.sources![sourceId])
+        ) {
+          throw new Error(`6–7세대 완전성 요구사항이 올바르지 않습니다: ${familyId}/${gateId}/${requirement.id}`)
+        }
+        requirementIds.add(requirement.id)
+        if (
+          requirement.status === 'blocked'
+          && (!requirement.missingFields?.length || !requirement.attemptedAlternatives?.length)
+        ) {
+          throw new Error(`6–7세대 차단 근거가 불완전합니다: ${familyId}/${gateId}/${requirement.id}`)
+        }
+      }
+    }
+  }
+  if (
+    coveredGames.size !== gatedGameIds.size
+    || [...gatedGameIds].some((gameId) => !coveredGames.has(gameId))
+  ) {
+    throw new Error('6–7세대 완전성 매니페스트가 모든 대상 게임을 포함하지 않습니다.')
+  }
+  return manifest as CompletenessManifest
+}
+
+export const gen67Completeness = validateCompletenessManifest(completenessJson)
+const completenessFamilyByGame = new Map(
+  Object.values(gen67Completeness.families)
+    .flatMap((family) => family.games.map((gameId) => [gameId, family] as const)),
+)
+
+export function validateRegistry(value: unknown): {
   schemaVersion: number
   source: VersionRegistrySource
   legacyPlannerSnapshot: LegacyPlannerSnapshot
@@ -88,6 +202,37 @@ function validateRegistry(value: unknown): {
     }
     if (game.plannerSupport.status === 'full' && !game.plannerFamilyId) {
       throw new Error(`완전 지원 게임에 플래너 패밀리가 없습니다: ${game.id}`)
+    }
+    if (gatedGameIds.has(game.id)) {
+      if (!game.plannerSupport.accuracyGates) {
+        throw new Error(`6–7세대 지원 게이트가 없습니다: ${game.id}`)
+      }
+      if (!game.supportReview || !/^\d{4}-\d{2}-\d{2}$/.test(game.supportReview)) {
+        throw new Error(`6–7세대 지원 검수일이 없습니다: ${game.id}`)
+      }
+      const gates = game.plannerSupport.accuracyGates
+      const completeness = completenessFamilyByGame.get(game.id)
+      if (!completeness) throw new Error(`6–7세대 완전성 매니페스트 게임이 없습니다: ${game.id}`)
+      for (const gateId of requiredAccuracyGates) {
+        const gate = gates[gateId]
+        if (
+          !gate
+          || typeof gate.complete !== 'boolean'
+          || typeof gate.evidence !== 'string'
+          || !gate.evidence.trim()
+        ) {
+          throw new Error(`6–7세대 지원 게이트 근거가 없습니다: ${game.id}/${gateId}`)
+        }
+        const manifestComplete = completeness.gates[gateId].requirements
+          .every((requirement) => requirement.status === 'complete')
+        if (gate.complete !== manifestComplete) {
+          throw new Error(`6–7세대 지원 게이트가 완전성 매니페스트와 일치하지 않습니다: ${game.id}/${gateId}`)
+        }
+      }
+      const allComplete = requiredAccuracyGates.every((gateId) => gates[gateId].complete === true)
+      if ((game.plannerSupport.status === 'full') !== allComplete) {
+        throw new Error(`6–7세대 지원 상태가 정확성 게이트와 일치하지 않습니다: ${game.id}`)
+      }
     }
     for (const sibling of game.pairedWith) {
       if (!ids.has(sibling)) throw new Error(`${game.id}의 페어 ${sibling}가 레지스트리에 없습니다.`)

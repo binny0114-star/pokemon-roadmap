@@ -32,7 +32,7 @@ import {
   modernStoryProvenance,
   type ModernPlannerGameId,
 } from './planner/modernGames'
-import { gameCatalog } from './planner/versionRegistry'
+import { gameCatalog, type AccuracyGateId } from './planner/versionRegistry'
 import { composeRoadmap } from './planner/roadmap'
 import { learnsetSource } from './planner/learnsets'
 import { createAccount, getActiveAccount, login, logout } from './planner/auth'
@@ -96,7 +96,18 @@ const tabs: { id: TabId; name: string; icon: string }[] = [
 ]
 
 const qualityLabel = { verified: '검증', inferred: '시점 추론' }
+const accuracyGateKo: Record<AccuracyGateId, string> = {
+  availability: '버전별 입수·최초 장',
+  forms: '폼 정체성',
+  learnsets: '기술 합법성·획득 시점',
+  evolutions: '진화 조건·최초 장',
+  story: '의무 스토리·보스',
+  mechanics: '이동 메커니즘',
+  integration: '플래너·저장 통합',
+}
 const modernPreviewGameIds = new Set<string>(modernGames.map((entry) => entry.id))
+const gatedGen67Entries = gameCatalog.filter((entry) => entry.plannerSupport.accuracyGates)
+const promotedGen67Count = gatedGen67Entries.filter((entry) => entry.plannerSupport.status === 'full').length
 const modernMethodKo: Record<string, string> = {
   walk: '일반 조우',
   grass: '풀숲',
@@ -107,6 +118,8 @@ const modernMethodKo: Record<string, string> = {
   'rock-smash': '바위깨기',
   horde: '무리배틀',
   'friend-safari': '프렌드사파리',
+  'wild-unspecified': '일반 야생(세부 방식 미분리)',
+  sos: '난입배틀(SOS)',
   overworld: '오버월드',
   hidden: '숨은 조우',
   fishing: '낚시',
@@ -232,6 +245,9 @@ function App() {
       : [],
   ), [catalogReady])
   const previewHasEncounterSnapshot = encounterPreviewGameIds.has(previewGameId)
+  const previewAccuracyGates = previewGame.catalog.plannerSupport.status === 'catalog-only'
+    ? previewGame.catalog.plannerSupport.accuracyGates
+    : undefined
   const previewEncounters = useMemo(() => {
     if (!catalogReady) return []
     return speciesCatalog.flatMap((species) =>
@@ -790,6 +806,9 @@ function App() {
             <div className="game-count">{bosses.length}<small>BOSSES</small></div>
           </div>
           <p className="data-note">ⓘ 6–9세대의 검수된 스토리·입수 데이터는 아래에서 미리볼 수 있습니다. 스토리·입수·버전별 기술 데이터가 모두 완비되기 전에는 파티 로드맵 생성을 열지 않습니다.</p>
+          <p className="generation-promotion-summary">
+            Gen 6–7 정확성 승격 <strong>{promotedGen67Count}/{gatedGen67Entries.length}</strong>
+          </p>
           {game.notes?.map((note) => <p className="data-note" key={note}>ⓘ {note}</p>)}
           <details className="version-catalog">
             <summary>
@@ -799,6 +818,9 @@ function App() {
             <div className="version-catalog-grid">
               {gameCatalog.map((entry) => {
                 const full = entry.plannerSupport.status === 'full'
+                const accuracyGates = entry.plannerSupport.status === 'catalog-only'
+                  ? entry.plannerSupport.accuracyGates
+                  : undefined
                 const storyPreviewAvailable = modernPreviewGameIds.has(entry.id)
                 const encounterPreviewAvailable = encounterPreviewGameIds.has(entry.id)
                 return (
@@ -820,6 +842,12 @@ function App() {
                             ? '스토리·입수 미리보기 제공'
                             : '스토리·보스 미리보기 제공 · 정확한 입수 스냅샷 없음'
                     }</small>}
+                    {accuracyGates && (
+                      <small>
+                        정확성 게이트 {Object.values(accuracyGates).filter((gate) => gate.complete).length}/
+                        {Object.keys(accuracyGates).length} 통과
+                      </small>
+                    )}
                   </article>
                 )
               })}
@@ -847,13 +875,28 @@ function App() {
             </label>
             <div>
               <div className="preview-capabilities" aria-label="미리보기 지원 범위">
-                <span className="available">스토리 순서 검수</span>
                 <span className={previewHasEncounterSnapshot ? 'available' : 'unavailable'}>
-                  {previewHasEncounterSnapshot ? '폼 보존 입수 스냅샷' : '정확한 입수 스냅샷 없음'}
+                  {previewHasEncounterSnapshot ? '부분 입수 스냅샷' : '정확한 입수 스냅샷 없음'}
                 </span>
                 <span className="unavailable">파티 로드맵 생성 미지원</span>
               </div>
               <p>{previewGame.catalog.plannerSupport.status === 'catalog-only' && previewGame.catalog.plannerSupport.reason}</p>
+              {previewAccuracyGates && (
+                <details className="accuracy-gates">
+                  <summary>
+                    정확성 게이트 {Object.values(previewAccuracyGates).filter((gate) => gate.complete).length}/
+                    {Object.keys(previewAccuracyGates).length} 통과
+                  </summary>
+                  <ul>
+                    {Object.entries(previewAccuracyGates).map(([gateId, gate]) => (
+                      <li key={gateId}>
+                        <strong>{gate.complete ? '통과' : '차단'} · {accuracyGateKo[gateId as AccuracyGateId]}</strong>
+                        <span>{gate.evidence}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               {previewStorySource && (
                 <p className="preview-provenance">
                   스토리 검수 {modernStoryProvenance.reviewedAt} · <a href={previewStorySource.url} target="_blank" rel="noreferrer">워크스루 출처</a>
@@ -1216,7 +1259,10 @@ function App() {
       <footer>
         <div className="brand footer-brand"><span className="brand-mark"><i /></span><span>POKÉ <b>ROUTE</b></span></div>
         <p>팬이 만든 비공식 공략 콘텐츠입니다. Nintendo, Game Freak, Pokémon Company와 제휴하거나 승인을 받지 않았습니다.</p>
-        <span>{isCloudConfigured() ? '온라인 로그인 시 설정과 진행률이 계정에 동기화됩니다.' : '계정, 설정과 진행률은 이 브라우저에만 저장됩니다.'}</span>
+        <span>
+          {isCloudConfigured() ? '온라인 로그인 시 설정과 진행률이 계정에 동기화됩니다.' : '계정, 설정과 진행률은 이 브라우저에만 저장됩니다.'}
+          {' · '}<a href="./THIRD_PARTY_NOTICES.md">오픈소스 고지</a>
+        </span>
       </footer>
     </div>
   )

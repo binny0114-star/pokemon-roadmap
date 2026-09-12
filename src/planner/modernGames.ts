@@ -320,7 +320,7 @@ const orasFields: FieldMove[] = [
 ]
 
 export const modernFamilies: Record<ModernFamilyId, ModernFamilyConfig> = {
-  kalos6: { id: 'kalos6', generation: 6, region: '칼로스', chapters: kalosChapters, bosses: kalosBosses, fieldMoves: gen6Fields, moveReminder: { chapter: 2, location: '버들비마을', cost: '하트비늘 1개' }, postgame: ['기남시티 배틀하우스', '메가링 강화와 메가스톤', '핸섬 에피소드'] },
+  kalos6: { id: 'kalos6', generation: 6, region: '칼로스', chapters: kalosChapters, bosses: kalosBosses, fieldMoves: gen6Fields, moveReminder: { chapter: 7, location: '버들비마을', cost: '하트비늘 1개' }, postgame: ['기남시티 배틀하우스', '메가링 강화와 메가스톤', '핸섬 에피소드'] },
   hoenn6: { id: 'hoenn6', generation: 6, region: '호연', chapters: orasChapters, bosses: orasBosses, fieldMoves: orasFields, moveReminder: { chapter: 4, location: '단풍마을', cost: '하트비늘 1개' }, postgame: ['에피소드 델타와 레쿠쟈·테오키스', '배틀리조트', '환상의 장소와 전설 포켓몬'] },
   alola7: { id: 'alola7', generation: 7, region: '알로라', chapters: alolaChapters, bosses: alolaBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['울트라비스트 포획 임무', '배틀트리', '수호신과 네크로즈마'] },
   'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
@@ -444,8 +444,35 @@ export const modernBossOverrides: Partial<Record<ModernPlannerGameId, PlannerBos
       : entry),
 }
 
+const alolaLocationChapterOverrides = {
+  'berry-fields': 1,
+  'route-3': 1,
+  'ten-carat-hill': 1,
+  'dividing-peak-tunnel': 2,
+  'kalae-bay': 2,
+  'melemele-sea': 2,
+  'poke-pelago': 2,
+  'route-6': 2,
+  'seaward-cave': 2,
+  'akala-outskirts': 3,
+  'digletts-tunnel': 3,
+  'hano-beach': 3,
+  'route-9': 3,
+  'haina-desert': 4,
+  'route-13': 4,
+  'route-16': 4,
+  'route-17': 4,
+  'ruins-of-abundance': 4,
+  'thrifty-megamart': 4,
+  'ulaula-beach': 4,
+  'ulaula-meadow': 4,
+  'poni-breaker-coast': 6,
+  'sandy-cave': 6,
+}
+
 const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, number>>> = {
   kalos6: {
+    'random-kalos-hotel': 2,
     'route-22': 1,
     'route-9': 2,
     'route-16': 7,
@@ -453,11 +480,24 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
     'terminus-cave': 9,
   },
   hoenn6: {
+    'ancient-tomb': 9,
+    'crescent-isle': 9,
+    'desert-ruins': 9,
+    'fabled-cave': 9,
+    'gnarled-den': 9,
+    'island-cave': 9,
+    'nameless-cavern': 9,
+    'pathless-plain': 9,
+    'soaring-in-the-sky': 9,
+    'southern-island': 6,
+    'trackless-forest': 9,
     mirage: 9,
     'route-115': 5,
     'sea-mauville': 5,
     'sealed-chamber': 8,
   },
+  alola7: alolaLocationChapterOverrides,
+  'alola7-ultra': alolaLocationChapterOverrides,
   galar8: {
     'west-lake-axewell': 1,
     'axews-eye': 7,
@@ -510,6 +550,12 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
 
 const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
   hoenn6: ['battle-resort', 'sky-pillar'],
+  alola7: [
+    'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
+  ],
+  'alola7-ultra': [
+    'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
+  ],
   galar8: [],
   sinnoh8: [
     'route-224', 'route-225', 'route-226', 'route-227', 'route-228', 'route-229', 'route-230',
@@ -549,6 +595,11 @@ export function modernEncounterChapter(
     sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 9, surf: 5, 'rock-smash': 1 },
   }
   let prerequisiteChapter = methodUnlocks[familyId]?.[method] ?? 1
+  if (familyId === 'hoenn6') {
+    if (conditions.includes('story-progress-go-goggles')) prerequisiteChapter = Math.max(prerequisiteChapter, 4)
+    if (conditions.includes('story-progress-eon-gift')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)
+    if (conditions.includes('story-progress-primal-defeated')) prerequisiteChapter = Math.max(prerequisiteChapter, 9)
+  }
   if (familyId === 'galar8') {
     const weatherConditions = conditions.filter((condition) => condition.startsWith('weather-'))
     if (weatherConditions.length === 1 && weatherConditions[0] === 'weather-heavy-fog') {
@@ -586,8 +637,8 @@ export function modernEncounterChapter(
 export const modernStoryProvenance = {
   reviewedAt: '2026-09-11',
   sources: [
-    { games: ['x', 'y'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_X_and_Y' },
-    { games: ['omega-ruby', 'alpha-sapphire'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Omega_Ruby_and_Alpha_Sapphire' },
+    { games: ['x', 'y'], revision: '4315929', url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_X_and_Y&oldid=4315929' },
+    { games: ['omega-ruby', 'alpha-sapphire'], revision: '4247537', url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Walkthrough:Pok%C3%A9mon_Omega_Ruby_and_Alpha_Sapphire&oldid=4247537' },
     { games: ['sun', 'moon'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Sun_and_Moon' },
     { games: ['ultra-sun', 'ultra-moon'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Ultra_Sun_and_Ultra_Moon' },
     { games: ['sword', 'shield'], url: 'https://bulbapedia.bulbagarden.net/wiki/Walkthrough:Pok%C3%A9mon_Sword_and_Shield' },
