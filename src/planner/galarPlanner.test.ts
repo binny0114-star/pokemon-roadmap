@@ -10,7 +10,7 @@ import {
 } from './catalog'
 import { getGen8FormProfile, getGen8FormProfileByPokemonId, swshFormChangeRules } from './gen8Forms'
 import { games, getBosses } from './games'
-import { generateParty, generatedMoves, validateRequired } from './engine'
+import { generateParty, generatedMoves, isMoveLegalForSpecies, validateRequired } from './engine'
 import { getLegalMoves, loadLearnsets, type LegalMove } from './learnsets'
 import { getMoveAcquisition } from './moveResources'
 import { composeRoadmap } from './roadmap'
@@ -177,6 +177,11 @@ describe('Sword/Shield 완전 플래너 게이트', () => {
       .find((entry) => entry.id === 'play-rough')).toMatchObject({ category: '물리' })
     const eggMove = getLegalMoves(speciesByDex.get(778)!, sword).find((entry) => entry.method === 'egg')
     expect(eggMove?.eggParentIdentifiers?.length).toBeGreaterThan(0)
+    expect(getMoveAcquisition(sword, eggMove!)).toMatchObject({
+      chapter: 3,
+      storyFlag: 'route-5-nursery-access',
+      source: expect.stringContaining('5번도로'),
+    })
     expect(getLegalMoves(speciesByDex.get(172)!, sword)
       .filter((entry) => entry.method === 'egg')
       .every((entry) => (entry.eggParentIdentifiers?.length ?? 0) > 0)).toBe(true)
@@ -205,6 +210,8 @@ describe('Sword/Shield 완전 플래너 게이트', () => {
       })
     expect(generatedMoves(speciesByDex.get(824)!, sword).find((entry) => entry.id === 'infestation')?.source)
       .toContain('부모 계열에서 유전')
+    expect(generatedMoves(speciesByDex.get(824)!, sword).find((entry) => entry.id === 'infestation')?.availableChapter)
+      .toBeGreaterThanOrEqual(3)
   })
 
   it('DLC 병행 진행과 스타터 연동 보상을 독립된 기계 판독 필드로 보존한다', () => {
@@ -225,6 +232,33 @@ describe('Sword/Shield 완전 플래너 게이트', () => {
       dlcMilestone: 'dlc-milestone-crown-legendary-clues',
       dlcChapter: 18,
     })
+    expect(getAvailability(speciesByDex.get(79)!, sword)).toMatchObject({
+      chapter: 1,
+      dlcChapter: undefined,
+      formIdentifier: 'slowpoke-galar',
+    })
+    expect(getAvailability(speciesByDex.get(80)!, sword)).toMatchObject({
+      dlcChapter: undefined,
+      evolutionDlcMilestone: 'dlc-milestone-isle-access',
+      evolutionDlcChapter: 12,
+      evolutionDlcFinalChapter: 12,
+      formIdentifier: 'slowbro-galar',
+      sourceSpeciesName: '야돈',
+      postgameOnly: false,
+    })
+    expect(getAvailability(speciesByDex.get(199)!, sword)).toMatchObject({
+      dlcChapter: undefined,
+      evolutionDlcMilestone: 'dlc-milestone-crown-access',
+      evolutionDlcChapter: 16,
+      evolutionDlcFinalChapter: 16,
+      postgameOnly: false,
+    })
+    const slowbroPlan = generateParty(sword, {
+      noTrade: true, allowPostgame: false, allowLegendary: true, hmConvenience: true, favoriteWeight: 1,
+    }, { requiredDexes: [80] })
+    const slowbroRoadmap = composeRoadmap(sword, slowbroPlan)
+    expect(slowbroRoadmap[0].actions.some((action) => action.id.includes(':capture:80'))).toBe(true)
+    expect(slowbroRoadmap[11].actions.some((action) => action.id.includes(':evolve:80'))).toBe(true)
     expect(getAvailability(speciesByDex.get(722)!, sword)).toMatchObject({
       mutuallyExclusiveGroup: 'choice-group-galar-starter-reward',
       requiredStarterDex: 810,
@@ -268,6 +302,86 @@ describe('Sword/Shield 완전 플래너 게이트', () => {
       previousMembers: [],
     })
     expect(basePlan.members.slice(1).every((member) => !member.availability.dlcChapter)).toBe(true)
+  })
+
+  it('우라오스 태세를 타입·기술·표시·플랜 ID에 구체적으로 고정한다', () => {
+    const sword = games.find((entry) => entry.id === 'sword')!
+    const preferences = {
+      noTrade: true,
+      allowPostgame: false,
+      allowLegendary: true,
+      hmConvenience: true,
+      favoriteWeight: 1,
+    }
+    expect(validateRequired([892], sword, preferences, 'dark').errors)
+      .toContain('우라오스: 사용할 폼을 선택하세요.')
+
+    const single = generateParty(sword, preferences, {
+      requiredDexes: [892],
+      challengeType: 'dark',
+      formSelections: { 892: 'urshifu-single-strike' },
+    })
+    const rapid = generateParty(sword, preferences, {
+      requiredDexes: [892],
+      challengeType: 'water',
+      formSelections: { 892: 'urshifu-rapid-strike' },
+    })
+    expect(single.members[0].availability).toMatchObject({
+      formIdentifier: 'urshifu-single-strike',
+      formTypes: ['fighting', 'dark'],
+      formChoices: undefined,
+    })
+    expect(rapid.members[0].availability).toMatchObject({
+      formIdentifier: 'urshifu-rapid-strike',
+      formTypes: ['fighting', 'water'],
+      formChoices: undefined,
+    })
+    expect(single.members[0].moves.map((entry) => entry.id)).toContain('wicked-blow')
+    expect(single.members[0].moves.every((entry) =>
+      isMoveLegalForSpecies(speciesByDex.get(892)!, sword, entry.id, 'urshifu-single-strike'))).toBe(true)
+    expect(rapid.members[0].moves.every((entry) =>
+      isMoveLegalForSpecies(speciesByDex.get(892)!, sword, entry.id, 'urshifu-rapid-strike'))).toBe(true)
+    expect(rapid.members[0].moves.map((entry) => entry.id)).not.toContain('wicked-blow')
+    expect(single.id).toContain('forms-892-urshifu-single-strike')
+    expect(rapid.id).toContain('892-urshifu-rapid-strike')
+    expect(single.id).not.toBe(rapid.id)
+    expect(single.formSelections).toMatchObject({ 892: 'urshifu-single-strike' })
+    expect(rapid.formSelections).toMatchObject({ 892: 'urshifu-rapid-strike' })
+    expect(single.members[0].availability).toMatchObject({
+      chapter: 1,
+      finalChapter: 1,
+      sourceSpeciesName: undefined,
+      dlcChapter: undefined,
+      dlcFinalChapter: undefined,
+    })
+    const starterRoadmap = composeRoadmap(sword, single)
+    expect(starterRoadmap[0].actions.some((action) => action.id.includes(':capture:892'))).toBe(true)
+    expect(starterRoadmap.flatMap((chapter) => chapter.actions)
+      .some((action) => action.id.includes(':evolve:892'))).toBe(false)
+
+    const storyUrshifu = generateParty(sword, preferences, {
+      requiredDexes: [892],
+      formSelections: { 892: 'urshifu-single-strike' },
+    })
+    const storyRoadmap = composeRoadmap(sword, storyUrshifu)
+    expect(storyRoadmap[12].actions.some((action) => action.id.includes(':capture:892'))).toBe(true)
+    expect(storyRoadmap[13].actions.some((action) => action.id.includes(':evolve:892'))).toBe(true)
+    expect(storyRoadmap[12].actions.some((action) => action.id.includes(':move:892:암흑강타'))).toBe(false)
+    expect(storyRoadmap[13].actions.some((action) => action.id.includes(':move:892:암흑강타'))).toBe(true)
+    expect(storyRoadmap[13].actions.find((action) => action.id.includes(':move:892:암흑강타'))?.text)
+      .toContain('일격의 태세')
+
+    expect(() => generateParty(sword, preferences, {
+      requiredDexes: [810],
+      lockedDexes: [892],
+      previousMembers: [892],
+      formSelections: { 892: 'not-a-real-form' },
+    })).toThrow('유효하지 않은 폼')
+    expect(() => generateParty(sword, preferences, {
+      requiredDexes: [810],
+      lockedDexes: [892],
+      previousMembers: [892],
+    })).toThrow('사용할 폼을 선택')
   })
 
   it('Galar 고유 진화와 필수 본편/DLC 종점을 고정한다', () => {

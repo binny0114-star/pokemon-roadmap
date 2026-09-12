@@ -52,6 +52,7 @@ import {
   loadBuilderState,
   loadPlanSession,
   loadPlanProgress,
+  loadPlanProgressWithLegacy,
   loadClearRecords,
   mergePlanProgress,
   reconcilePlanProgress,
@@ -71,6 +72,7 @@ type TabId = 'party' | 'roadmap' | 'hm' | 'bosses' | 'postgame'
 interface BuilderState {
   gameId: PlannerGameId
   requiredDexes: number[]
+  formSelections: Record<number, string>
   preferences: PlannerPreferences
   challengeType: string | null
 }
@@ -78,6 +80,7 @@ interface BuilderState {
 const defaultState: BuilderState = {
   gameId: 'emerald',
   requiredDexes: [],
+  formSelections: {},
   challengeType: null,
   preferences: {
     noTrade: true,
@@ -199,7 +202,7 @@ function modernConditionLabel(condition: string): string {
 }
 
 function loadCurrentPlanProgress(gameId: PlannerGameId, plan: GeneratedPlan): Set<string> {
-  const saved = loadPlanProgress(gameId, plan.id)
+  const saved = loadPlanProgressWithLegacy(gameId, plan.id, plan.legacyId)
   const actionIds = composeRoadmap(getGame(gameId), plan)
     .flatMap((chapter) => chapter.actions.map((action) => action.id))
   return reconcilePlanProgress(saved, actionIds)
@@ -230,7 +233,8 @@ function Toggle({
 }
 
 function App() {
-  const initial = loadBuilderState(defaultState)
+  const loadedInitial = loadBuilderState(defaultState)
+  const initial = { ...loadedInitial, formSelections: loadedInitial.formSelections ?? {} }
   const [builder, setBuilder] = useState<BuilderState>(initial)
   const initialBuilderRef = useRef(initial)
   const [query, setQuery] = useState('')
@@ -265,7 +269,13 @@ function App() {
   const game = getGame(builder.gameId)
   const family = getFamily(game)
   const bosses = getBosses(game)
-  const validation = validateRequired(builder.requiredDexes, game, builder.preferences, builder.challengeType)
+  const validation = validateRequired(
+    builder.requiredDexes,
+    game,
+    builder.preferences,
+    builder.challengeType,
+    builder.formSelections,
+  )
   const roadmap = plan ? composeRoadmap(game, plan) : []
   const roadmapActions = roadmap.flatMap((chapter) => chapter.actions)
   const progress = roadmapActions.length ? Math.round(completed.size / roadmapActions.length * 100) : 0
@@ -402,13 +412,16 @@ function App() {
         || (initialBuilder.requiredDexes.length === 0 && !initialBuilder.challengeType)
       ) return
       try {
+        const restoredFormSelections = saved.formSelections ?? initialBuilder.formSelections
         const restored = generateParty(getGame(initialBuilder.gameId), initialBuilder.preferences, {
           requiredDexes: initialBuilder.requiredDexes,
           lockedDexes: saved.lockedDexes,
           previousMembers: saved.memberDexes,
           variant: saved.variant,
           challengeType: initialBuilder.challengeType,
+          formSelections: restoredFormSelections,
         })
+        setBuilder((current) => ({ ...current, formSelections: { ...restoredFormSelections } }))
         setPlan(restored)
         setVariant(saved.variant)
         setCompleted(loadCurrentPlanProgress(initialBuilder.gameId, restored))
@@ -426,6 +439,7 @@ function App() {
       memberDexes: plan.members.map((member) => member.species.dex),
       lockedDexes: plan.members.filter((member) => member.locked).map((member) => member.species.dex),
       variant,
+      formSelections: plan.formSelections,
     })
   }, [plan, variant])
 
@@ -434,7 +448,7 @@ function App() {
   }
 
   const selectGame = (gameId: PlannerGameId) => {
-    setBuilder((current) => ({ ...current, gameId, requiredDexes: [], challengeType: null }))
+    setBuilder((current) => ({ ...current, gameId, requiredDexes: [], formSelections: {}, challengeType: null }))
     setPlan(null)
     setQuery('')
     setMessage('')
@@ -446,13 +460,26 @@ function App() {
     const species = speciesByDex.get(dex)
     if (!species) return
     if (builder.requiredDexes.includes(dex)) {
-      setBuilder((current) => ({ ...current, requiredDexes: current.requiredDexes.filter((entry) => entry !== dex) }))
+      setBuilder((current) => {
+        const formSelections = { ...current.formSelections }
+        delete formSelections[dex]
+        return {
+          ...current,
+          requiredDexes: current.requiredDexes.filter((entry) => entry !== dex),
+          formSelections,
+        }
+      })
       setMessage('')
       return
     }
     const availability = getAvailability(species, game)
+    const matchingForm = availability.formChoices?.find((choice) =>
+      !builder.challengeType || choice.types.includes(builder.challengeType))
+    const availableTypes = availability.formChoices?.length
+      ? [...new Set(availability.formChoices.flatMap((choice) => choice.types))]
+      : speciesTypes(species, game.generation, game)
     const selectingChallengeStarter = Boolean(builder.challengeType && builder.requiredDexes.length === 0)
-    if (builder.challengeType && !speciesTypes(species, game.generation, game).includes(builder.challengeType)) {
+    if (builder.challengeType && !availableTypes.includes(builder.challengeType)) {
       setMessage(`${species.name}은(는) ${typeKo[builder.challengeType]} 타입을 공유하지 않아 현재 챌린지에 참가할 수 없습니다.`)
       return
     }
@@ -498,7 +525,13 @@ function App() {
         return
       }
     }
-    setBuilder((current) => ({ ...current, requiredDexes: [...current.requiredDexes, dex] }))
+    setBuilder((current) => ({
+      ...current,
+      requiredDexes: [...current.requiredDexes, dex],
+      formSelections: matchingForm
+        ? { ...current.formSelections, [dex]: matchingForm.formIdentifier }
+        : current.formSelections,
+    }))
     setMessage('')
   }
 
@@ -510,6 +543,7 @@ function App() {
         previousMembers: previous?.members.map((member) => member.species.dex),
         variant: nextVariant,
         challengeType: builder.challengeType,
+        formSelections: builder.formSelections,
       })
       setPlan(generated)
       setVariant(nextVariant)
@@ -536,7 +570,13 @@ function App() {
       noTrade: true,
       allowPostgame: false,
     }
-    setBuilder((current) => ({ ...current, requiredDexes: dexes, preferences, challengeType: null }))
+    setBuilder((current) => ({
+      ...current,
+      requiredDexes: dexes,
+      formSelections: {},
+      preferences,
+      challengeType: null,
+    }))
     try {
       const generated = generateParty(game, preferences, { requiredDexes: dexes, challengeType: null })
       setPlan(generated)
@@ -568,6 +608,7 @@ function App() {
         lockedDexes: [...kept, alternativeDex],
         previousMembers: [...kept, alternativeDex],
         challengeType: builder.challengeType,
+        formSelections: builder.formSelections,
       })
       setPlan(generated)
       setVariant(0)
@@ -610,7 +651,36 @@ function App() {
   }
 
   const setChallengeType = (challengeType: string | null) => {
-    setBuilder((current) => ({ ...current, challengeType }))
+    setBuilder((current) => {
+      const formSelections = { ...current.formSelections }
+      for (const dex of current.requiredDexes) {
+        const species = speciesByDex.get(dex)
+        const choices = species ? getAvailability(species, game).formChoices : undefined
+        if (!choices?.length) continue
+        const currentChoice = choices.find((choice) => choice.formIdentifier === formSelections[dex])
+        const nextChoice = choices.find((choice) => !challengeType || choice.types.includes(challengeType))
+        if (!currentChoice || (challengeType && !currentChoice.types.includes(challengeType))) {
+          if (nextChoice) formSelections[dex] = nextChoice.formIdentifier
+        }
+      }
+      return { ...current, challengeType, formSelections }
+    })
+    setPlan(null)
+    setCompleted(new Set())
+    setMessage('')
+    clearPlanSession()
+  }
+
+  const selectForm = (dex: number, formIdentifier: string) => {
+    const species = speciesByDex.get(dex)
+    const choice = species
+      ? getAvailability(species, game).formChoices?.find((entry) => entry.formIdentifier === formIdentifier)
+      : undefined
+    if (!choice) return
+    setBuilder((current) => ({
+      ...current,
+      formSelections: { ...current.formSelections, [dex]: formIdentifier },
+    }))
     setPlan(null)
     setCompleted(new Set())
     setMessage('')
@@ -1086,10 +1156,35 @@ function App() {
           <div className="required-tray">
             {builder.requiredDexes.length ? builder.requiredDexes.map((dex, index) => {
               const species = speciesByDex.get(dex)
+              const availability = species ? getAvailability(species, game) : undefined
               return species && (
-                <button key={dex} onClick={() => selectSpecies(dex)} title={`${species.name} 필수 선택 해제`}>
-                  <span>{speciesIcon(species, game.generation)}</span><b>{species.name}{builder.challengeType && index === 0 ? ' · 개조 스타팅' : ''}</b><small>×</small>
-                </button>
+                <div className="required-choice" key={dex}>
+                  <button onClick={() => selectSpecies(dex)} title={`${species.name} 필수 선택 해제`}>
+                    <span>{speciesIcon(species, game.generation, game, builder.formSelections[dex])}</span>
+                    <b>{speciesDisplayName(species, game, builder.formSelections[dex])}{builder.challengeType && index === 0 ? ' · 개조 스타팅' : ''}</b>
+                    <small>×</small>
+                  </button>
+                  {availability?.formChoices?.length && (
+                    <label>
+                      <span>{species.name} 폼</span>
+                      <select
+                        aria-label={`${species.name} 폼 선택`}
+                        value={builder.formSelections[dex] ?? ''}
+                        onChange={(event) => selectForm(dex, event.target.value)}
+                      >
+                        {availability.formChoices.map((choice) => (
+                          <option
+                            key={choice.formIdentifier}
+                            value={choice.formIdentifier}
+                            disabled={Boolean(builder.challengeType && !choice.types.includes(builder.challengeType))}
+                          >
+                            {choice.formName ?? choice.formIdentifier} · {choice.types.map((type) => typeKo[type]).join('/')}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
               )
             }) : <p>{builder.challengeType ? `${typeKo[builder.challengeType]} 타입에서 개조 스타팅으로 쓸 포켓몬을 먼저 선택하세요.` : '1–6마리를 선택하세요. 나머지는 엔진이 균형 있게 채웁니다.'}</p>}
           </div>
@@ -1101,7 +1196,10 @@ function App() {
           <div className="picker-grid" aria-busy={!catalogReady}>
             {!catalogReady && <p className="catalog-loading">전국도감 정적 데이터를 불러오는 중입니다…</p>}
             {results.map(({ species, availability }) => {
-              const challengeMismatch = Boolean(builder.challengeType && !speciesTypes(species, game.generation, game).includes(builder.challengeType))
+              const availableTypes = availability.formChoices?.length
+                ? [...new Set(availability.formChoices.flatMap((choice) => choice.types))]
+                : speciesTypes(species, game.generation, game)
+              const challengeMismatch = Boolean(builder.challengeType && !availableTypes.includes(builder.challengeType))
               const selectingChallengeStarter = Boolean(builder.challengeType && builder.requiredDexes.length === 0)
               const futureGeneration = species.generation > game.generation
               const selected = builder.requiredDexes.includes(species.dex)
@@ -1218,17 +1316,18 @@ function App() {
                     {plan.members.map((member) => (
                       <article className="generated-member" key={member.species.dex}>
                         <div className="member-top">
-                          <span className="member-icon">{speciesIcon(member.species, game.generation)}</span>
-                          <div><small>#{String(member.species.dex).padStart(3, '0')}</small><h3>{speciesDisplayName(member.species, game)}</h3><p>{member.availability.formChoices?.length
-                            ? member.availability.formChoices.map((choice) => choice.types.map((type) => typeKo[type]).join(' · ')).join(' / ')
-                            : speciesTypes(member.species, game.generation, game).map((type) => typeKo[type]).join(' · ')}</p></div>
+                          <span className="member-icon">{speciesIcon(member.species, game.generation, game, member.availability.formIdentifier)}</span>
+                          <div><small>#{String(member.species.dex).padStart(3, '0')}</small><h3>{speciesDisplayName(member.species, game, member.availability.formIdentifier)}</h3><p>{
+                            (member.availability.formTypes ?? speciesTypes(member.species, game.generation, game))
+                              .map((type) => typeKo[type]).join(' · ')
+                          }</p></div>
                           <button onClick={() => toggleLock(member.species.dex)} disabled={member.required} title={member.required ? '필수 멤버는 항상 잠김' : '추천 멤버 잠금 전환'}>{member.locked ? '🔒' : '🔓'}</button>
                         </div>
                         <div className="member-flags"><span>{member.challengeStarter ? 'Lv.5 개조 스타팅' : member.required ? '필수 선택' : '자동 추천'}</span><b>{member.role}</b><i>점수 {Math.round(member.score)}</i></div>
                         <p className="recommend-reason"><strong>추천 이유</strong>{member.reason}</p>
                         <dl>
                           <div><dt>합류</dt><dd>{member.availability.chapter}장 · {member.availability.location}{member.availability.method ? ` · ${member.availability.method}` : ''} {member.availability.level}{member.availability.sourceSpeciesName ? ` · ${member.availability.sourceSpeciesName}부터 육성` : ''}</dd></div>
-                          <div><dt>진화</dt><dd>{evolutionText(member.species, game)}</dd></div>
+                          <div><dt>진화</dt><dd>{evolutionText(member.species, game, member.availability.formIdentifier)}</dd></div>
                         </dl>
                         <div className="generated-moves">
                           {member.moves.map((move) => <span key={move.name}><b>{move.name}</b><small>{typeKo[move.type]} · {move.category}</small><em>{move.source}</em>{move.quality === 'inferred' && <i>시점 추론</i>}</span>)}

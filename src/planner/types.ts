@@ -166,6 +166,9 @@ export interface Availability {
   dlcMilestone?: string
   dlcChapter?: number
   dlcFinalChapter?: number
+  evolutionDlcMilestone?: string
+  evolutionDlcChapter?: number
+  evolutionDlcFinalChapter?: number
   formIndex?: number
   formIdentifier?: string
   formName?: string
@@ -237,9 +240,11 @@ export interface CoverageSummary {
 
 export interface GeneratedPlan {
   id: string
+  legacyId?: string
   gameId: PlannerGameId
   challengeType: string | null
   challengeStarterDex: number | null
+  formSelections: Record<number, string>
   members: GeneratedMember[]
   alternatives: GeneratedMember[]
   coverage: CoverageSummary

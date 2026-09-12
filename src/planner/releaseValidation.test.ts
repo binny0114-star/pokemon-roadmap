@@ -46,6 +46,13 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(() => validateRegistry(malformed)).toThrow('x/availability')
   })
 
+  it('레지스트리 게임의 플래너 패밀리를 바꾸면 승격을 거부한다', () => {
+    const malformed = structuredClone(registryJson)
+    const sword = malformed.games.find((game) => game.id === 'sword')!
+    sword.plannerFamilyId = 'hisui8'
+    expect(() => validateRegistry(malformed)).toThrow('플래너 패밀리 계약')
+  })
+
   it('완전성 매니페스트가 누락 도메인과 시도한 대안을 요구한다', () => {
     const malformed = structuredClone(gen67Completeness)
     const blocked = malformed.families.kalos6.gates.availability.requirements
@@ -81,6 +88,11 @@ describe('릴리스 레지스트리와 전국도감', () => {
     deletedCategory.families.galar8.requiredSourceCategories =
       deletedCategory.families.galar8.requiredSourceCategories!.filter((category) => category !== 'tr')
     expect(() => validateGen8CompletenessManifest(deletedCategory)).toThrow('필수 출처 범주 계약')
+
+    const swappedFamilyGame = structuredClone(gen8Completeness)
+    swappedFamilyGame.families.galar8.games = ['sword', 'legends-arceus']
+    swappedFamilyGame.families.hisui8.games = ['shield']
+    expect(() => validateGen8CompletenessManifest(swappedFamilyGame)).toThrow('패밀리 게임 계약')
   })
 
   it('Gen 7 입수 게이트를 조우율이 아니라 방식·도달 시점 근거로 차단한다', () => {

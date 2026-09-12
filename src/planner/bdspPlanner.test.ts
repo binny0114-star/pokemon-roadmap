@@ -150,6 +150,22 @@ describe('BDSP 완전 플래너 게이트', () => {
     const pearl = games.find((entry) => entry.id === 'shining-pearl')!
     expect(getAvailability(speciesByDex.get(422)!, diamond).formChoices?.map((choice) => choice.formIdentifier))
       .toEqual(expect.arrayContaining(['shellos-west', 'shellos-east']))
+    const shellos = speciesByDex.get(422)!
+    const eastChoice = getAvailability(shellos, diamond).formChoices!
+      .find((choice) => choice.formIdentifier === 'shellos-east')!
+    const eastAvailability = getAvailability(shellos, diamond, eastChoice.formIndex)
+    const eastPlan = generateParty(diamond, {
+      noTrade: true, allowPostgame: false, allowLegendary: false, hmConvenience: true, favoriteWeight: 1,
+    }, {
+      requiredDexes: [422],
+      formSelections: { 422: 'shellos-east' },
+    })
+    expect(eastPlan.members[0].availability).toMatchObject({
+      formIdentifier: 'shellos-east',
+      sourceFormIdentifier: 'shellos-east',
+      chapter: eastAvailability.chapter,
+      location: eastAvailability.location,
+    })
     expect(getAvailability(speciesByDex.get(198)!, diamond)).toMatchObject({ chapter: 2, versionExclusive: true })
     expect(getAvailability(speciesByDex.get(200)!, pearl)).toMatchObject({ chapter: 2, versionExclusive: true })
     expect(getAvailability(speciesByDex.get(16)!, diamond)).toMatchObject({ chapter: 11, postgameOnly: true })
@@ -242,6 +258,7 @@ describe('BDSP 완전 플래너 게이트', () => {
   it('모든 의무 보스와 포켓치 비전기술을 순서대로 로드맵에 넣는다', () => {
     const diamond = games.find((entry) => entry.id === 'brilliant-diamond')!
     const bosses = getBosses(diamond)
+    expect(bosses.slice(0, 2).map((boss) => boss.id)).toEqual(['barry-route-203', 'roark-bdsp'])
     for (const id of [
       'barry-route-203', 'mars-valley-windworks', 'jupiter-eterna', 'galactic-veilstone-double',
       'saturn-lake-valor', 'mars-lake-verity', 'cyrus-galactic-hq', 'commanders-spear-pillar',

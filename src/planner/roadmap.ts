@@ -66,24 +66,22 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
     for (const member of chronologicalMembers) {
       const captureChapter = member.availability.dlcChapter ?? member.availability.chapter
       if (captureChapter === number) {
-        const formChoiceNote = member.availability.formChoices?.length
-          ? ` · 폼 선택지: ${member.availability.formChoices.map((choice) => choice.formName ?? choice.formIdentifier).join(' / ')}`
-          : ''
         actions.push({
           id: `${chapter.id}:capture:${member.species.dex}`,
           kind: 'capture',
           memberDex: member.species.dex,
           quality: member.availability.quality,
           text: member.challengeStarter
-            ? `${speciesDisplayName(member.species, game)} 스타팅 합류 — 시작 데이터의 포켓몬을 직접 교체, Lv.5`
+            ? `${speciesDisplayName(member.species, game, member.availability.formIdentifier)} 스타팅 합류 — 시작 데이터의 포켓몬을 직접 교체, Lv.5`
             : member.availability.sourceSpeciesName
-              ? `${speciesDisplayName(member.species, game)} 준비 — ${member.availability.sourceSpeciesName}${member.availability.sourceFormName ? ` (${member.availability.sourceFormName})` : ''} 포획: ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}${formChoiceNote}`
-              : `${speciesDisplayName(member.species, game)} 합류 — ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}${formChoiceNote}`,
+              ? `${speciesDisplayName(member.species, game, member.availability.formIdentifier)} 준비 — ${member.availability.sourceSpeciesName}${member.availability.sourceFormName ? ` (${member.availability.sourceFormName})` : ''} 포획: ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}`
+              : `${speciesDisplayName(member.species, game, member.availability.formIdentifier)} 합류 — ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}`,
         })
       }
       if (member.availability.sourceSpeciesName) {
         for (const stage of generationLineage(member.species, game.generation).slice(1)) {
-          const evolutionAt = member.availability.dlcFinalChapter
+          const evolutionAt = member.availability.evolutionDlcFinalChapter
+            ?? member.availability.dlcFinalChapter
             ?? (member.availability.dlcChapter ? Math.max(member.availability.dlcChapter, effectiveChapter(stage, game)) : effectiveChapter(stage, game))
           if (evolutionAt !== number || evolutionAt < captureChapter) continue
           const parent = stage.evolvesFrom ? speciesCatalog.find((species) => species.dex === stage.evolvesFrom) : undefined
@@ -92,10 +90,11 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
             kind: 'evolution',
             memberDex: member.species.dex,
             quality: stage.evolution?.trigger ? 'verified' : 'inferred',
-            text: member.species.dex === 892 && member.availability.formChoices?.length && stage.dex === member.species.dex
-              ? `${parent?.name ?? '진화 전 형태'} → ${member.availability.formChoices.map((choice) =>
-                  `${choice.formName ?? choice.formIdentifier} (${choice.evolutionTrigger === 'tower-of-darkness' ? '악의 탑' : '물의 탑'})`).join(' 또는 ')}`
-              : `${parent?.name ?? '진화 전 형태'} → ${evolutionText(stage, game)}`,
+            text: `${parent?.name ?? '진화 전 형태'} → ${evolutionText(
+              stage,
+              game,
+              stage.dex === member.species.dex ? member.availability.formIdentifier : undefined,
+            )}`,
           })
         }
       }
@@ -106,7 +105,7 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
           kind: 'move',
           memberDex: member.species.dex,
           quality: move.quality,
-          text: `${speciesDisplayName(member.species, game)}: ${move.name} (${typeKo[move.type] ?? move.type}·${move.category}) — ${move.source}`,
+          text: `${speciesDisplayName(member.species, game, member.availability.formIdentifier)}: ${move.name} (${typeKo[move.type] ?? move.type}·${move.category}) — ${move.source}`,
         })
       }
     }

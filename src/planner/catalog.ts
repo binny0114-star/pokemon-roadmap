@@ -545,6 +545,7 @@ interface RankedEncounter {
   readyChapter: number
   evolutionSteps: number
   conditional: boolean
+  parallelDlc: boolean
   methodLabel: string
   unavailableReason?: string
 }
@@ -691,6 +692,8 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         return method
       })
       const invalidFormEvolution = evolutionLine.length > 0 && pathMethods.some((method) => !method)
+      const parallelDlc = encounter.conditions.some((condition) => condition.startsWith('dlc-milestone-'))
+        || pathMethods.some((method) => Boolean(method?.item && galarEvolutionItemDlc[method.item]))
       const tradeRequired = evolutionLine.some((entry, index) =>
         pathMethods[index]?.trigger === 'trade' || Boolean(crossVersionEvolutionReason(entry, game)),
       )
@@ -723,6 +726,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         readyChapter,
         evolutionSteps: evolutionLine.length,
         conditional,
+        parallelDlc,
         methodLabel: [
           methodKo[encounter.method] ?? encounter.method,
           ...conditions.map(conditionLabel),
@@ -764,14 +768,21 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
     }
   }
 
-  const preChampion = eligible.filter((entry) => !entry.postgame && entry.readyChapter <= mainStoryChapterCount)
+  const preChampion = eligible.filter((entry) =>
+    !entry.postgame && (entry.readyChapter <= mainStoryChapterCount || entry.parallelDlc))
   const pool = preChampion.length ? preChampion : eligible
+  const effectiveReadyChapter = (entry: RankedEncounter) => Math.max(
+    entry.readyChapter,
+    ...entry.encounter.conditions
+      .filter((condition) => condition.startsWith('dlc-milestone-'))
+      .map((condition) => galarDlcMilestoneChapters[condition] ?? 0),
+  )
   pool.sort((a, b) =>
     Number(a.tradeRequired) - Number(b.tradeRequired)
     || Number(a.encounter.conditions.some((condition) => condition.startsWith('dlc-milestone-')))
       - Number(b.encounter.conditions.some((condition) => condition.startsWith('dlc-milestone-')))
     || Number(a.conditional) - Number(b.conditional)
-    || a.readyChapter - b.readyChapter
+    || effectiveReadyChapter(a) - effectiveReadyChapter(b)
     || a.storyOrder - b.storyOrder
     || a.evolutionSteps - b.evolutionSteps
     || a.encounter.minLevel - b.encounter.minLevel
@@ -853,7 +864,13 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
   const capturePostgame = first.postgame || first.chapter > mainStoryChapterCount
   const captureChapter = capturePostgame ? mainStoryChapterCount + 1 : first.chapter
   const evolutionChapter = Math.max(captureChapter, first.readyChapter)
-  const postgameOnly = capturePostgame || evolutionChapter > mainStoryChapterCount
+  const evolutionDlc = game.familyId === 'galar8'
+    ? selectedEvolutionMethods
+        .map((method) => method?.item ? galarEvolutionItemDlc[method.item] : undefined)
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+        .sort((a, b) => b.dlcChapter - a.dlcChapter)[0]
+    : undefined
+  const postgameOnly = capturePostgame || (!evolutionDlc && evolutionChapter > mainStoryChapterCount)
   const starter = game.starters.includes(root.dex)
   const fossil = game.fossils.some((group) => group.includes(root.dex))
   const gift = ['gift', 'gift-egg', 'npc-trade', 'trade'].includes(first.encounter.method)
@@ -864,13 +881,15 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
   const requiredStarterDex = first.encounter.conditions
     .map((condition) => /^requires-galar-starter-(\d+)$/.exec(condition)?.[1])
     .find((value) => value !== undefined)
-  const dlcMilestone = first.encounter.conditions
+  const encounterDlcMilestone = first.encounter.conditions
     .filter((condition) => condition.startsWith('dlc-milestone-'))
     .sort((a, b) => (galarDlcMilestoneChapters[b] ?? 0) - (galarDlcMilestoneChapters[a] ?? 0))[0]
+  const dlcMilestone = encounterDlcMilestone
   const dlcChapter = dlcMilestone ? galarDlcMilestoneChapters[dlcMilestone] : undefined
   const dlcFinalChapter = dlcChapter
     ? Math.max(
         dlcChapter,
+        evolutionDlc?.dlcFinalChapter ?? dlcChapter,
         ...selectedEvolutionMethods.map((method) =>
           method?.trigger === 'tower-of-darkness' || method?.trigger === 'tower-of-waters' ? 14 : dlcChapter),
       )
@@ -907,6 +926,9 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
     dlcMilestone,
     dlcChapter,
     dlcFinalChapter,
+    evolutionDlcMilestone: evolutionDlc?.dlcMilestone,
+    evolutionDlcChapter: evolutionDlc?.dlcChapter,
+    evolutionDlcFinalChapter: evolutionDlc?.dlcFinalChapter,
     formIndex: finalForm?.formIndex ?? 0,
     formIdentifier: finalForm?.identifier,
     formName: finalForm?.formName ?? undefined,
@@ -1016,8 +1038,25 @@ const galarEvolutionItemUnlocks: Record<string, number> = {
   'chipped-pot': 5,
   'ice-stone': 7,
   'shiny-stone': 7,
-  'galarica-cuff': 1,
-  'galarica-wreath': 1,
+  'galarica-cuff': 12,
+  'galarica-wreath': 16,
+}
+
+const galarEvolutionItemDlc: Record<string, {
+  dlcMilestone: string
+  dlcChapter: number
+  dlcFinalChapter: number
+}> = {
+  'galarica-cuff': {
+    dlcMilestone: 'dlc-milestone-isle-access',
+    dlcChapter: 12,
+    dlcFinalChapter: 12,
+  },
+  'galarica-wreath': {
+    dlcMilestone: 'dlc-milestone-crown-access',
+    dlcChapter: 16,
+    dlcFinalChapter: 16,
+  },
 }
 
 export function evolutionRequirementChapter(species: CatalogSpecies, game: GameConfig): number {
@@ -1147,7 +1186,13 @@ function areaEvolutionText(species: CatalogSpecies, game?: GameConfig): string |
   return '이 버전에는 얼음 바위가 없어 다른 버전에서 진화 후 교환'
 }
 
-export function evolutionText(species: CatalogSpecies, game?: GameConfig): string {
+export function evolutionText(species: CatalogSpecies, game?: GameConfig, formIdentifier?: string): string {
+  if (species.dex === 892 && game) {
+    const choice = getAvailability(species, game).formChoices
+      ?.find((entry) => entry.formIdentifier === formIdentifier)
+    if (choice?.evolutionTrigger === 'tower-of-darkness') return `악의 탑 정상에서 ${species.name} 진화`
+    if (choice?.evolutionTrigger === 'tower-of-waters') return `물의 탑 정상에서 ${species.name} 진화`
+  }
   const evolution = game ? evolutionForGame(species, game) : species.evolution
   if (!evolution) return '진화 없음 또는 기본 형태'
   if (evolution.trigger === 'three-critical-hits') return `한 전투에서 급소를 3번 맞힌 뒤 ${species.name} 진화`

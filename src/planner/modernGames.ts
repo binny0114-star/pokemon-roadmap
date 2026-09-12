@@ -335,8 +335,8 @@ const sinnohRemakeChapters = [
 ]
 
 const sinnohRemakeBosses = [
-  boss('roark-bdsp', '강석', '무쇠 체육관', 1, ['rock'], 'Lv.12–14'),
   boss('barry-route-203', '라이벌', '203번도로', 1, ['normal'], 'Lv.7–9', { warning: '라이벌 스타터는 플레이어가 고른 스타터에 유리한 타입입니다.' }),
+  boss('roark-bdsp', '강석', '무쇠 체육관', 1, ['rock'], 'Lv.12–14'),
   boss('mars-valley-windworks', '마스', '골짜기발전소', 2, ['dark', 'poison'], 'Lv.14–16'),
   boss('gardenia-bdsp', '유채', '영원 체육관', 2, ['grass'], 'Lv.19–22'),
   boss('jupiter-eterna', '주피터', '갤럭시단 영원빌딩', 2, ['dark', 'poison'], 'Lv.18–20'),

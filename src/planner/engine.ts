@@ -47,7 +47,14 @@ const preFairyTypes: Record<number, string[]> = {
   303: ['steel'], 439: ['psychic'], 546: ['grass'], 547: ['grass'],
 }
 
-export function speciesTypes(species: CatalogSpecies, generation: number, game?: GameConfig): string[] {
+export function speciesTypes(
+  species: CatalogSpecies,
+  generation: number,
+  game?: GameConfig,
+  formIdentifier?: string,
+): string[] {
+  const selectedProfile = formIdentifier ? getGen8FormProfileByIdentifier(formIdentifier) : undefined
+  if (selectedProfile?.speciesId === species.dex) return selectedProfile.types
   if (game) {
     const formTypes = getAvailability(species, game).formTypes
     if (formTypes?.length) return formTypes
@@ -57,12 +64,14 @@ export function speciesTypes(species: CatalogSpecies, generation: number, game?:
   return species.types
 }
 
-export function speciesIcon(species: CatalogSpecies, generation = 5): string {
-  return typeEmoji[speciesTypes(species, generation)[0]] ?? '◉'
+export function speciesIcon(species: CatalogSpecies, generation = 5, game?: GameConfig, formIdentifier?: string): string {
+  return typeEmoji[speciesTypes(species, generation, game, formIdentifier)[0]] ?? '◉'
 }
 
-export function speciesDisplayName(species: CatalogSpecies, game: GameConfig): string {
+export function speciesDisplayName(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): string {
   const availability = getAvailability(species, game)
+  const selected = availability.formChoices?.find((choice) => choice.formIdentifier === formIdentifier)
+  if (selected) return `${species.name} (${selected.formName ?? selected.formIdentifier})`
   if (availability.formChoices?.length) {
     return `${species.name} (${availability.formChoices.map((choice) => choice.formName ?? choice.formIdentifier).join('/')})`
   }
@@ -70,16 +79,41 @@ export function speciesDisplayName(species: CatalogSpecies, game: GameConfig): s
   return formName ? `${species.name} (${formName})` : species.name
 }
 
+function selectedAvailability(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): Availability {
+  const availability = getAvailability(species, game)
+  if (!availability.formChoices?.length || !formIdentifier) return availability
+  const choice = availability.formChoices.find((entry) => entry.formIdentifier === formIdentifier)
+  const profile = getGen8FormProfileByIdentifier(formIdentifier)
+  if (!choice || profile?.speciesId !== species.dex) return availability
+  const scopedAvailability = ['capture-form', 'gender-random'].includes(choice.evolutionTrigger)
+    ? getAvailability(species, game, choice.formIndex)
+    : availability
+  return {
+    ...scopedAvailability,
+    formIndex: choice.formIndex,
+    formIdentifier: choice.formIdentifier,
+    formName: choice.formName,
+    formTypes: choice.types,
+    formStats: profile.stats,
+    formChoices: undefined,
+  }
+}
+
 export function effectiveChapter(species: CatalogSpecies, game: GameConfig): number {
   return getAvailability(species, game).finalChapter
 }
 
-function legalMovesForLineage(species: CatalogSpecies, game: GameConfig, includeAncestors = true): {
+function legalMovesForLineage(
+  species: CatalogSpecies,
+  game: GameConfig,
+  includeAncestors = true,
+  selectedFormIdentifier?: string,
+): {
   move: LegalMove
   learnedBy: CatalogSpecies
 }[] {
   const stages = includeAncestors ? generationLineage(species, game.generation) : [species]
-  const availability = getAvailability(species, game)
+  const availability = selectedAvailability(species, game, selectedFormIdentifier)
   return stages.flatMap((learnedBy) => {
     const inheritedFormIndex = learnedBy.dex === species.dex
       ? availability.formIndex
@@ -89,7 +123,7 @@ function legalMovesForLineage(species: CatalogSpecies, game: GameConfig, include
       : getGen8FormProfile(learnedBy.dex, inheritedFormIndex)?.identifier
         ?? getGen8DefaultFormProfile(learnedBy.dex)?.identifier
     const moves = getLegalMoves(learnedBy, game, formIdentifier)
-    if (learnedBy.dex !== species.dex || !availability.formChoices?.length) {
+    if (learnedBy.dex !== species.dex || !availability.formChoices?.length || selectedFormIdentifier) {
       return moves.map((move) => ({ move, learnedBy }))
     }
     const legalInEveryForm = availability.formChoices
@@ -100,8 +134,13 @@ function legalMovesForLineage(species: CatalogSpecies, game: GameConfig, include
   })
 }
 
-export function isMoveLegalForSpecies(species: CatalogSpecies, game: GameConfig, moveId: string): boolean {
-  return legalMovesForLineage(species, game).some((entry) => entry.move.id === moveId)
+export function isMoveLegalForSpecies(
+  species: CatalogSpecies,
+  game: GameConfig,
+  moveId: string,
+  formIdentifier?: string,
+): boolean {
+  return legalMovesForLineage(species, game, true, formIdentifier).some((entry) => entry.move.id === moveId)
 }
 
 export function canLearnFieldMove(species: CatalogSpecies, move: FieldMove, game?: GameConfig): boolean {
@@ -128,6 +167,7 @@ export function validateRequired(
   game: GameConfig,
   preferences: PlannerPreferences,
   challengeType: string | null = null,
+  formSelections: Readonly<Record<number, string>> = {},
 ): RequiredValidation {
   const errors: string[] = []
   const warnings: string[] = []
@@ -146,8 +186,16 @@ export function validateRequired(
       continue
     }
     const availability = getAvailability(species, game)
+    const selectedForm = formSelections[dex]
+    if (availability.formChoices?.length) {
+      if (!selectedForm) {
+        errors.push(`${species.name}: 사용할 폼을 선택하세요.`)
+      } else if (!availability.formChoices.some((choice) => choice.formIdentifier === selectedForm)) {
+        errors.push(`${species.name}: 이 버전에서 유효하지 않은 폼 선택입니다.`)
+      }
+    }
     const modifiedStarter = Boolean(challengeType && index === 0)
-    if (challengeType && !speciesTypes(species, game.generation, game).includes(challengeType)) {
+    if (challengeType && !speciesTypes(species, game.generation, game, selectedForm).includes(challengeType)) {
       errors.push(`${species.name}: ${typeKo[challengeType]} 타입 챌린지 조건과 맞지 않습니다.`)
     }
     if (modifiedStarter && species.generation > game.generation) {
@@ -200,16 +248,16 @@ export function validateRequired(
   return { errors, warnings }
 }
 
-function statsFor(species: CatalogSpecies, game: GameConfig): Record<string, number> {
-  return getAvailability(species, game).formStats ?? species.stats
+function statsFor(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): Record<string, number> {
+  return selectedAvailability(species, game, formIdentifier).formStats ?? species.stats
 }
 
-function statTotal(species: CatalogSpecies, game: GameConfig): number {
-  return Object.values(statsFor(species, game)).reduce((sum, value) => sum + value, 0)
+function statTotal(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): number {
+  return Object.values(statsFor(species, game, formIdentifier)).reduce((sum, value) => sum + value, 0)
 }
 
-function memberRole(species: CatalogSpecies, game: GameConfig): string {
-  const stats = statsFor(species, game)
+function memberRole(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): string {
+  const stats = statsFor(species, game, formIdentifier)
   const attack = stats['2'] ?? 0
   const defense = stats['3'] ?? 0
   const specialAttack = stats['4'] ?? 0
@@ -248,9 +296,16 @@ export function generatedMoves(
   acquisitionChapter = getAvailability(species, game).chapter,
   includeAncestors = true,
   resourceUsage: ReadonlyMap<string, number> = new Map(),
+  formIdentifier?: string,
 ): GeneratedMove[] {
   const family = getFamily(game)
-  const directlyAcquired = !getAvailability(species, game).sourceSpeciesName
+  const speciesAvailability = selectedAvailability(species, game, formIdentifier)
+  const directlyAcquired = !includeAncestors || !speciesAvailability.sourceSpeciesName
+  const finalStageChapter = directlyAcquired
+    ? acquisitionChapter
+    : speciesAvailability.evolutionDlcFinalChapter
+      ?? speciesAvailability.dlcFinalChapter
+      ?? speciesAvailability.finalChapter
   const lineage = generationLineage(species, game.generation)
   const evolvedStages = new Set(lineage.slice(1).map((stage) => stage.dex))
   const evolutionLevel = (stage: CatalogSpecies) =>
@@ -283,6 +338,7 @@ export function generatedMoves(
     Math.max(
       acquisitionChapter,
       chapterForLevel(move.level, game),
+      learnedBy.dex === species.dex ? finalStageChapter : 1,
       isReminderOnly(move, learnedBy) ? effectiveChapter(species, game) : 1,
       isReminderOnly(move, learnedBy) ? family.moveReminder?.chapter ?? 1 : 1,
     )
@@ -306,7 +362,7 @@ export function generatedMoves(
       return parentMove ? [parentMove] : []
     })
     .sort((a, b) => a.chapter - b.chapter)[0]
-  const legal = legalMovesForLineage(species, game, includeAncestors)
+  const legal = legalMovesForLineage(species, game, includeAncestors, formIdentifier)
     .filter(({ move, learnedBy }) => {
       const reminderOnly = isReminderOnly(move, learnedBy)
       const acquisition = getMoveAcquisition(game, move)
@@ -351,7 +407,7 @@ export function generatedMoves(
     return repeatableInStory
       || (resourceUsage.get(acquisition.resourceId) ?? 0) < (acquisition.guaranteedCopies ?? 1)
   })
-  const ownTypes = speciesTypes(species, game.generation, game)
+  const ownTypes = speciesTypes(species, game.generation, game, formIdentifier)
   const bosses = getBosses(game).filter((entry) => entry.chapter <= getMainStoryChapterCount(game))
   const score = ({ move }: (typeof candidates)[number]) => {
     if (move.category === '변화') return usefulStatusMoves.has(move.id) ? 75 : 12
@@ -383,7 +439,12 @@ export function generatedMoves(
     const eggParent = move.method === 'egg' ? eggParentTiming(move) : undefined
     const availableChapter = move.method === 'level'
       ? levelChapter(move, learnedBy)
-      : Math.max(acquisitionChapter, acquisition?.chapter ?? Math.ceil(getMainStoryChapterCount(game) * .7), eggParent?.chapter ?? 1)
+      : Math.max(
+          acquisitionChapter,
+          learnedBy.dex === species.dex ? finalStageChapter : 1,
+          acquisition?.chapter ?? Math.ceil(getMainStoryChapterCount(game) * .7),
+          eggParent?.chapter ?? 1,
+        )
     const source = move.method === 'level'
       ? move.level <= 1
         ? reminderOnly
@@ -421,11 +482,13 @@ function scoreCandidate(
   game: GameConfig,
   selected: CatalogSpecies[],
   preferences: PlannerPreferences,
+  formSelections: Readonly<Record<number, string>>,
 ): { score: number; reason: string } {
   const family = getFamily(game)
   const availability = getAvailability(species, game)
-  const selectedTypes = new Set(selected.flatMap((member) => speciesTypes(member, game.generation, game)))
-  const candidateTypes = speciesTypes(species, game.generation, game)
+  const selectedTypes = new Set(selected.flatMap((member) =>
+    speciesTypes(member, game.generation, game, formSelections[member.dex])))
+  const candidateTypes = speciesTypes(species, game.generation, game, formSelections[species.dex])
   const newTypes = candidateTypes.filter((type) => !selectedTypes.has(type))
   const availableBosses = getBosses(game).filter((bossEntry) =>
     bossEntry.chapter <= getMainStoryChapterCount(game)
@@ -433,13 +496,14 @@ function scoreCandidate(
   const bossWins = availableBosses.filter((bossEntry) =>
     candidateTypes.some((type) => bossEntry.types.some((bossType) => isStrongAgainst(type, bossType))),
   ).length
-  const selectedWeaknesses = selected.flatMap((member) => weaknesses(speciesTypes(member, game.generation, game), game.generation))
+  const selectedWeaknesses = selected.flatMap((member) =>
+    weaknesses(speciesTypes(member, game.generation, game, formSelections[member.dex]), game.generation))
   const sharedWeaknesses = weaknesses(candidateTypes, game.generation).filter((weakness) => selectedWeaknesses.includes(weakness)).length
   const fieldContribution = game.familyId === 'sinnoh8'
     ? 0
     : family.fieldMoves.filter((move) => canLearnFieldMove(species, move, game)).length
   const earlyScore = Math.max(0, getMainStoryChapterCount(game) + 1 - availability.chapter) * 7
-  const statsScore = Math.min(22, statTotal(species, game) / 28)
+  const statsScore = Math.min(22, statTotal(species, game, formSelections[species.dex]) / 28)
   const coverageScore = newTypes.length * 15 + bossWins * 5
   const hmScore = preferences.hmConvenience ? fieldContribution * 3 : 0
   const legendaryPenalty = species.legendary ? -8 : 0
@@ -497,10 +561,12 @@ function assignFieldMoves(members: GeneratedMember[], game: GameConfig, enabled:
 
 function coverage(members: GeneratedMember[], game: GameConfig): CoverageSummary {
   const family = getFamily(game)
-  const offensiveTypes = [...new Set(members.flatMap((member) => speciesTypes(member.species, game.generation, game)))]
+  const memberTypes = (member: GeneratedMember) =>
+    member.availability.formTypes ?? speciesTypes(member.species, game.generation, game)
+  const offensiveTypes = [...new Set(members.flatMap(memberTypes))]
   const weaknessCounts: Record<string, number> = {}
   for (const member of members) {
-    for (const weakness of weaknesses(speciesTypes(member.species, game.generation, game), game.generation)) {
+    for (const weakness of weaknesses(memberTypes(member), game.generation)) {
       weaknessCounts[weakness] = (weaknessCounts[weakness] ?? 0) + 1
     }
   }
@@ -508,7 +574,7 @@ function coverage(members: GeneratedMember[], game: GameConfig): CoverageSummary
   const bossCovered = bosses.filter((bossEntry) =>
     members.some((member) =>
       (member.challengeStarter ? 1 : effectiveChapter(member.species, game)) <= bossEntry.chapter
-      && speciesTypes(member.species, game.generation, game).some((type) => bossEntry.types.some((bossType) => isStrongAgainst(type, bossType))),
+      && memberTypes(member).some((type) => bossEntry.types.some((bossType) => isStrongAgainst(type, bossType))),
     ),
   ).length
   const fieldMovesCovered = game.familyId === 'sinnoh8'
@@ -529,9 +595,17 @@ function planId(
   preferences: PlannerPreferences,
   challengeType: string | null,
   challengeStarterDex: number | null,
+  formSelections: Readonly<Record<number, string>>,
 ): string {
   const memberKey = members.map((member) => member.species.dex).sort((a, b) => a - b).join('-')
-  return `${game.id}:${challengeType ? `mono-${challengeType}:starter-${challengeStarterDex}` : 'balanced'}:${memberKey}:${preferences.noTrade ? 'n' : 't'}:${preferences.hmConvenience ? 'h' : 'b'}`
+  const formKey = members
+    .map((member) => [member.species.dex, formSelections[member.species.dex]] as const)
+    .filter((entry): entry is readonly [number, string] => Boolean(entry[1]))
+    .sort(([left], [right]) => left - right)
+    .map(([dex, form]) => `${dex}-${form}`)
+    .join('-')
+  const legacyId = `${game.id}:${challengeType ? `mono-${challengeType}:starter-${challengeStarterDex}` : 'balanced'}:${memberKey}:${preferences.noTrade ? 'n' : 't'}:${preferences.hmConvenience ? 'h' : 'b'}`
+  return formKey ? `${legacyId}:forms-${formKey}` : legacyId
 }
 
 export interface GenerateOptions {
@@ -540,6 +614,7 @@ export interface GenerateOptions {
   previousMembers?: number[]
   variant?: number
   challengeType?: string | null
+  formSelections?: Readonly<Record<number, string>>
 }
 
 function hasFeasibleEvolution(species: CatalogSpecies, game: GameConfig, preferences: PlannerPreferences): boolean {
@@ -561,7 +636,7 @@ function isEligibleCandidate(
 ): boolean {
   const availability = getAvailability(species, game)
   if (!availability.obtainable) return false
-  if (game.familyId === 'galar8' && availability.dlcChapter) return false
+  if (game.familyId === 'galar8' && (availability.dlcChapter || availability.evolutionDlcChapter)) return false
   if (hasFeasibleEvolution(species, game, preferences)) return false
   if (preferences.noTrade && availability.tradeRequired) return false
   if (!preferences.allowPostgame && availability.postgameOnly) return false
@@ -599,7 +674,8 @@ function satisfiesStarterDependency(species: CatalogSpecies, selected: CatalogSp
 export function generateParty(game: GameConfig, preferences: PlannerPreferences, options: GenerateOptions): GeneratedPlan {
   const challengeType = options.challengeType ?? null
   const challengeStarterDex = challengeType ? options.requiredDexes[0] ?? null : null
-  const validation = validateRequired(options.requiredDexes, game, preferences, challengeType)
+  const formSelections: Record<number, string> = { ...options.formSelections }
+  const validation = validateRequired(options.requiredDexes, game, preferences, challengeType, formSelections)
   if (validation.errors.length) throw new Error(validation.errors.join('\n'))
   const locked = new Set(options.lockedDexes ?? [])
   const required = new Set(options.requiredDexes)
@@ -608,6 +684,17 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
     ...(options.previousMembers ?? []).filter((dex) => locked.has(dex)),
   ])]
   const selected = retainedDexes.map((dex) => speciesByDex.get(dex)).filter((entry): entry is CatalogSpecies => Boolean(entry))
+  for (const species of selected) {
+    const choices = getAvailability(species, game).formChoices
+    if (!choices?.length) continue
+    const selectedForm = formSelections[species.dex]
+    if (selectedForm && !choices.some((choice) => choice.formIdentifier === selectedForm)) {
+      throw new Error(`${species.name}: 이 버전에서 유효하지 않은 폼 선택입니다.`)
+    }
+    if (!selectedForm && species.dex === 892) {
+      throw new Error(`${species.name}: 사용할 폼을 선택하세요.`)
+    }
+  }
   const eligible = speciesCatalog.filter((species) => {
     if (selected.some((member) => member.dex === species.dex)) return false
     if (selected.some((member) => member.chainId === species.chainId)) return false
@@ -632,20 +719,42 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
         return !group || !selected.some((member) => getAvailability(member, game).mutuallyExclusiveGroup === group)
       })
       .filter((species) => satisfiesStarterDependency(species, selected, game))
-      .map((species) => ({ species, ...scoreCandidate(species, game, selected, preferences) }))
+      .map((species) => ({ species, ...scoreCandidate(species, game, selected, preferences, formSelections) }))
       .sort((a, b) => b.score - a.score || a.species.dex - b.species.dex)
     if (!ranked.length) break
     alternativesPool.push(...ranked.slice(0, 10))
     const pickIndex = Math.min(variant, Math.max(0, ranked.length - 1))
     selected.push(ranked[pickIndex].species)
   }
+  for (const species of selected) {
+    if (formSelections[species.dex]) continue
+    const choices = getAvailability(species, game).formChoices
+    const choice = choices?.find((entry) => !challengeType || entry.types.includes(challengeType)) ?? choices?.[0]
+    if (choice) formSelections[species.dex] = choice.formIdentifier
+  }
+  if (challengeType) {
+    const invalidMember = selected.find((species) =>
+      !speciesTypes(species, game.generation, game, formSelections[species.dex]).includes(challengeType))
+    if (invalidMember) {
+      throw new Error(`${invalidMember.name}: ${typeKo[challengeType]} 타입 챌린지 조건과 맞지 않습니다.`)
+    }
+  }
 
   const moveResourceUsage = new Map<string, number>()
   const members = selected.slice(0, 6).map((species) => {
-    const scored = scoreCandidate(species, game, selected.filter((entry) => entry.dex !== species.dex), preferences)
+    const selectedForm = formSelections[species.dex]
+    const scored = scoreCandidate(
+      species,
+      game,
+      selected.filter((entry) => entry.dex !== species.dex),
+      preferences,
+      formSelections,
+    )
     const challengeStarter = species.dex === challengeStarterDex
+    const concreteAvailability = selectedAvailability(species, game, selectedForm)
     const availability: Availability = challengeStarter
       ? {
+          ...concreteAvailability,
           obtainable: true,
           preChampion: true,
           chapter: 1,
@@ -657,11 +766,34 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
           postgameOnly: false,
           versionExclusive: false,
           sourceKind: 'starter',
+          method: undefined,
+          methodId: undefined,
+          sourceSpeciesName: undefined,
+          sourceSpeciesDex: undefined,
+          sourceFormIndex: undefined,
+          sourceFormIdentifier: undefined,
+          sourceFormName: undefined,
+          conditions: undefined,
+          mutuallyExclusiveGroup: undefined,
+          requiredStarterDex: undefined,
+          dlcMilestone: undefined,
+          dlcChapter: undefined,
+          dlcFinalChapter: undefined,
+          evolutionDlcMilestone: undefined,
+          evolutionDlcChapter: undefined,
+          evolutionDlcFinalChapter: undefined,
           reason: '타입 챌린지를 위해 스타팅 데이터를 직접 교체합니다.',
           quality: 'verified',
         }
-      : getAvailability(species, game)
-    const moves = generatedMoves(species, game, availability.chapter, !challengeStarter, moveResourceUsage)
+      : concreteAvailability
+    const moves = generatedMoves(
+      species,
+      game,
+      availability.chapter,
+      !challengeStarter,
+      moveResourceUsage,
+      selectedForm,
+    )
     for (const move of moves) {
       if (move.resourceId && move.reusable === false) {
         moveResourceUsage.set(move.resourceId, (moveResourceUsage.get(move.resourceId) ?? 0) + 1)
@@ -679,7 +811,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
         : required.has(species.dex)
         ? `사용자가 선택한 ${challengeType ? `${typeKo[challengeType]} 챌린지 ` : ''}필수 포켓몬`
         : `${challengeType ? `${typeKo[challengeType]} 타입 조건 · ` : ''}${scored.reason}`,
-      role: memberRole(species, game),
+      role: memberRole(species, game, selectedForm),
       moves,
       fieldMoves: [],
     }
@@ -740,10 +872,18 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
   }
 
   return {
-    id: planId(game, members, preferences, challengeType, challengeStarterDex),
+    id: planId(game, members, preferences, challengeType, challengeStarterDex, formSelections),
+    legacyId: Object.keys(formSelections).length
+      ? planId(game, members, preferences, challengeType, challengeStarterDex, {})
+      : undefined,
     gameId: game.id,
     challengeType,
     challengeStarterDex,
+    formSelections: Object.fromEntries(
+      members
+        .map((member) => [member.species.dex, formSelections[member.species.dex]] as const)
+        .filter((entry): entry is readonly [number, string] => Boolean(entry[1])),
+    ),
     members,
     alternatives: [...alternativeMap.values()].slice(0, 12),
     coverage: summary,

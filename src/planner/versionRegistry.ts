@@ -96,13 +96,18 @@ type CompletenessManifest = {
   }>
 }
 
-type Gen8GateContract = Record<string, Record<AccuracyGateId, {
-  requirementIds: string[]
-  sourceCategories: string[]
-}>>
+type Gen8GateContract = Record<string, {
+  gameIds: string[]
+  gates: Record<AccuracyGateId, {
+    requirementIds: string[]
+    sourceCategories: string[]
+  }>
+}>
 
 const gen8GateContract: Gen8GateContract = {
   letsgo7: {
+    gameIds: ['lets-go-pikachu', 'lets-go-eevee'],
+    gates: {
     availability: {
       requirementIds: ['wild-static-gift-trade'],
       sourceCategories: ['wild', 'overworld', 'static', 'gift', 'trade', 'catch-combo'],
@@ -131,8 +136,11 @@ const gen8GateContract: Gen8GateContract = {
       requirementIds: ['full-planner-contract'],
       sourceCategories: [],
     },
+    },
   },
   galar8: {
+    gameIds: ['sword', 'shield'],
+    gates: {
     availability: {
       requirementIds: ['base-wild-symbol-raid', 'dlc-and-distribution-scope'],
       sourceCategories: [
@@ -164,8 +172,11 @@ const gen8GateContract: Gen8GateContract = {
       requirementIds: ['full-planner-contract'],
       sourceCategories: [],
     },
+    },
   },
   sinnoh8: {
+    gameIds: ['brilliant-diamond', 'shining-pearl'],
+    gates: {
     availability: {
       requirementIds: ['overworld-static', 'conditional-and-underground-pools'],
       sourceCategories: [
@@ -197,8 +208,11 @@ const gen8GateContract: Gen8GateContract = {
       requirementIds: ['full-planner-contract'],
       sourceCategories: [],
     },
+    },
   },
   hisui8: {
+    gameIds: ['legends-arceus'],
+    gates: {
     availability: {
       requirementIds: ['field-static-outbreak-distortion-task'],
       sourceCategories: [
@@ -230,6 +244,7 @@ const gen8GateContract: Gen8GateContract = {
       requirementIds: ['full-planner-contract'],
       sourceCategories: [],
     },
+    },
   },
 }
 
@@ -243,6 +258,10 @@ const gen8GatedGameIds = new Set([
   'brilliant-diamond', 'shining-pearl',
   'legends-arceus',
 ])
+const canonicalGen8FamilyByGame = new Map(
+  Object.entries(gen8GateContract).flatMap(([familyId, contract]) =>
+    contract.gameIds.map((gameId) => [gameId, familyId] as const)),
+)
 const gatedGameIds = new Set([...gen67GatedGameIds, ...gen8GatedGameIds])
 const requiredAccuracyGates: AccuracyGateId[] = [
   'availability', 'forms', 'learnsets', 'evolutions', 'story', 'mechanics', 'integration',
@@ -320,17 +339,20 @@ function validateScopedCompletenessManifest(
     if (familyIds.join(',') !== Object.keys(gen8GateContract).sort().join(',')) {
       throw new Error(`${scope} 필수 패밀리 계약이 올바르지 않습니다.`)
     }
-    for (const [familyId, gateContract] of Object.entries(gen8GateContract)) {
+    for (const [familyId, contract] of Object.entries(gen8GateContract)) {
       const family = manifest.families[familyId]
+      if ([...family.games].sort().join(',') !== [...contract.gameIds].sort().join(',')) {
+        throw new Error(`${scope} 패밀리 게임 계약이 올바르지 않습니다: ${familyId}`)
+      }
       for (const gateId of requiredAccuracyGates) {
         const actualIds = family.gates[gateId].requirements.map((requirement) => requirement.id).sort()
-        const expectedIds = [...gateContract[gateId].requirementIds].sort()
+        const expectedIds = [...contract.gates[gateId].requirementIds].sort()
         if (actualIds.join(',') !== expectedIds.join(',')) {
           throw new Error(`${scope} 필수 요구사항 계약이 올바르지 않습니다: ${familyId}/${gateId}`)
         }
       }
       const expectedCategories = [...new Set(
-        requiredAccuracyGates.flatMap((gateId) => gateContract[gateId].sourceCategories),
+        requiredAccuracyGates.flatMap((gateId) => contract.gates[gateId].sourceCategories),
       )].sort()
       const actualCategories = [...(family.requiredSourceCategories ?? [])].sort()
       if (actualCategories.join(',') !== expectedCategories.join(',')) {
@@ -394,6 +416,10 @@ export function validateRegistry(value: unknown): {
     }
     if (gatedGameIds.has(game.id)) {
       const scope = gen8GatedGameIds.has(game.id) ? '8세대 계열' : '6–7세대'
+      const canonicalFamily = canonicalGen8FamilyByGame.get(game.id)
+      if (canonicalFamily && game.plannerFamilyId && game.plannerFamilyId !== canonicalFamily) {
+        throw new Error(`${scope} 플래너 패밀리 계약이 올바르지 않습니다: ${game.id}`)
+      }
       if (!game.plannerSupport.accuracyGates) {
         throw new Error(`${scope} 지원 게이트가 없습니다: ${game.id}`)
       }

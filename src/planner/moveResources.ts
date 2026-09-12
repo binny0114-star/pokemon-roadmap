@@ -233,12 +233,12 @@ export function getMoveAcquisition(game: GameConfig, move: LegalMove): MoveAcqui
   }
   if (move.method === 'egg') {
     return {
-      chapter: 1,
-      source: '첫 와일드에리어 포켓몬 맡기미집 · 호환 부모 또는 같은 종의 알기술 전수 필요',
+      chapter: 3,
+      source: '5번도로 포켓몬 맡기미집 · 호환 부모 또는 같은 종의 알기술 전수 필요',
       reusable: true,
       repeatable: true,
       availability: 'compatible-parent-required',
-      storyFlag: 'wild-area-nursery-access',
+      storyFlag: 'route-5-nursery-access',
     }
   }
   if (move.method === 'machine' && move.machine?.startsWith('TM')) {

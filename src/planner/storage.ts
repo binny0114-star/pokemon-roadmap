@@ -8,6 +8,7 @@ export interface SavedPlanSession {
   memberDexes: number[]
   lockedDexes: number[]
   variant: number
+  formSelections?: Record<string, string>
 }
 
 export interface ClearRecord {
@@ -40,6 +41,17 @@ export function loadPlanProgress(gameId: PlannerGameId, planId: string): Set<str
   } catch {
     return new Set()
   }
+}
+
+export function loadPlanProgressWithLegacy(
+  gameId: PlannerGameId,
+  planId: string,
+  legacyPlanId?: string,
+): Set<string> {
+  if (localStorage.getItem(planProgressKey(gameId, planId)) !== null || !legacyPlanId) {
+    return loadPlanProgress(gameId, planId)
+  }
+  return loadPlanProgress(gameId, legacyPlanId)
 }
 
 function actionIdentity(id: string): string {
