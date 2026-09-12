@@ -10,7 +10,7 @@ export type CatalogGameId =
   | 'sword' | 'shield' | 'brilliant-diamond' | 'shining-pearl' | 'legends-arceus'
   | 'scarlet' | 'violet' | 'legends-z-a'
 
-export type MechanicsFamily = 'classic' | 'lets-go' | 'legends'
+export type MechanicsFamily = 'classic' | 'galar-wild-area' | 'sinnoh-underground' | 'lets-go' | 'legends'
 export type ReleaseKind = 'original' | 'third' | 'enhanced' | 'sequel' | 'remake'
 export type AccuracyGateId =
   | 'availability'

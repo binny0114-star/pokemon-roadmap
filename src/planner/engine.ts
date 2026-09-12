@@ -247,6 +247,7 @@ export function generatedMoves(
   game: GameConfig,
   acquisitionChapter = getAvailability(species, game).chapter,
   includeAncestors = true,
+  resourceUsage: ReadonlyMap<string, number> = new Map(),
 ): GeneratedMove[] {
   const family = getFamily(game)
   const directlyAcquired = !getAvailability(species, game).sourceSpeciesName
@@ -342,7 +343,14 @@ export function generatedMoves(
       || (!bothLevelMoves && entry.move.method === current.move.method && entry.move.level < current.move.level)
     ) bestSource.set(entry.move.id, entry)
   }
-  const candidates = [...bestSource.values()]
+  const candidates = [...bestSource.values()].filter(({ move }) => {
+    const acquisition = getMoveAcquisition(game, move)
+    if (!acquisition?.resourceId || acquisition.reusable) return true
+    const repeatableInStory = acquisition.repeatable
+      && (acquisition.repeatableChapter ?? acquisition.chapter) <= getMainStoryChapterCount(game)
+    return repeatableInStory
+      || (resourceUsage.get(acquisition.resourceId) ?? 0) < (acquisition.guaranteedCopies ?? 1)
+  })
   const ownTypes = speciesTypes(species, game.generation, game)
   const bosses = getBosses(game).filter((entry) => entry.chapter <= getMainStoryChapterCount(game))
   const score = ({ move }: (typeof candidates)[number]) => {
@@ -399,6 +407,8 @@ export function generatedMoves(
       dlcChapter: acquisition?.dlcChapter,
       reusable: acquisition?.reusable,
       repeatable: acquisition?.repeatable,
+      guaranteedCopies: acquisition?.guaranteedCopies,
+      repeatableChapter: acquisition?.repeatableChapter,
       unitCost: acquisition?.unitCost,
       currency: acquisition?.currency,
       quality: move.method === 'level' || acquisition ? 'verified' : 'inferred',
@@ -425,7 +435,9 @@ function scoreCandidate(
   ).length
   const selectedWeaknesses = selected.flatMap((member) => weaknesses(speciesTypes(member, game.generation, game), game.generation))
   const sharedWeaknesses = weaknesses(candidateTypes, game.generation).filter((weakness) => selectedWeaknesses.includes(weakness)).length
-  const fieldContribution = family.fieldMoves.filter((move) => canLearnFieldMove(species, move, game)).length
+  const fieldContribution = game.familyId === 'sinnoh8'
+    ? 0
+    : family.fieldMoves.filter((move) => canLearnFieldMove(species, move, game)).length
   const earlyScore = Math.max(0, getMainStoryChapterCount(game) + 1 - availability.chapter) * 7
   const statsScore = Math.min(22, statTotal(species, game) / 28)
   const coverageScore = newTypes.length * 15 + bossWins * 5
@@ -448,7 +460,7 @@ function scoreCandidate(
 }
 
 function assignFieldMoves(members: GeneratedMember[], game: GameConfig, enabled: boolean): void {
-  if (!enabled) return
+  if (!enabled || game.familyId === 'sinnoh8') return
   const family = getFamily(game)
   const assignedCount = new Map<number, number>()
   for (const move of family.fieldMoves) {
@@ -499,7 +511,9 @@ function coverage(members: GeneratedMember[], game: GameConfig): CoverageSummary
       && speciesTypes(member.species, game.generation, game).some((type) => bossEntry.types.some((bossType) => isStrongAgainst(type, bossType))),
     ),
   ).length
-  const fieldMovesCovered = [...new Set(members.flatMap((member) => member.fieldMoves))]
+  const fieldMovesCovered = game.familyId === 'sinnoh8'
+    ? family.fieldMoves.map((move) => move.id)
+    : [...new Set(members.flatMap((member) => member.fieldMoves))]
   return {
     offensiveTypes,
     weaknesses: weaknessCounts,
@@ -626,6 +640,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
     selected.push(ranked[pickIndex].species)
   }
 
+  const moveResourceUsage = new Map<string, number>()
   const members = selected.slice(0, 6).map((species) => {
     const scored = scoreCandidate(species, game, selected.filter((entry) => entry.dex !== species.dex), preferences)
     const challengeStarter = species.dex === challengeStarterDex
@@ -646,6 +661,12 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
           quality: 'verified',
         }
       : getAvailability(species, game)
+    const moves = generatedMoves(species, game, availability.chapter, !challengeStarter, moveResourceUsage)
+    for (const move of moves) {
+      if (move.resourceId && move.reusable === false) {
+        moveResourceUsage.set(move.resourceId, (moveResourceUsage.get(move.resourceId) ?? 0) + 1)
+      }
+    }
     return {
       species,
       availability,
@@ -659,7 +680,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
         ? `사용자가 선택한 ${challengeType ? `${typeKo[challengeType]} 챌린지 ` : ''}필수 포켓몬`
         : `${challengeType ? `${typeKo[challengeType]} 타입 조건 · ` : ''}${scored.reason}`,
       role: memberRole(species, game),
-      moves: generatedMoves(species, game, availability.chapter, !challengeStarter),
+      moves,
       fieldMoves: [],
     }
   })
@@ -693,6 +714,9 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
       .reduce((sum, move) => sum + (move.unitCost ?? 0), 0)
     if (armoriteCount) warnings.push(`갑옷섬 기술가르침 비용 합계: 갑옷광석 ${armoriteCount}개.`)
   }
+  if (game.id === 'brilliant-diamond' || game.id === 'shining-pearl') {
+    warnings.push('BDSP 기술머신은 1회용입니다. 스토리 중 보장 수량 안에서 배정했으며, 반복 구매가 없는 TM은 같은 복사본을 중복 사용하지 않습니다.')
+  }
   const shortMovesets = members.filter((member) => member.moves.length < 4)
   if (shortMovesets.length) {
     warnings.push(`${shortMovesets.map((member) => member.species.name).join(', ')}은(는) 이 버전의 실현 가능한 스토리 기술 후보가 4개 미만입니다. 존재하지 않는 기술로 채우지 않았습니다.`)
@@ -710,7 +734,7 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
       score: entry.score,
       reason: entry.reason,
       role: memberRole(entry.species, game),
-      moves: generatedMoves(entry.species, game),
+      moves: generatedMoves(entry.species, game, undefined, true, moveResourceUsage),
       fieldMoves: [],
     })
   }

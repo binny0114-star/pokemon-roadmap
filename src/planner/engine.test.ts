@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { catalogCoverage, catalogProvenance, generationLineage, getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
+import { catalogCoverage, catalogProvenance, evolutionRequirementChapter, generationLineage, getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
 import { canLearnFieldMove, effectiveChapter, generatedMoves, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, speciesTypes, validateRequired } from './engine'
 import { families, games, getFamily, getGame } from './games'
 import { getLegalMoves, learnsetCoverage, learnsetProvenance } from './learnsets'
@@ -53,10 +53,10 @@ describe('지원 버전과 정적 카탈로그', () => {
     }
   }, 20_000)
 
-  it('기존 21개 플래너 버전에 Sword/Shield를 추가하고 ID를 고유하게 유지한다', () => {
-    expect(games).toHaveLength(23)
-    expect(new Set(games.map((game) => game.id)).size).toBe(23)
-    expect(Object.keys(families)).toHaveLength(9)
+  it('기존 플래너 버전에 Sword/Shield와 BDSP를 추가하고 ID를 고유하게 유지한다', () => {
+    expect(games).toHaveLength(25)
+    expect(new Set(games.map((game) => game.id)).size).toBe(25)
+    expect(Object.keys(families)).toHaveLength(10)
     for (const game of games) expect(getFamily(game).chapters.length).toBeGreaterThanOrEqual(8)
   })
 
@@ -73,8 +73,8 @@ describe('지원 버전과 정적 카탈로그', () => {
 
   it('39개 본가 버전과 현대 메커니즘 패밀리를 명시적으로 분류한다', () => {
     expect(gameCatalog).toHaveLength(39)
-    expect(plannerGameCatalog).toHaveLength(23)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(16)
+    expect(plannerGameCatalog).toHaveLength(25)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(14)
     expect(gameCatalog.find((game) => game.id === 'lets-go-pikachu')?.mechanicsFamily).toBe('lets-go')
     expect(gameCatalog.find((game) => game.id === 'sword')?.mechanicsFamily).toBe('galar-wild-area')
     expect(gameCatalog.find((game) => game.id === 'legends-arceus')?.mechanicsFamily).toBe('legends')
@@ -260,6 +260,7 @@ describe('획득 제약', () => {
     expect(effectiveChapter(speciesByDex.get(26)!, getGame('red'))).toBe(4)
     expect(effectiveChapter(speciesByDex.get(470)!, getGame('diamond'))).toBeGreaterThanOrEqual(2)
     expect(effectiveChapter(speciesByDex.get(471)!, getGame('diamond'))).toBeGreaterThanOrEqual(6)
+    expect(evolutionRequirementChapter(speciesByDex.get(471)!, getGame('diamond'))).toBe(6)
     expect(effectiveChapter(speciesByDex.get(470)!, getGame('black-2'))).toBe(9)
   })
 

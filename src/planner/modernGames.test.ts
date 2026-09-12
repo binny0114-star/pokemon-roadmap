@@ -70,7 +70,7 @@ describe('6–9세대 스토리 패밀리', () => {
     for (const gameId of targetIds) {
       const game = modernGames.find((entry) => entry.id === gameId)!
       const support = game.catalog.plannerSupport
-      const promoted = gameId === 'sword' || gameId === 'shield'
+      const promoted = ['sword', 'shield', 'brilliant-diamond', 'shining-pearl'].includes(gameId)
       expect(support.status, gameId).toBe(promoted ? 'full' : 'catalog-only')
       expect(game.catalog.supportReview, gameId).toBe('2026-09-12')
       expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
@@ -215,9 +215,10 @@ describe('6–9세대 스토리 패밀리', () => {
   it('HM 파티 요구는 6세대에서만 남고 이후 이동 시스템과 분리된다', () => {
     expect(modernFamilies.kalos6.fieldMoves.some((move) => move.required)).toBe(true)
     expect(modernFamilies.hoenn6.fieldMoves.some((move) => move.required)).toBe(true)
-    for (const family of Object.values(modernFamilies).filter((entry) => entry.generation >= 7)) {
+    for (const family of Object.values(modernFamilies).filter((entry) => entry.generation >= 7 && entry.id !== 'sinnoh8')) {
       expect(family.fieldMoves, family.id).toEqual([])
     }
+    expect(modernFamilies.sinnoh8.fieldMoves).toHaveLength(8)
   })
 
   it('레츠고 비전기술과 PLA 라이드를 클래식 HM·체육관으로 오인하지 않는다', () => {
@@ -475,7 +476,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
         expect(row.maxLevel, `${gameId}/#${row.species}`).toBeGreaterThanOrEqual(row.minLevel)
       }
     }
-  })
+  }, 15_000)
 
   it('가라르와 팔데아 리전폼 식별자를 기본폼으로 평탄화하지 않는다', () => {
     expect(encounterGames.sword.some((row) => row.species === 52 && row.form === 2)).toBe(true)
@@ -599,15 +600,15 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(modernEncounterChapter('galar8', 'rolling-fields', ['weather-normal', 'weather-heavy-fog'], 'overworld', 15)).toBe(2)
     expect(modernEncounterChapter('galar8', 'east-lake-axewell', ['badge-count-3', 'water-bike'], 'raid', 35)).toBe(7)
     expect(modernEncounterChapter('galar8', 'slumbering-weald', [], 'overworld', 45)).toBe(10)
-    expect(modernEncounterChapter('sinnoh8', 'route-219', [], 'super-rod')).toBe(9)
+    expect(modernEncounterChapter('sinnoh8', 'route-219', [], 'super-rod')).toBe(11)
     expect(modernEncounterChapter('sinnoh8', 'route-219', [], 'old-rod')).toBe(1)
     expect(modernEncounterChapter('hoenn6', 'mirage-forest', [], 'horde')).toBe(9)
     expect(modernEncounterChapter('hoenn6', 'route-115', [], 'horde')).toBe(5)
     expect(modernEncounterChapter('paldea9', 'area-zero')).toBe(14)
     expect(Object.values(encounterGames).flat().some((row) => row.location === 'grand-underground')).toBe(false)
-    expect(Object.values(encounterGames).flat().some((row) => row.location === 'trophy-garden')).toBe(false)
-    expect(Object.values(encounterGames).flat().some((row) => row.location === 'great-marsh')).toBe(false)
-    expect(encounterGames['brilliant-diamond'].some((row) => row.method === 'grass')).toBe(false)
+    expect(Object.values(encounterGames).flat().some((row) => row.location === 'trophy-garden')).toBe(true)
+    expect(Object.values(encounterGames).flat().some((row) => row.location === 'great-marsh')).toBe(true)
+    expect(encounterGames['brilliant-diamond'].some((row) => row.method === 'grass')).toBe(true)
     expect(encounterGames.sword.some((row) =>
       row.area === 'max-den-90'
       && row.location === 'south-lake-miloch'

@@ -218,6 +218,7 @@ export const families: Record<string, FamilyConfig> = {
   unova5: { id: 'unova5', generation: 5, region: '하나', chapters: unovaChapters, bosses: unovaBosses, fieldMoves: fields.unova, moveReminder: { chapter: 5, location: '궐수시티', cost: '하트비늘 1개' }, postgame: ['칠보시티 이후 동쪽 하나', '챔피언 노간주', '블랙시티/화이트포리스트'] },
   'unova5-2': { id: 'unova5-2', generation: 5, region: '하나', chapters: unova2Chapters, bosses: unova2Bosses, fieldMoves: fields.unova, moveReminder: { chapter: 4, location: '포켓몬 월드 토너먼트', cost: '하트비늘 1개' }, postgame: ['포켓몬 월드 토너먼트', '검은마천루/하얀수동', 'N·아크로마 재대결'] },
   galar8: { ...modernFamilies.galar8, id: 'galar8' },
+  sinnoh8: { ...modernFamilies.sinnoh8, id: 'sinnoh8' },
 }
 
 const game = (
@@ -266,6 +267,8 @@ export const games: GameConfig[] = [
   game('white-2', '챔피언 아이리스', '#9ca5a9', [495, 498, 501], [[564, 566]]),
   game('sword', '챔피언 단델', '#39a7d7', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
   game('shield', '챔피언 단델', '#d84b89', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
+  game('brilliant-diamond', '챔피언 난천', '#5c8eba', [387, 390, 393], [[408]], { familyId: 'sinnoh8', notes: ['포켓치 비전기술은 파티 기술칸을 차지하지 않으며 지하대동굴 풀은 진행 플래그에 따라 확장됩니다.'] }),
+  game('shining-pearl', '챔피언 난천', '#c9799d', [387, 390, 393], [[410]], { familyId: 'sinnoh8', notes: ['포켓치 비전기술은 파티 기술칸을 차지하지 않으며 지하대동굴 풀은 진행 플래그에 따라 확장됩니다.'] }),
 ]
 
 export function getGame(id: string): GameConfig {
@@ -282,7 +285,14 @@ export function getMainStoryChapterCount(game: GameConfig): number {
 }
 
 export function getBosses(game: GameConfig): PlannerBoss[] {
-  if (game.id === 'sword' || game.id === 'shield') return getModernBosses(game.id)
+  if (
+    game.id === 'sword'
+    || game.id === 'shield'
+    || game.id === 'brilliant-diamond'
+    || game.id === 'shining-pearl'
+  ) {
+    return getModernBosses(game.id).filter((entry) => !entry.gameIds || entry.gameIds.includes(game.id))
+  }
   const base = getFamily(game).bosses
   if (game.id === 'diamond' || game.id === 'pearl') return diamondPearlBosses
   if (game.id === 'emerald') {

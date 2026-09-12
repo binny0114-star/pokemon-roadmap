@@ -175,6 +175,14 @@ const locationKo: Record<string, string> = {
   'twinleaf-town': '떡잎마을',
   'oreburgh-city': '무쇠시티',
   'great-marsh': '대습초원',
+  'grand-underground': '지하대동굴',
+  'trophy-garden': '자랑의 뒤뜰',
+  'mount-coronet': '천관산',
+  'valley-windworks': '골짜기발전소',
+  'iron-island': '강철섬',
+  'old-chateau': '숲의양옥집',
+  'ramanas-park': '라마나스파크',
+  'stark-mountain': '하드마운틴',
   'nuvema-town': '마름꽃마을',
   'castelia-city': '구름시티',
   'victory-road': '챔피언로드',
@@ -293,6 +301,8 @@ const postgameConditions = [
   'other-captured-reshiram-or-zekrom',
   'special-encounter-couldnt-capture-before',
   'postgame',
+  'national-dex',
+  'elite-four-defeated',
 ]
 
 const unavailableConditions = [
@@ -328,6 +338,27 @@ const conditionKo: Record<string, string> = {
   'weekday-friday': '금요일',
   'story-progress-national-dex': '전국도감 이후',
   'story-progress-hall-of-fame': '엔딩 이후',
+  'postgame': '엔딩 이후',
+  'national-dex': '전국도감 이후',
+  'elite-four-defeated': '사천왕 격파 이후',
+  'grand-underground': '지하대동굴',
+  'explorer-kit': '탐험세트 획득',
+  'strength-obtained': '괴력 입수',
+  'defog': '안개제거 해금',
+  'strength': '괴력 해금',
+  'surf': '파도타기 해금',
+  'icicle-badge': '글레이셔배지',
+  'waterfall': '폭포오르기 해금',
+  'daily-feebas-tiles': '매일 바뀌는 빈티나 출현 타일',
+  'story-climax-complete': '창기둥 사건 해결 이후',
+  'daily-swarm': '오늘의 대량발생',
+  'poke-radar': '포켓트레 필요',
+  'daily-trophy-garden': '자랑의 뒤뜰 일일 포켓몬',
+  'daily-great-marsh-binoculars': '대습초원 망원경 일일 포켓몬',
+  'friday-only': '금요일 한정',
+  'night-only': '밤 한정',
+  'roaming': '배회 포켓몬',
+  'gift-egg': '선물받은 알',
   'dlc-milestone-isle-access': '갑옷섬 도착',
   'dlc-milestone-isle-first-trial': '도장 첫 번째 수행 완료',
   'dlc-milestone-isle-trials-complete': '도장 수행 완료',
@@ -475,6 +506,10 @@ export function evolutionForGame(
   baseFormIndex?: number,
 ): CatalogEvolution | CatalogEvolutionMethod | null {
   if (game.generation < 6 || species.evolutionMethods.length === 0) return species.evolution
+  if (game.familyId === 'sinnoh8' && species.dex === 350) {
+    return species.evolutionMethods.find((method) =>
+      method.trigger === 'level-up' && method.minBeauty === 170) ?? species.evolution
+  }
   const versionGroups = getCatalogGame(game.id)?.dataVersionGroupIds ?? [game.versionGroupId]
   const candidates = species.evolutionMethods
     .filter((method) => method.generation === null || method.generation <= game.generation)
@@ -620,6 +655,16 @@ export function getAvailability(species: CatalogSpecies, game: GameConfig, desir
 }
 
 function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredSourceFormIndex?: number): Availability {
+  if (game.familyId === 'sinnoh8' && species.dex > 493) {
+    return {
+      obtainable: false, preChampion: false, chapter: 99, location: '-', level: '-',
+      finalChapter: 99,
+      storyOrder: 99_000,
+      tradeRequired: false, postgameOnly: false, versionExclusive: false, sourceKind: 'unknown',
+      reason: '브릴리언트 다이아몬드·샤이닝 펄의 게임 내 도감은 #001–493만 지원합니다.',
+      quality: 'verified',
+    }
+  }
   if (species.generation > game.generation) {
     return {
       obtainable: false, preChampion: false, chapter: 99, location: '-', level: '-',
@@ -785,7 +830,21 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
             evolutionTrigger: 'gender-random',
           }] : []
         })
-    : undefined
+    : game.familyId === 'sinnoh8' && [201, 422, 423].includes(species.dex)
+      ? [...new Set(eligible
+          .filter((entry) => entry.source.chainId === species.chainId)
+          .map((entry) => entry.encounter.form ?? 0))]
+          .flatMap((formIndex) => {
+            const profile = getGen8FormProfile(species.dex, formIndex)
+            return profile ? [{
+              formIndex,
+              formIdentifier: profile.identifier,
+              formName: profile.formName ?? undefined,
+              types: profile.types,
+              evolutionTrigger: 'capture-form',
+            }] : []
+          })
+      : undefined
   const externalEvolution = evolutionLine.find((entry) => crossVersionEvolutionReason(entry, game))
   const tradeRequired = source.dex !== species.dex && (
     selectedEvolutionMethods.some((method) => method?.trigger === 'trade')
@@ -797,7 +856,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
   const postgameOnly = capturePostgame || evolutionChapter > mainStoryChapterCount
   const starter = game.starters.includes(root.dex)
   const fossil = game.fossils.some((group) => group.includes(root.dex))
-  const gift = ['gift', 'gift-egg', 'npc-trade'].includes(first.encounter.method)
+  const gift = ['gift', 'gift-egg', 'npc-trade', 'trade'].includes(first.encounter.method)
   const staticLike = ['only-one', 'static', 'pokeflute', 'roaming-grass', 'roaming-water', 'squirt-bottle', 'wailmer-pail', 'devon-scope']
     .includes(first.encounter.method)
   const authoredChoiceGroup = first.encounter.conditions
@@ -916,6 +975,11 @@ const evolutionItemUnlocks: Record<string, Partial<Record<string, number>>> = {
     'leaf-stone': 2, 'water-stone': 4, 'fire-stone': 5, 'shiny-stone': 5,
     'moon-stone': 5, 'dawn-stone': 6, 'dusk-stone': 7, 'thunder-stone': 8, 'sun-stone': 9,
   },
+  sinnoh8: {
+    'fire-stone': 2, 'leaf-stone': 2, 'moon-stone': 2, 'sun-stone': 2,
+    'thunder-stone': 2, 'water-stone': 2, 'oval-stone': 3, 'shiny-stone': 6,
+    'dawn-stone': 5, 'dusk-stone': 8, 'ice-stone': 7,
+  },
   johto4: {
     'fire-stone': 3, 'leaf-stone': 3, 'moon-stone': 3, 'sun-stone': 3,
     'thunder-stone': 3, 'water-stone': 3, 'dawn-stone': 9, 'dusk-stone': 9, 'shiny-stone': 9,
@@ -966,23 +1030,44 @@ export function evolutionRequirementChapter(species: CatalogSpecies, game: GameC
     if (evolution.trigger === 'tower-of-darkness' || evolution.trigger === 'tower-of-waters') return 1
     return 1
   }
+  if (game.familyId === 'sinnoh8' && species.dex === 350) return 3
+  if (game.familyId === 'sinnoh8' && evolution.heldItemId) {
+    const heldItemChapter: Record<number, number> = {
+      110: 3,
+      198: 11,
+      203: 11,
+      204: 11,
+      210: 6,
+      212: 11,
+      229: 11,
+      298: 11,
+      299: game.id === 'brilliant-diamond' ? 2 : 11,
+      300: game.id === 'shining-pearl' ? 2 : 11,
+      301: 11,
+      302: 11,
+      303: 9,
+      304: 11,
+    }
+    return heldItemChapter[evolution.heldItemId] ?? mainStoryChapterCount
+  }
   if (evolution.item) {
     const crystalOverride = game.id === 'crystal' ? crystalEvolutionItemUnlocks[evolution.item] : undefined
     return crystalOverride ?? evolutionItemUnlocks[game.familyId]?.[evolution.item] ?? mainStoryChapterCount
   }
   if (species.dex === 462 || species.dex === 476) {
-    if (game.familyId === 'sinnoh4') return 3
+    if (game.familyId === 'sinnoh4' || game.familyId === 'sinnoh8') return 3
     if (game.familyId.startsWith('unova5')) return 5
     return mainStoryChapterCount + 1
   }
   if (species.dex === 470) {
-    if (game.familyId === 'sinnoh4') return 2
+    if (game.familyId === 'sinnoh4' || game.familyId === 'sinnoh8') return 2
     if (game.familyId === 'unova5') return 3
     if (game.familyId === 'unova5-2') return mainStoryChapterCount + 1
     return mainStoryChapterCount + 1
   }
   if (species.dex === 471) {
     if (game.familyId === 'sinnoh4') return 6
+    if (game.familyId === 'sinnoh8') return 7
     if (game.familyId === 'unova5') return 6
     if (game.familyId === 'unova5-2') return mainStoryChapterCount + 1
     return mainStoryChapterCount + 1
@@ -1048,16 +1133,16 @@ function areaEvolutionText(species: CatalogSpecies, game?: GameConfig): string |
   if (![462, 470, 471, 476].includes(species.dex)) return null
   if (!game) return '특정 장소에서 레벨업'
   if ([462, 476].includes(species.dex)) {
-    if (game.familyId === 'sinnoh4') return '천관산 자기장 구역에서 레벨업'
+    if (game.familyId === 'sinnoh4' || game.familyId === 'sinnoh8') return '천관산 자기장 구역에서 레벨업'
     if (game.familyId.startsWith('unova5')) return '전기돌동굴에서 레벨업'
     return '이 버전에는 필요한 자기장 장소가 없어 다른 버전에서 진화 후 교환'
   }
   if (species.dex === 470) {
-    if (game.familyId === 'sinnoh4') return '영원의숲 이끼 낀 바위 근처에서 레벨업'
+    if (game.familyId === 'sinnoh4' || game.familyId === 'sinnoh8') return '영원의숲 이끼 낀 바위 근처에서 레벨업'
     if (game.familyId.startsWith('unova5')) return '바람개비숲 이끼 낀 바위 근처에서 레벨업'
     return '이 버전에는 이끼 낀 바위가 없어 다른 버전에서 진화 후 교환'
   }
-  if (game.familyId === 'sinnoh4') return '217번도로 얼음 바위 근처에서 레벨업'
+  if (game.familyId === 'sinnoh4' || game.familyId === 'sinnoh8') return '217번도로 얼음 바위 근처에서 레벨업'
   if (game.familyId.startsWith('unova5')) return '태엽산 얼음 바위 근처에서 레벨업'
   return '이 버전에는 얼음 바위가 없어 다른 버전에서 진화 후 교환'
 }

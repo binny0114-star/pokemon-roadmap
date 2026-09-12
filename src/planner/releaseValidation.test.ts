@@ -161,13 +161,12 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(galarLearnsets.status).toBe('complete')
     expect(galarLearnsets.evidence).toContain('daily rotation')
     expect(galarLearnsets.evidence).toContain('resource-conflict')
-    expect(requirement('sinnoh8', 'availability').missingFields).toEqual(expect.arrayContaining([
-      'underground-story-gate', 'swarm-gate', 'poke-radar-gate',
-    ]))
-    expect(requirement('sinnoh8', 'learnsets').missingFields).toEqual(expect.arrayContaining([
-      'tm-copy-quantity', 'tm-resource-conflicts',
-    ]))
-    expect(requirement('sinnoh8', 'learnsets').evidence).toContain('consumable TM')
+    const sinnohAvailability = gen8Completeness.families.sinnoh8.gates.availability.requirements[1]
+    const sinnohLearnsets = gen8Completeness.families.sinnoh8.gates.learnsets.requirements[0]
+    expect(sinnohAvailability.status).toBe('complete')
+    expect(sinnohAvailability.evidence).toContain('Poké Radar')
+    expect(sinnohLearnsets.status).toBe('complete')
+    expect(sinnohLearnsets.evidence).toContain('one-copy limits')
     expect(requirement('hisui8', 'availability').missingFields).toEqual(expect.arrayContaining([
       'outbreak-unlock', 'space-time-distortion-unlock', 'research-rank-gate',
     ]))
@@ -188,8 +187,8 @@ describe('릴리스 레지스트리와 전국도감', () => {
   it('39개 스토리 게임과 지원 경계를 고유하고 상호 참조 가능하게 유지한다', () => {
     expect(gameCatalog).toHaveLength(39)
     expect(new Set(gameCatalog.map((game) => game.id)).size).toBe(39)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(23)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(16)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(25)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(14)
     expect(gameCatalog.some((game) => game.id === ('champions' as string))).toBe(false)
 
     const byId = new Map(gameCatalog.map((game) => [game.id, game]))
@@ -200,9 +199,12 @@ describe('릴리스 레지스트리와 전국도감', () => {
         expect(byId.get(pairedId)?.pairedWith, `${game.id}/${pairedId}`).toContain(game.id)
       }
       if (game.plannerSupport.status === 'full') {
-        expect(game.mechanicsFamily, game.id).toBe(
-          game.id === 'sword' || game.id === 'shield' ? 'galar-wild-area' : 'classic',
-        )
+        const expectedMechanics = game.id === 'sword' || game.id === 'shield'
+          ? 'galar-wild-area'
+          : game.id === 'brilliant-diamond' || game.id === 'shining-pearl'
+            ? 'sinnoh-underground'
+            : 'classic'
+        expect(game.mechanicsFamily, game.id).toBe(expectedMechanics)
         expect(game.plannerFamilyId, game.id).toBeTruthy()
       } else {
         expect(game.plannerSupport.reason.trim().length, game.id).toBeGreaterThan(0)
@@ -219,7 +221,7 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(duplicateVersionIds).toEqual([[2, ['blue', 'green']]])
     expect(modernGames.every((game) => gameCatalog.some((entry) => entry.id === game.id))).toBe(true)
     expect(modernGames.filter((game) => game.catalog.plannerSupport.status === 'full').map((game) => game.id).sort())
-      .toEqual(['shield', 'sword'])
+      .toEqual(['brilliant-diamond', 'shield', 'shining-pearl', 'sword'])
   })
 
   it('전국도감 #001–1025를 누락과 중복 없이 유지한다', () => {

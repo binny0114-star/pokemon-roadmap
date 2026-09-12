@@ -126,6 +126,7 @@ const catalogOnlyCount = gameCatalog.length - fullSupportCount
 const mechanicsFamilyKo = {
   classic: '클래식 본편',
   'galar-wild-area': '가라르 와일드에리어·DLC',
+  'sinnoh-underground': '신오 포켓치·지하대동굴',
   'lets-go': '레츠고 전용',
   legends: 'LEGENDS 전용',
 } as const
@@ -149,6 +150,9 @@ const modernMethodKo: Record<string, string> = {
   gift: '선물',
   egg: '알',
   fossil: '화석 복원',
+  trade: '게임 내 교환',
+  'honey-tree': '꿀나무',
+  'grand-underground': '지하대동굴 심볼 조우',
 }
 const modernConditionKo: Record<string, string> = {
   'max-raid': '맥스 레이드',
@@ -170,6 +174,20 @@ const modernConditionKo: Record<string, string> = {
   'weather-sandstorm': '모래바람',
   'weather-heavy-fog': '짙은 안개',
   'weather-mist': '안개',
+  'grand-underground': '지하대동굴',
+  'explorer-kit': '탐험세트',
+  'defog': '안개제거',
+  'strength': '괴력',
+  'icicle-badge': '글레이셔배지',
+  'waterfall': '폭포오르기',
+  'national-dex': '전국도감 이후',
+  'elite-four-defeated': '사천왕 격파 이후',
+  'daily-swarm': '오늘의 대량발생',
+  'poke-radar': '포켓트레',
+  'daily-trophy-garden': '자랑의 뒤뜰 일일 풀',
+  'daily-great-marsh-binoculars': '대습초원 망원경 일일 풀',
+  'friday-only': '금요일 한정',
+  'night-only': '밤 한정',
 }
 
 function modernConditionLabel(condition: string): string {
@@ -191,18 +209,20 @@ function Toggle({
   checked,
   title,
   description,
+  disabled = false,
   onChange,
 }: {
   checked: boolean
   title: string
   description: string
+  disabled?: boolean
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="toggle-row">
+    <label className={`toggle-row${disabled ? ' disabled' : ''}`}>
       <span><strong>{title}</strong><small>{description}</small></span>
       <span className="toggle">
-        <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+        <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
         <span aria-hidden="true" />
       </span>
     </label>
@@ -1139,7 +1159,15 @@ function App() {
           <div className="preference-layout">
             <div className="settings-card">
               <Toggle checked={builder.preferences.noTrade} title="통신교환 없이" description="교환진화가 필요한 최종 형태를 추천에서 제외합니다." onChange={(noTrade) => updatePreferences({ noTrade })} />
-              <Toggle checked={builder.preferences.hmConvenience} title="필드기 편의성 우선" description="해당 버전의 실제 HM/필드기 목록을 점수에 반영합니다." onChange={(hmConvenience) => updatePreferences({ hmConvenience })} />
+              <Toggle
+                checked={game.familyId === 'sinnoh8' || builder.preferences.hmConvenience}
+                disabled={game.familyId === 'sinnoh8'}
+                title={game.familyId === 'sinnoh8' ? '포켓치 비전기술 자동 사용' : '필드기 편의성 우선'}
+                description={game.familyId === 'sinnoh8'
+                  ? 'BDSP 비전기술은 스토리 진행으로 해금되며 파티 기술칸이나 전용 요원이 필요하지 않습니다.'
+                  : '해당 버전의 실제 HM/필드기 목록을 점수에 반영합니다.'}
+                onChange={(hmConvenience) => updatePreferences({ hmConvenience })}
+              />
             </div>
             <div className="settings-card">
               <Toggle checked={builder.preferences.allowLegendary} title="전설 포켓몬 허용" description="스토리 완료 전에 잡을 수 있는 전설만 후보에 포함합니다." onChange={(allowLegendary) => updatePreferences({ allowLegendary })} />
@@ -1168,7 +1196,7 @@ function App() {
               <div className="coverage-chips">
                 <span><b>{plan.coverage.bossCoverage}%</b> 보스 상성</span>
                 <span><b>{plan.coverage.offensiveTypes.length}</b> 공격 타입</span>
-                <span><b>{plan.coverage.fieldMovesCovered.length}/{family.fieldMoves.length}</b> 필드기</span>
+                <span><b>{plan.coverage.fieldMovesCovered.length}/{family.fieldMoves.length}</b> {game.familyId === 'sinnoh8' ? '포켓치 비전기술' : '필드기'}</span>
               </div>
             </div>
             <div className="progress-strip">
@@ -1176,7 +1204,7 @@ function App() {
               <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
             </div>
             <div className="tabs" role="tablist">
-              {tabs.map((tab) => <button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}><span>{tab.icon}</span>{tab.name}</button>)}
+              {tabs.map((tab) => <button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}><span>{tab.icon}</span>{game.familyId === 'sinnoh8' && tab.id === 'hm' ? '비전기술' : tab.name}</button>)}
             </div>
 
             <div className="tab-panel">
@@ -1249,11 +1277,23 @@ function App() {
 
               {activeTab === 'hm' && (
                 <>
-                  <div className="panel-heading"><div><span className="eyebrow">FIELD MOVE MATRIX</span><h2>{game.generation}세대 필드기 배치</h2><p>버전별 실제 HM 목록과 해당 버전의 포켓몬별 호환 데이터를 사용합니다.</p></div></div>
-                  <div className="hm-table-wrap"><table className="hm-table"><thead><tr><th>필드기</th>{plan.members.map((member) => <th key={member.species.dex}>{member.species.name}</th>)}<th>진행 필수</th></tr></thead><tbody>
-                    {family.fieldMoves.map((move) => <tr key={move.id}><th>{move.name}</th>{plan.members.map((member) => <td key={member.species.dex}>{member.fieldMoves.includes(move.id) ? <span className="hm-check">✓</span> : '·'}</td>)}<td>{move.required ? '필수' : '선택'}</td></tr>)}
-                  </tbody></table></div>
-                  <p className="matrix-note">알려진 예외를 반영합니다: 지그제구리는 괴력을 배울 수 없고 직구리부터 가능합니다. “필드기 편의성” 점수는 원작 HM 목록을 세대별로 분리합니다.</p>
+                  {game.familyId === 'sinnoh8' ? (
+                    <>
+                      <div className="panel-heading"><div><span className="eyebrow">POKÉTCH HIDDEN MOVES</span><h2>포켓치 비전기술 해금</h2><p>야생 포켓몬을 호출하므로 파티 멤버의 기술칸이나 호환성에 의존하지 않습니다.</p></div></div>
+                      <div className="hm-table-wrap"><table className="hm-table"><thead><tr><th>비전기술</th><th>최초 해금</th><th>진행 필수</th><th>사용 방식</th></tr></thead><tbody>
+                        {family.fieldMoves.map((move) => <tr key={move.id}><th>{move.name}</th><td>{move.unlockChapter}장</td><td>{move.required ? '필수' : '선택'}</td><td><span className="hm-check">✓</span> 포켓치 앱</td></tr>)}
+                      </tbody></table></div>
+                      <p className="matrix-note">비전기술 해금은 동적 로드맵에 별도 행동으로 표시되며 파티 기술칸을 차지하지 않습니다.</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="panel-heading"><div><span className="eyebrow">FIELD MOVE MATRIX</span><h2>{game.generation}세대 필드기 배치</h2><p>버전별 실제 HM 목록과 해당 버전의 포켓몬별 호환 데이터를 사용합니다.</p></div></div>
+                      <div className="hm-table-wrap"><table className="hm-table"><thead><tr><th>필드기</th>{plan.members.map((member) => <th key={member.species.dex}>{member.species.name}</th>)}<th>진행 필수</th></tr></thead><tbody>
+                        {family.fieldMoves.map((move) => <tr key={move.id}><th>{move.name}</th>{plan.members.map((member) => <td key={member.species.dex}>{member.fieldMoves.includes(move.id) ? <span className="hm-check">✓</span> : '·'}</td>)}<td>{move.required ? '필수' : '선택'}</td></tr>)}
+                      </tbody></table></div>
+                      <p className="matrix-note">알려진 예외를 반영합니다: 지그제구리는 괴력을 배울 수 없고 직구리부터 가능합니다. “필드기 편의성” 점수는 원작 HM 목록을 세대별로 분리합니다.</p>
+                    </>
+                  )}
                 </>
               )}
 

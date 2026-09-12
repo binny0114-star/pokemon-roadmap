@@ -23,8 +23,14 @@ const sources = {
     'legality/wild/Gen8/encounter_sh_symbol.pkl',
     'legality/wild/Gen8/encounter_sh_nest.pkl',
   ],
-  'brilliant-diamond': ['legality/wild/Gen8/encounter_bd.pkl'],
-  'shining-pearl': ['legality/wild/Gen8/encounter_sp.pkl'],
+  'brilliant-diamond': [
+    'legality/wild/Gen8/encounter_bd.pkl',
+    'legality/wild/Gen8/encounter_bd_underground.pkl',
+  ],
+  'shining-pearl': [
+    'legality/wild/Gen8/encounter_sp.pkl',
+    'legality/wild/Gen8/encounter_sp_underground.pkl',
+  ],
   paldea: ['legality/wild/Gen9/encounter_wild_paldea.pkl'],
 }
 const inputFiles = [
@@ -68,6 +74,77 @@ const staticAcquisitions = [
   ].map(([game, species]) => ({ game, species, location: 'lake-verity', area: 'starter-gift', method: 'gift', minLevel: 5, maxLevel: 5, conditions: ['mutually-exclusive-starter'] })),
   { game: 'brilliant-diamond', species: 483, location: 'spear-pillar', area: 'story-static', method: 'static', minLevel: 47, maxLevel: 47, conditions: ['story-climax'] },
   { game: 'shining-pearl', species: 484, location: 'spear-pillar', area: 'story-static', method: 'static', minLevel: 47, maxLevel: 47, conditions: ['story-climax'] },
+  ...[
+    [133, 'hearthome-city', 5, ['postgame', 'national-dex']],
+    [440, 'hearthome-city', 1, ['gift-egg']],
+    [447, 'iron-island', 1, ['gift-egg']],
+    [425, 'valley-windworks', 22, ['friday-only']],
+    [442, 'route-209', 25, ['odd-keystone', 'underground-npc-count-32']],
+    [479, 'old-chateau', 15, ['postgame', 'national-dex', 'night-only']],
+    [481, 'lake-verity', 50, ['story-climax-complete', 'roaming']],
+    [488, 'fullmoon-island', 50, ['postgame', 'roaming']],
+    [480, 'lake-acuity', 50, ['story-climax-complete']],
+    [482, 'lake-valor', 50, ['story-climax-complete']],
+    [485, 'stark-mountain', 70, ['postgame', 'stark-mountain-quest']],
+    [486, 'snowpoint-temple', 70, ['postgame', 'regi-party-required']],
+    [487, 'turnback-cave', 70, ['postgame']],
+    [377, 'ramanas-park', 70, ['postgame', 'national-dex', 'discovery-slate']],
+    [378, 'ramanas-park', 70, ['postgame', 'national-dex', 'discovery-slate']],
+    [379, 'ramanas-park', 70, ['postgame', 'national-dex', 'discovery-slate']],
+    [380, 'ramanas-park', 70, ['postgame', 'national-dex', 'soul-slate']],
+    [381, 'ramanas-park', 70, ['postgame', 'national-dex', 'soul-slate']],
+    [150, 'ramanas-park', 70, ['postgame', 'national-dex', 'genome-slate']],
+    [382, 'ramanas-park', 70, ['postgame', 'national-dex', 'oceanic-slate']],
+    [383, 'ramanas-park', 70, ['postgame', 'national-dex', 'tectonic-slate']],
+    [384, 'ramanas-park', 70, ['postgame', 'national-dex', 'stratospheric-slate']],
+  ].flatMap(([species, location, level, conditions]) =>
+    ['brilliant-diamond', 'shining-pearl'].map((game) => ({
+      game, species, location, area: 'static-or-gift', method: 'static',
+      minLevel: level, maxLevel: level, conditions,
+    }))),
+  ...[
+    [151, 1, ['lets-go-save-data']],
+    [385, 5, ['sword-shield-save-data']],
+  ].flatMap(([species, level, conditions]) =>
+    ['brilliant-diamond', 'shining-pearl'].map((game) => ({
+      game, species, location: 'floaroma-town', area: 'save-data-gift', method: 'gift',
+      minLevel: level, maxLevel: level, conditions,
+    }))),
+  ...[
+    [138, ['postgame', 'national-dex', 'fossil-mining']],
+    [140, ['postgame', 'national-dex', 'fossil-mining']],
+    [142, ['postgame', 'national-dex', 'fossil-mining']],
+    [345, ['postgame', 'national-dex', 'fossil-mining']],
+    [347, ['postgame', 'national-dex', 'fossil-mining']],
+  ].flatMap(([species, conditions]) =>
+    ['brilliant-diamond', 'shining-pearl'].map((game) => ({
+      game, species, location: 'oreburgh-mining-museum', area: 'fossil-restoration', method: 'fossil',
+      minLevel: 1, maxLevel: 1, conditions,
+    }))),
+  { game: 'brilliant-diamond', species: 408, location: 'oreburgh-mining-museum', area: 'fossil-restoration', method: 'fossil', minLevel: 1, maxLevel: 1, conditions: ['skull-fossil', 'grand-underground', 'explorer-kit'] },
+  { game: 'shining-pearl', species: 410, location: 'oreburgh-mining-museum', area: 'fossil-restoration', method: 'fossil', minLevel: 1, maxLevel: 1, conditions: ['armor-fossil', 'grand-underground', 'explorer-kit'] },
+  ...[
+    [63, 'oreburgh-city', 9, 'machop-required'],
+    [441, 'eterna-city', 15, 'buizel-required'],
+    [93, 'snowpoint-city', 33, 'medicham-required-everstone'],
+    [129, 'route-226', 45, 'finneon-required'],
+  ].flatMap(([species, location, level, condition]) =>
+    ['brilliant-diamond', 'shining-pearl'].map((game) => ({
+      game, species, location, area: 'in-game-trade', method: 'trade',
+      minLevel: level, maxLevel: level, conditions: [condition],
+    }))),
+  { game: 'brilliant-diamond', species: 243, location: 'ramanas-park', area: 'version-static', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame', 'national-dex', 'johto-slate'] },
+  { game: 'brilliant-diamond', species: 244, location: 'ramanas-park', area: 'version-static', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame', 'national-dex', 'johto-slate'] },
+  { game: 'brilliant-diamond', species: 245, location: 'ramanas-park', area: 'version-static', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame', 'national-dex', 'johto-slate'] },
+  { game: 'brilliant-diamond', species: 250, location: 'ramanas-park', area: 'version-static', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame', 'national-dex', 'rainbow-slate'] },
+  { game: 'shining-pearl', species: 144, location: 'ramanas-park', area: 'version-static', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame', 'national-dex', 'kanto-slate'] },
+  { game: 'shining-pearl', species: 145, location: 'ramanas-park', area: 'version-static', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame', 'national-dex', 'kanto-slate'] },
+  { game: 'shining-pearl', species: 146, location: 'ramanas-park', area: 'version-static', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame', 'national-dex', 'kanto-slate'] },
+  { game: 'shining-pearl', species: 249, location: 'ramanas-park', area: 'version-static', method: 'static', minLevel: 70, maxLevel: 70, conditions: ['postgame', 'national-dex', 'squall-slate'] },
+  ...['brilliant-diamond', 'shining-pearl'].map((game) => ({
+    game, species: 493, location: 'hall-of-origin', area: 'save-data-static', method: 'static',
+    minLevel: 80, maxLevel: 80, conditions: ['postgame', 'national-dex', 'legends-arceus-all-main-missions'],
+  })),
   ...[
     ['scarlet', 906], ['scarlet', 909], ['scarlet', 912],
     ['violet', 906], ['violet', 909], ['violet', 912],
@@ -718,19 +795,138 @@ function parseSwshDynamaxAdventures(buffer, game) {
   return result
 }
 
-function parseBdsp(buffer, locationNames) {
+const bdspSwarmSpecies = new Set([
+  16, 81, 83, 84, 96, 98, 100, 104, 108, 177, 206, 209, 220, 222,
+  225, 231, 238, 263, 283, 287, 296, 299, 300, 309, 325, 327, 359, 374,
+])
+const bdspRadarSpecies = new Set([
+  29, 30, 32, 33, 48, 49, 56, 57, 79, 88, 128, 132, 161, 175, 179,
+  180, 187, 188, 191, 202, 228, 234, 235, 236, 246, 262, 276,
+  277, 280, 281, 290, 294, 304, 305, 324, 328, 329, 333, 343, 352,
+  355, 356, 360, 361, 371,
+])
+const trophyGardenDailySpecies = new Set([35, 39, 52, 113, 133, 137, 173, 174, 183, 298, 311, 312, 351, 438, 439, 440])
+const greatMarshDailySpecies = new Set([46, 54, 102, 115, 193, 285, 316, 451, 453, 455])
+const sinnohDexSpecies = new Set([
+  25, 26, 35, 36, 41, 42, 54, 55, 63, 64, 65, 66, 67, 68, 72, 73,
+  74, 75, 76, 77, 78, 92, 93, 94, 95, 113, 118, 119, 122, 129, 130,
+  143, 163, 164, 169, 172, 173, 183, 184, 185, 190, 194, 195, 198,
+  200, 201, 203, 208, 214, 215, 223, 224, 226, 242, 265, 266, 267,
+  268, 269, 278, 279, 298, 307, 308, 315, 339, 340, 349, 350, 358,
+  ...Array.from({ length: 75 }, (_, index) => index + 387),
+  480, 481, 482, 483, 484, 490,
+])
+
+// Serebii's per-hideaway milestone tables are reference-only chronology evidence.
+// PKHeX remains the redistributed species/form/version source.
+const bdspUndergroundBeginningSpecies = new Set([
+  41, 54, 66, 74, 81, 92, 95, 108, 111, 123, 127, 175, 198, 200, 207, 216,
+  220, 229, 238, 239, 240, 265, 266, 268, 280, 315, 333, 355, 359, 361, 362,
+  399, 401, 403, 406, 415, 417, 418, 420, 422, 423, 427, 451, 453,
+])
+const bdspUndergroundStrengthSpecies = new Set([
+  42, 77, 163, 307, 339, 400, 433, 434, 435, 436,
+])
+const bdspUndergroundDefogSpecies = new Set([
+  64, 67, 75, 190, 194, 195, 203, 278, 432, 446, 449,
+])
+const bdspUndergroundIcicleSpecies = new Set([
+  72, 73, 122, 215, 279, 404, 431, 443, 459,
+])
+const bdspUndergroundWaterfallSpecies = new Set([224, 340, 444, 458])
+const bdspUndergroundPreNationalSpecies = new Set([
+  ...bdspUndergroundBeginningSpecies,
+  ...bdspUndergroundStrengthSpecies,
+  ...bdspUndergroundDefogSpecies,
+  ...bdspUndergroundIcicleSpecies,
+  ...bdspUndergroundWaterfallSpecies,
+])
+
+function bdspUndergroundMilestoneConditions(species) {
+  if (bdspUndergroundBeginningSpecies.has(species)) return []
+  if (bdspUndergroundStrengthSpecies.has(species)) return ['strength-obtained']
+  if (bdspUndergroundDefogSpecies.has(species)) return ['defog']
+  if (bdspUndergroundIcicleSpecies.has(species)) return ['icicle-badge']
+  if (bdspUndergroundWaterfallSpecies.has(species)) return ['waterfall']
+  return ['national-dex', 'elite-four-defeated']
+}
+
+function bdspConditions(species, location, underground, minLevel) {
+  if (underground) {
+    const progression = minLevel >= 58
+      ? ['elite-four-defeated']
+      : minLevel >= 50
+        ? ['badge-count-8']
+        : minLevel >= 42
+          ? ['badge-count-7']
+          : minLevel >= 39
+            ? ['badge-count-6']
+            : minLevel >= 36
+              ? ['badge-count-5']
+              : minLevel >= 33
+                ? ['badge-count-4']
+                : minLevel >= 29
+                  ? ['badge-count-3']
+                  : minLevel >= 25
+                    ? ['badge-count-2']
+                    : ['badge-count-1']
+    return [
+      'grand-underground',
+      'explorer-kit',
+      ...progression,
+      ...bdspUndergroundMilestoneConditions(species),
+    ]
+  }
+  if (location === 'trophy-garden' && trophyGardenDailySpecies.has(species)) {
+    return ['postgame', 'national-dex', 'daily-trophy-garden']
+  }
+  if (location === 'great-marsh' && greatMarshDailySpecies.has(species)) {
+    return [...(!sinnohDexSpecies.has(species) ? ['postgame', 'national-dex'] : []), 'daily-great-marsh-binoculars']
+  }
+  if (bdspSwarmSpecies.has(species)) return ['postgame', 'national-dex', 'daily-swarm']
+  if (bdspRadarSpecies.has(species)) return ['postgame', 'national-dex', 'poke-radar']
+  if (!sinnohDexSpecies.has(species)) return ['postgame', 'national-dex']
+  return []
+}
+
+function parseBdsp(buffer, locationNames, underground) {
   const typeNames = ['unknown', 'grass', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash', 'unknown', 'honey-tree']
   return unpack(buffer).flatMap((area) => {
     const locationId = area.readUInt16LE(0)
-    const location = locationNames[locationId] || `sinnoh-location-${locationId}`
-    if (['trophy-garden', 'great-marsh'].includes(slug(location))) return []
+    const sourceLocation = locationNames[locationId] || `sinnoh-location-${locationId}`
+    const location = sourceLocation.replace(/^Grand Underground \((.+)\)$/, 'Grand Underground $1')
+    const locationIdText = slug(sourceLocation)
     const method = typeNames[area[2]] ?? 'unknown'
-    if (method === 'grass' || method === 'unknown') return []
+    if (method === 'unknown') return []
     const result = []
     for (let offset = 4; offset + 3 < area.length; offset += 4) {
       const encoded = area.readUInt16LE(offset)
       const decoded = normalizeForm(encoded >> 11)
-      result.push(encounter(encoded & 0x3ff, decoded.form, location, `${location}-${locationId}`, area[offset + 2], area[offset + 3], method, decoded.condition ? [decoded.condition] : []))
+      const species = encoded & 0x3ff
+      const minLevel = area[offset + 2]
+      if (underground && !bdspUndergroundPreNationalSpecies.has(species) && minLevel < 58) continue
+      const feebasTile = !underground && species === 349 && locationIdText === 'mount-coronet'
+      const nightExclusive = !underground && (species === 198 || species === 200)
+      const encounterMethod = underground
+        ? 'grand-underground'
+        : feebasTile
+          ? 'feebas-tile-fishing'
+          : method
+      result.push(encounter(
+        species,
+        decoded.form,
+        location,
+        underground ? location : `${location}-${locationId}`,
+        minLevel,
+        area[offset + 3],
+        encounterMethod,
+        [
+          ...bdspConditions(species, locationIdText, underground, minLevel),
+          ...(feebasTile ? ['daily-feebas-tiles', 'defog', 'surf', 'strength'] : []),
+          ...(nightExclusive ? ['night-only'] : []),
+          ...(decoded.condition ? [decoded.condition] : []),
+        ],
+      ))
     }
     return result
   })
@@ -913,7 +1109,7 @@ for (const game of ['sword', 'shield']) {
 }
 for (const game of ['brilliant-diamond', 'shining-pearl']) {
   const buffers = await Promise.all(sources[game].map(fetchBytes))
-  rowsByGame[game] = deduplicate(buffers.flatMap((buffer) => parseBdsp(buffer, sinnohNames)))
+  rowsByGame[game] = deduplicate(buffers.flatMap((buffer, index) => parseBdsp(buffer, sinnohNames, index === 1)))
 }
 
 const paldeaRows = parsePaldea(await fetchBytes(sources.paldea[0]), paldeaNames)
@@ -966,6 +1162,22 @@ await writeFile(
             reviewedAt: '2026-09-12',
             use: 'reference-only Isle of Armor Diglett reward thresholds',
           },
+          {
+            url: 'https://bulbapedia.bulbagarden.net/w/index.php?title=Feebas_(Pok%C3%A9mon)&oldid=4628707',
+            revision: '4628707',
+            use: 'reference-only BDSP Feebas location and Beauty evolution cross-check',
+          },
+          {
+            url: 'https://game8.co/games/Pokemon-Brilliant-Diamond-Shining-Pearl/archives/348122',
+            reviewedAt: '2026-09-12',
+            use: 'reference-only BDSP any-rod Feebas tiles and traversal cross-check',
+          },
+          {
+            url: 'https://www.serebii.net/pokearth/sinnoh/grandunderground.shtml',
+            sha256: '1160d6e16f3067e190a41db5d6270f38c341b87844ca2955933d9026e5643278',
+            reviewedAt: '2026-09-12',
+            use: 'reference-only per-hideaway Beginning, Strength, Defog, Icicle Badge, Waterfall and National Pokédex species unlock cross-check',
+          },
         ],
       },
       notes: [
@@ -979,8 +1191,8 @@ await writeFile(
         'Sword/Shield code-defined static, gift, fossil and in-game trade tables are normalized from the pinned PKHeX source with explicit base-game, Isle of Armor 1.2.0 and Crown Tundra 1.3.0 scope.',
         'Sword/Shield Max Lair rows preserve rental-team access, one-catch legendary rules, opposite-version host paths and the post-clue Ultra Beast unlock; temporal distribution dens are intentionally excluded from permanent availability.',
         'Independently authored reachability conditions cover Wedgehurst Slowpoke, Isle of Armor Diglett rewards, Crown Tundra footprints, roaming birds, Spiritomb, Regigigas, Keldeo, Cosmog and Poipole and are cross-checked against the reference-only URLs above.',
-        'BDSP overworld level ranges are decoded from separate version resources.',
-        'BDSP grass pools, Grand Underground, Trophy Garden and Great Marsh rows are excluded because the pinned encounter resource does not distinguish story, swarm, Poké Radar and National Pokédex gates.',
+        'BDSP overworld and Grand Underground level ranges are decoded from separate version resources; independently authored reachability conditions preserve the exact per-species Explorer Kit, Strength-obtained, Defog, Icicle Badge, Waterfall and National Pokédex milestones cross-checked against the content-hashed Serebii tables, and discard unreachable pre-Elite-Four level bands only for National Pokédex species.',
+        'BDSP Feebas retains the pinned PKHeX species, form, location and level range while the special any-rod daily-tile method and Defog, Surf and Strength gates are independently cross-checked against the reference-only URLs above.',
         'Scarlet/Violet base-Paldea wild slots are decoded from the shared resource and filtered by reviewed version exclusives.',
         'Concrete species forms are preserved exactly; PKHeX dynamic form sentinels are normalized to base form with explicit form-region-dependent or form-random conditions.',
         'Snapshot keys are stable planner game IDs, not PokéAPI or PKHeX numeric version identifiers.',

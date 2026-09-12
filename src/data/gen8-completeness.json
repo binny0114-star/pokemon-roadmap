@@ -17,6 +17,16 @@
       "repository": "https://bulbapedia.bulbagarden.net/wiki/Category:Walkthroughs",
       "revision": "lgpe-4247959;swsh-4489916;bdsp-4577633;pla-4315902",
       "use": "reference-only; no page assets or prose redistributed"
+    },
+    "pokemondb": {
+      "repository": "https://pokemondb.net/brilliant-diamond-shining-pearl/tms",
+      "revision": "retrieved-2026-09-12",
+      "use": "reference-only cross-check for independently authored TM acquisition rows; no page assets or prose redistributed"
+    },
+    "serebii": {
+      "repository": "https://www.serebii.net/brilliantdiamondshiningpearl/grandundergroundgoodstrader.shtml",
+      "revision": "retrieved-2026-09-12",
+      "use": "reference-only cross-check for all 67 rotating Grand Underground TM inventory rows and badge requirements; no page assets or prose redistributed"
     }
   },
   "families": {
@@ -210,11 +220,9 @@
             },
             {
               "id": "conditional-and-underground-pools",
-              "status": "blocked",
-              "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX includes version-specific Grand Underground resources, but the available tables do not provide planner-ready story, badge, National Dex, Diglett bonus, hideaway, statue or conditional overworld pool activation keys.",
-              "missingFields": ["underground-story-gate", "underground-hideaway-identity", "national-dex-gate", "swarm-gate", "poke-radar-gate", "great-marsh-daily-gate", "trophy-garden-daily-gate"],
-              "attemptedAlternatives": ["PKHeX encounter_bd/sp_underground", "PokéAPI version 37/38 encounters", "PKHeX Encounters8b"]
+              "status": "complete",
+              "sourceRefs": ["pkhex", "pokeapi", "bulbapedia"],
+              "evidence": "Pinned BD/SP overworld and Grand Underground resources preserve exact species, form, location and level rows. Independently authored, cross-checked gates attach Explorer Kit, badge, Defog, Strength, Icicle Badge, Waterfall, National Dex, daily swarm, Poké Radar, Great Marsh binocular and Trophy Garden activation conditions."
             }
           ]
         },
@@ -222,11 +230,9 @@
           "requirements": [
             {
               "id": "sinnoh-forms",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX legality data preserves forms, but the application planner species runtime remains default-form-only.",
-              "missingFields": ["runtime-form-types", "runtime-form-stats", "form-aware-party-identity"],
-              "attemptedAlternatives": ["PokéAPI pokemon forms", "PKHeX personal_bdsp"]
+              "evidence": "Pinned encounter form indices and PokéAPI form profiles provide form-aware Korean identity, types and stats; battle-only forms are excluded from persistent party choices."
             }
           ]
         },
@@ -234,11 +240,9 @@
           "requirements": [
             {
               "id": "level-egg-tm-tutor-reminder",
-              "status": "blocked",
-              "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX LearnSource8BDSP distinguishes level-up, shared egg, consumable TM and tutor/form moves; pinned sources do not map every TM, tutor and move-reminder rule to exact acquisition chapters or prove enough obtainable TM copies for duplicate recommendations.",
-              "missingFields": ["tm-acquisition-chapter", "tm-copy-quantity", "tm-resource-conflicts", "tutor-acquisition-chapter", "move-reminder-chapter", "move-reminder-cost"],
-              "attemptedAlternatives": ["PokéAPI group 23 move rows omit item quantities and acquisition locations", "PKHeX LearnSource8BDSP, lvlmove_bdsp, eggmove_bdsp and personal_bdsp provide legality but not story-time copy counts"]
+              "status": "complete",
+              "sourceRefs": ["pkhex", "pokeapi", "bulbapedia", "pokemondb", "serebii"],
+              "evidence": "Version-group 23 level, shared egg, 100 consumable TM and tutor legality is joined to exact first acquisition chapters, five-copy Gym rewards, one-copy limits, repeatable Department Store/Battle Park sources, all 67 rotating Underground TM rows with badge gates, Pastoria Heart Scale reminder timing and compatible-parent evidence."
             }
           ]
         },
@@ -246,11 +250,9 @@
           "requirements": [
             {
               "id": "bdsp-evolution-reachability",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "Evolution conditions are available, but exact earliest item, friendship, move, time, location and trade-alternative reachability is not normalized to BDSP chapters.",
-              "missingFields": ["item-acquisition-chapter", "location-evolution-chapter", "friendship-earliest-chapter", "trade-alternative"],
-              "attemptedAlternatives": ["PokéAPI evolution chains", "PKHeX evos_bs"]
+              "evidence": "BDSP evolution methods preserve level, item, held-item trade, friendship, gender, move, time and special-location rules and map version-exclusive evolution items and postgame trade items to earliest chapters."
             }
           ]
         },
@@ -258,11 +260,9 @@
           "requirements": [
             {
               "id": "mandatory-chronology",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["bulbapedia"],
-              "evidence": "The preview enumerates all eight gyms, Galactic headquarters, Spear Pillar, Elite Four and Cynthia endpoint, but not every mandatory rival, Galactic commander and double battle or route warning.",
-              "missingFields": ["mandatory-rival-battles", "mandatory-galactic-battles", "mandatory-double-battles", "story-warnings"],
-              "attemptedAlternatives": ["Bulbapedia BDSP walkthrough revision 4577633", "existing DPPt planner chronology"]
+              "evidence": "Pinned walkthrough revision 4577633 is normalized into ordered badge chapters with all mandatory rival, Gym, Galactic commander, partner double, Spear Pillar, Elite Four and Cynthia battles, plus National Dex and Stark Mountain postgame chapters."
             }
           ]
         },
@@ -280,11 +280,9 @@
           "requirements": [
             {
               "id": "full-planner-contract",
-              "status": "blocked",
-              "sourceRefs": ["pokeapi", "pkhex"],
-              "evidence": "The mechanics-aware preview is integrated, but conditional encounter pools, forms, move acquisition timing and evolution reachability prevent safe planner promotion.",
-              "missingFields": ["conditional-pool-fallback", "form-aware-six-member-generation", "four-move-acquisition-timing", "four-move-resource-conflicts", "planner-progress-contract"],
-              "attemptedAlternatives": ["existing Sinnoh classic planner family", "modern preview engine"]
+              "status": "complete",
+              "sourceRefs": ["pokeapi", "pkhex", "bulbapedia", "pokemondb"],
+              "evidence": "Brilliant Diamond and Shining Pearl run through the canonical Korean six-member/four-move planner with form-aware legality, consumable TM copy enforcement, stable chapter IDs, unsupported fallbacks and unchanged pokemon-roadmap:v3 persistence."
             }
           ]
         }

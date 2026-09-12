@@ -320,30 +320,52 @@ const galarBosses = [
 ]
 
 const sinnohRemakeChapters = [
-  chapter('bd-1', '떡잎마을 → 무쇠시티', '콜배지', 'Lv.5–14', ['twinleaf', 'route-201', 'lake-verity', 'sandgem', 'route-202', 'jubilife', 'route-203', 'oreburgh-gate', 'oreburgh'], ['스타터 선택', '무쇠체육관 강석 격파'], ['포켓치 비전기술 바위깨기']),
-  chapter('bd-2', '꽃향기마을 → 영원시티', '포리스트배지', 'Lv.14–22', ['route-204', 'floaroma', 'valley-windworks', 'route-205', 'eterna-forest', 'eterna'], ['골짜기발전소 사건 해결', '영원체육관 유채 격파'], ['포켓치 비전기술 풀베기']),
-  chapter('bd-3', '장막시티', '코블배지', 'Lv.20–30', ['route-206', 'wayward-cave', 'route-207', 'mt-coronet', 'route-208', 'hearthome', 'route-209', 'solaceon', 'route-210', 'route-215', 'veilstone'], ['장막체육관 자두 격파'], ['포켓치 비전기술 공중날기']),
-  chapter('bd-4', '들판시티 → 연고시티', '펜배지와 레릭배지', 'Lv.27–36', ['route-214', 'valor-lakefront', 'route-213', 'pastoria', 'great-marsh', 'route-212', 'hearthome'], ['들판체육관 맥실러 격파', '갤럭시단 조무래기 추적', '연고체육관 멜리사 격파'], ['포켓치 비전기술 안개제거']),
-  chapter('bd-5', '봉신마을 → 운하시티', '마인배지', 'Lv.32–39', ['route-210', 'celestic', 'route-211', 'route-218', 'canalave', 'iron-island'], ['봉신마을 유적 조사', '운하체육관 동관 격파'], ['포켓치 비전기술 파도타기', '포켓치 비전기술 괴력']),
-  chapter('bd-6', '선단시티', '글레이셔배지', 'Lv.36–42', ['route-216', 'route-217', 'acuity-lakefront', 'snowpoint'], ['선단체육관 무청 격파'], ['포켓치 비전기술 락클라임']),
-  chapter('bd-7', '갤럭시단 본부 → 창기둥', '디아루가/펄기아 사건', 'Lv.39–48', ['lake-verity', 'lake-valor', 'lake-acuity', 'veilstone', 'mt-coronet', 'spear-pillar'], ['갤럭시단 본부 돌파', '창기둥에서 태홍 격파', '디아루가/펄기아와 조우'], ['포켓치 비전기술 폭포오르기']),
-  chapter('bd-8', '물가시티 → 신오리그', '비컨배지와 챔피언 난천', 'Lv.46–66', ['route-222', 'sunnyshore', 'route-223', 'victory-road', 'pokemon-league'], ['물가체육관 전진 격파', '챔피언로드 돌파', '사천왕과 난천 격파']),
+  chapter('bd-1', '떡잎마을 → 무쇠시티', '콜배지', 'Lv.5–14', ['twinleaf', 'route-201', 'lake-verity', 'sandgem', 'route-202', 'jubilife', 'route-203', 'oreburgh-gate', 'oreburgh-mine', 'oreburgh'], ['스타터 선택', '203번도로 라이벌전 승리', '무쇠체육관 강석 격파'], ['포켓치 비전기술 바위깨기']),
+  chapter('bd-2', '꽃향기마을 → 영원시티', '포리스트배지와 지하대동굴', 'Lv.14–22', ['route-204', 'ravaged-path', 'floaroma', 'floaroma-meadow', 'valley-windworks', 'route-205', 'eterna-forest', 'eterna'], ['축복시티 갤럭시단전 승리', '골짜기발전소 마스 격파', '영원체육관 유채 격파', '갤럭시단 영원빌딩 주피터 격파'], ['탐험세트와 지하대동굴', '포켓치 비전기술 풀베기']),
+  chapter('bd-3', '연고시티 → 장막시티', '코블배지', 'Lv.20–30', ['route-206', 'wayward-cave', 'route-207', 'mt-coronet', 'route-208', 'hearthome', 'amity-square', 'route-209', 'lost-tower', 'solaceon', 'route-210', 'route-215', 'veilstone'], ['연고시티 라이벌전 승리', '장막체육관 자두 격파', '빛나/광휘와 갤럭시단 더블배틀 승리'], ['포켓치 비전기술 공중날기', '키우미집']),
+  chapter('bd-4', '들판시티', '펜배지와 대습초원', 'Lv.27–32', ['route-214', 'valor-lakefront', 'route-213', 'pastoria', 'great-marsh'], ['들판체육관 맥실러 격파', '들판시티 라이벌전 승리', '갤럭시단 조무래기 추적'], ['포켓치 비전기술 안개제거', '들판시티 기술 떠올리기']),
+  chapter('bd-5', '연고시티 → 봉신마을', '레릭배지와 파도타기', 'Lv.30–36', ['route-212', 'pokemon-mansion', 'hearthome', 'route-210', 'celestic', 'route-211'], ['연고체육관 멜리사 격파', '봉신마을 유적에서 태홍 격파'], ['포켓치 비전기술 파도타기']),
+  chapter('bd-6', '운하시티', '마인배지', 'Lv.32–39', ['route-218', 'canalave', 'iron-island', 'fuego-ironworks'], ['운하시티 라이벌전 승리', '운하체육관 동관 격파'], ['포켓치 비전기술 괴력', '선택: 강철섬 라일리 동행과 리오르 알']),
+  chapter('bd-7', '세 호수 → 선단시티', '글레이셔배지', 'Lv.36–42', ['lake-valor', 'lake-verity', 'route-216', 'route-217', 'acuity-lakefront', 'snowpoint', 'lake-acuity'], ['입지호수 새턴 격파', '진실호수 마스 격파', '선단체육관 무청 격파', '예지호수에서 주피터 사건 확인'], ['포켓치 비전기술 락클라임']),
+  chapter('bd-8', '갤럭시단 본부 → 창기둥', '디아루가/펄기아 사건', 'Lv.40–48', ['veilstone', 'galactic-warehouse', 'galactic-hq', 'mt-coronet', 'spear-pillar'], ['갤럭시단 본부에서 태홍 격파', '새턴 격파 후 호수 포켓몬 해방', '창기둥에서 라이벌과 마스·주피터 더블배틀 승리', '태홍 최종전 승리', '디아루가/펄기아와 조우']),
+  chapter('bd-9', '물가시티 → 챔피언로드', '비컨배지', 'Lv.46–57', ['route-222', 'sunyshore', 'route-223', 'victory-road'], ['물가체육관 전진 격파', '폭포오르기로 챔피언로드 진입', '챔피언로드 돌파'], ['포켓치 비전기술 폭포오르기']),
+  chapter('bd-10', '신오 포켓몬리그', '사천왕과 챔피언 난천', 'Lv.53–66', ['pokemon-league'], ['리그 입구 라이벌전 승리', '사천왕 충호·들국화·대엽·오엽 격파', '챔피언 난천 격파']),
+  chapter('bd-11', '전국도감과 배틀존', '포켓트레·대량발생·일일 풀', 'Lv.58–70', ['sandgem', 'fight-area', 'battle-park', 'route-224', 'route-225', 'route-226', 'route-228', 'route-229', 'route-230', 'ramanas-park', 'snowpoint-temple', 'turnback-cave'], ['신오도감 목격 완료 후 전국도감 획득', '포켓트레와 대량발생 해금', '배틀존·라마나스파크 진입']),
+  chapter('bd-12', '하드마운틴', '맥과 히드런', 'Lv.58–78', ['survival-area', 'route-227', 'stark-mountain'], ['맥과 하드마운틴 더블배틀 구간 돌파', '화산의돌 사건 완료', '히드런 포획 가능 상태 해금']),
 ]
 
 const sinnohRemakeBosses = [
   boss('roark-bdsp', '강석', '무쇠 체육관', 1, ['rock'], 'Lv.12–14'),
+  boss('barry-route-203', '라이벌', '203번도로', 1, ['normal'], 'Lv.7–9', { warning: '라이벌 스타터는 플레이어가 고른 스타터에 유리한 타입입니다.' }),
+  boss('mars-valley-windworks', '마스', '골짜기발전소', 2, ['dark', 'poison'], 'Lv.14–16'),
   boss('gardenia-bdsp', '유채', '영원 체육관', 2, ['grass'], 'Lv.19–22'),
+  boss('jupiter-eterna', '주피터', '갤럭시단 영원빌딩', 2, ['dark', 'poison'], 'Lv.18–20'),
+  boss('barry-hearthome', '라이벌', '연고시티', 3, ['normal'], 'Lv.19–21', { warning: '선택한 스타터에 따라 라이벌의 세 멤버가 달라집니다.' }),
   boss('maylene-bdsp', '자두', '장막 체육관', 3, ['fighting'], 'Lv.27–30'),
+  boss('galactic-veilstone-double', '갤럭시단 조무래기 2명', '빛나/광휘와 더블배틀', 3, ['poison', 'bug'], 'Lv.24–25'),
   boss('wake-bdsp', '맥실러', '들판 체육관', 4, ['water'], 'Lv.27–30'),
-  boss('fantina-bdsp', '멜리사', '연고 체육관', 4, ['ghost'], 'Lv.32–36'),
-  boss('byron-bdsp', '동관', '운하 체육관', 5, ['steel'], 'Lv.36–39'),
-  boss('candice-bdsp', '무청', '선단 체육관', 6, ['ice'], 'Lv.38–42'),
-  boss('volkner-bdsp', '전진', '물가 체육관', 8, ['electric'], 'Lv.46–49'),
-  boss('aaron-bdsp', '충호', '사천왕', 8, ['bug'], 'Lv.53–57'),
-  boss('bertha-bdsp', '들국화', '사천왕', 8, ['ground'], 'Lv.55–59'),
-  boss('flint-bdsp', '대엽', '사천왕', 8, ['fire'], 'Lv.58–61'),
-  boss('lucian-bdsp', '오엽', '사천왕', 8, ['psychic'], 'Lv.59–63'),
-  boss('cynthia-bdsp', '난천', '챔피언', 8, ['dragon'], 'Lv.60–66'),
+  boss('barry-pastoria', '라이벌', '들판시티', 4, ['normal'], 'Lv.26–28'),
+  boss('fantina-bdsp', '멜리사', '연고 체육관', 5, ['ghost'], 'Lv.32–36'),
+  boss('cyrus-celestic', '태홍', '봉신마을 유적', 5, ['dark', 'flying'], 'Lv.25–27'),
+  boss('barry-canalave', '라이벌', '운하시티', 6, ['normal'], 'Lv.32–35'),
+  boss('byron-bdsp', '동관', '운하 체육관', 6, ['steel'], 'Lv.36–39'),
+  boss('saturn-lake-valor', '새턴', '입지호수', 7, ['poison', 'psychic'], 'Lv.32–35'),
+  boss('mars-lake-verity', '마스', '진실호수', 7, ['dark', 'poison'], 'Lv.32–37'),
+  boss('candice-bdsp', '무청', '선단 체육관', 7, ['ice'], 'Lv.38–42'),
+  boss('cyrus-galactic-hq', '태홍', '갤럭시단 본부', 8, ['dark', 'flying'], 'Lv.40–43'),
+  boss('saturn-galactic-hq', '새턴', '갤럭시단 본부', 8, ['poison', 'psychic'], 'Lv.38–40'),
+  boss('commanders-spear-pillar', '마스·주피터', '라이벌과 창기둥 더블배틀', 8, ['dark', 'poison'], 'Lv.41–46'),
+  boss('cyrus-spear-pillar', '태홍', '창기둥 최종전', 8, ['dark', 'flying'], 'Lv.45–48'),
+  boss('dialga-bdsp', '디아루가', '창기둥', 8, ['steel', 'dragon'], 'Lv.47', { gameIds: ['brilliant-diamond'] }),
+  boss('palkia-bdsp', '펄기아', '창기둥', 8, ['water', 'dragon'], 'Lv.47', { gameIds: ['shining-pearl'] }),
+  boss('volkner-bdsp', '전진', '물가 체육관', 9, ['electric'], 'Lv.46–49'),
+  boss('barry-league', '라이벌', '신오리그 입구', 10, ['normal'], 'Lv.48–51'),
+  boss('aaron-bdsp', '충호', '사천왕', 10, ['bug'], 'Lv.53–57'),
+  boss('bertha-bdsp', '들국화', '사천왕', 10, ['ground'], 'Lv.55–59'),
+  boss('flint-bdsp', '대엽', '사천왕', 10, ['fire'], 'Lv.58–61'),
+  boss('lucian-bdsp', '오엽', '사천왕', 10, ['psychic'], 'Lv.59–63'),
+  boss('cynthia-bdsp', '난천', '챔피언', 10, ['dragon'], 'Lv.60–66', { warning: '밀로틱의 화염구슬+이상한비늘과 한카리아스의 로젤열매를 포함한 지닌물건에 주의하세요.' }),
+  boss('heatran-bdsp', '히드런', '하드마운틴 고정 조우', 12, ['fire', 'steel'], 'Lv.70', { winRequired: false, warning: '화산의돌 사건 완료 후 다시 하드마운틴 최심부로 돌아오면 포획할 수 있습니다.' }),
 ]
 
 const hisuiChapters = [
@@ -441,7 +463,26 @@ export const modernFamilies: Record<ModernFamilyId, ModernFamilyConfig> = {
   'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
   letsgo7: { id: 'letsgo7', generation: 7, region: '관동', chapters: letsGoChapters, bosses: letsGoBosses, fieldMoves: [], postgame: ['블루와 체육관 관장 재대결', '블루시티동굴의 뮤츠', '마스터 트레이너와 레드'] },
   galar8: { id: 'galar8', generation: 8, region: '가라르', chapters: galarChapters, bosses: galarBosses, fieldMoves: [], moveReminder: { chapter: 1, location: '모든 포켓몬센터', cost: '무료' }, mainStoryChapterCount: 10, postgame: ['소드·실드 전설 에피소드', '배틀타워', '갑옷섬 마스터 도장', '왕관설원 전설의 메모'] },
-  sinnoh8: { id: 'sinnoh8', generation: 8, region: '신오', chapters: sinnohRemakeChapters, bosses: sinnohRemakeBosses, fieldMoves: [], moveReminder: { chapter: 4, location: '들판시티', cost: '하트비늘 10회 이후 무료' }, postgame: ['전국도감과 파이트에리어', '배틀타워', '라마나스파크와 하드마운틴'] },
+  sinnoh8: {
+    id: 'sinnoh8',
+    generation: 8,
+    region: '신오',
+    chapters: sinnohRemakeChapters,
+    bosses: sinnohRemakeBosses,
+    fieldMoves: [
+      { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 1, required: true },
+      { id: 'cut', name: '풀베기', type: 'normal', unlockChapter: 2, required: true },
+      { id: 'fly', name: '공중날기', type: 'flying', unlockChapter: 3, required: false },
+      { id: 'defog', name: '안개제거', type: 'flying', unlockChapter: 4, required: true },
+      { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 5, required: true },
+      { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 6, required: true },
+      { id: 'rock-climb', name: '락클라임', type: 'normal', unlockChapter: 7, required: true },
+      { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 9, required: true },
+    ],
+    moveReminder: { chapter: 4, location: '들판시티', cost: '하트비늘 1개 · 10회 지불 후 무료' },
+    mainStoryChapterCount: 10,
+    postgame: ['전국도감·포켓트레·대량발생', '파이트에리어와 배틀타워', '라마나스파크', '하드마운틴과 히드런'],
+  },
   hisui8: { id: 'hisui8', generation: 8, region: '히스이', chapters: hisuiChapters, bosses: hisuiBosses, fieldMoves: [], moveReminder: { chapter: 1, location: '기술 변경 메뉴', cost: '무료' }, postgame: ['모든 석판과 월로·기라티나', '히스이도감 완성과 아르세우스', '대량발생·시공의 뒤틀림·서브 임무'] },
   paldea9: {
     id: 'paldea9',
@@ -636,8 +677,15 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
     'ravaged-path': 2,
     'ruin-maniac-cave': 4,
     'solaceon-ruins': 3,
-    'sunyshore-city': 8,
-    'trophy-garden': 4,
+    'sunyshore-city': 9,
+    'trophy-garden': 5,
+    'great-marsh': 4,
+    'galactic-warehouse': 3,
+    'iron-island': 6,
+    'lake-acuity': 7,
+    'lake-valor': 7,
+    'lake-verity': 1,
+    'ramanas-park': 11,
   },
   hisui8: {},
   paldea9: {
@@ -706,7 +754,7 @@ export function modernEncounterChapter(
     hoenn6: { 'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 5, 'rock-smash': 3 },
     letsgo7: {},
     galar8: { surf: 7 },
-    sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 9, surf: 5, 'rock-smash': 1 },
+    sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 11, surf: 5, 'rock-smash': 1 },
     hisui8: {},
   }
   let prerequisiteChapter = methodUnlocks[familyId]?.[method] ?? 1
@@ -748,6 +796,26 @@ export function modernEncounterChapter(
     if (badgeCount) prerequisiteChapter = Math.max(prerequisiteChapter, badgeChapter[badgeCount] ?? 1)
     if (conditions.includes('isle-of-armor')) return prerequisiteChapter
     if (conditions.includes('crown-tundra')) return Math.max(prerequisiteChapter, 10)
+  }
+  if (familyId === 'sinnoh8') {
+    if (conditions.includes('national-dex') || conditions.includes('postgame')) return 11
+    if (conditions.includes('grand-underground') || conditions.includes('explorer-kit')) {
+      prerequisiteChapter = Math.max(prerequisiteChapter, 2)
+    }
+    const badgeCount = conditions
+      .map((condition) => /^badge-count-(\d+)$/.exec(condition)?.[1])
+      .find((value) => value !== undefined)
+    const badgeChapter: Record<string, number> = {
+      '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 9,
+    }
+    if (badgeCount) prerequisiteChapter = Math.max(prerequisiteChapter, badgeChapter[badgeCount] ?? 1)
+    if (conditions.includes('strength-obtained')) prerequisiteChapter = Math.max(prerequisiteChapter, 3)
+    if (conditions.includes('defog')) prerequisiteChapter = Math.max(prerequisiteChapter, 4)
+    if (conditions.includes('surf')) prerequisiteChapter = Math.max(prerequisiteChapter, 5)
+    if (conditions.includes('strength')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)
+    if (conditions.includes('story-climax-complete')) prerequisiteChapter = Math.max(prerequisiteChapter, 8)
+    if (conditions.includes('icicle-badge')) prerequisiteChapter = Math.max(prerequisiteChapter, 7)
+    if (conditions.includes('waterfall')) prerequisiteChapter = Math.max(prerequisiteChapter, 9)
   }
   if (override) return Math.max(override[1], prerequisiteChapter)
   for (const [index, story] of family.chapters.entries()) {

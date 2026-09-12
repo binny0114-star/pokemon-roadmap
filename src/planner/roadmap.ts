@@ -174,6 +174,15 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
     }
 
     for (const move of family.fieldMoves.filter((entry) => entry.unlockChapter === number)) {
+      if (game.familyId === 'sinnoh8') {
+        actions.push({
+          id: `${chapter.id}:field:${move.id}`,
+          kind: 'move',
+          quality: 'verified',
+          text: `배지 조건 충족 후 포켓치 비전기술 ${fieldMoveKo[move.id]} 사용 가능 · 파티 기술칸 불필요`,
+        })
+        continue
+      }
       const owner = plan.members.find((member) => member.fieldMoves.includes(move.id))
       const ownerAvailable = owner && owner.availability.chapter <= number
       actions.push({

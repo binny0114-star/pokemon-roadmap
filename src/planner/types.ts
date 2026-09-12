@@ -1,11 +1,11 @@
-export type FamilyId = 'kanto1' | 'johto2' | 'hoenn3' | 'kanto3' | 'sinnoh4' | 'johto4' | 'unova5' | 'unova5-2' | 'galar8'
+export type FamilyId = 'kanto1' | 'johto2' | 'hoenn3' | 'kanto3' | 'sinnoh4' | 'johto4' | 'unova5' | 'unova5-2' | 'galar8' | 'sinnoh8'
 export type PlannerGameId =
   | 'red' | 'green' | 'blue' | 'yellow'
   | 'gold' | 'silver' | 'crystal'
   | 'ruby' | 'sapphire' | 'emerald' | 'firered' | 'leafgreen'
   | 'diamond' | 'pearl' | 'platinum' | 'heartgold' | 'soulsilver'
   | 'black' | 'white' | 'black-2' | 'white-2'
-  | 'sword' | 'shield'
+  | 'sword' | 'shield' | 'brilliant-diamond' | 'shining-pearl'
 
 export interface CatalogEncounter {
   form?: number
@@ -207,6 +207,8 @@ export interface GeneratedMove {
   resourceId?: string
   reusable?: boolean
   repeatable?: boolean
+  guaranteedCopies?: number
+  repeatableChapter?: number
   unitCost?: number
   currency?: string
   quality: DataQuality
