@@ -304,7 +304,6 @@ function orasStaticConditions(row) {
       'rock-smash',
       'soaring',
       'story-progress-primal-defeated',
-      'one-per-save',
       ...([138, 140, 408, 410, 564, 566].includes(row.species) ? ['version-exclusive-fossil'] : []),
     ]
   }

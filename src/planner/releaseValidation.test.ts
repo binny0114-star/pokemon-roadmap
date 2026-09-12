@@ -45,6 +45,23 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(() => validateCompletenessManifest(malformed)).toThrow('kalos6/availability')
   })
 
+  it('Gen 7 입수 게이트를 조우율이 아니라 방식·도달 시점 근거로 차단한다', () => {
+    for (const familyId of ['alola7', 'alola7-ultra'] as const) {
+      const requirement = gen67Completeness.families[familyId].gates.availability.requirements
+        .find((entry) => entry.id === 'wild-sos-slots')!
+      expect(requirement.status).toBe('blocked')
+      expect(requirement.evidence).toContain('Missing encounter rates alone do not block promotion')
+      expect(requirement.missingFields).toContain('ordinary-encounter-method')
+      expect(requirement.missingFields).toContain('encounter-table-identity')
+      expect(requirement.missingFields).not.toContain('encounter-rate')
+    }
+    for (const gameId of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
+      const game = gameCatalog.find((entry) => entry.id === gameId)!
+      expect(game.plannerSupport.accuracyGates?.availability.complete).toBe(false)
+      expect(game.plannerSupport.accuracyGates?.availability.evidence).toContain('플래너 방식 식별자')
+    }
+  })
+
   it('레지스트리 게이트를 행 수만으로 수동 승격할 수 없다', () => {
     const malformed = structuredClone(registryJson)
     const x = malformed.games.find((game) => game.id === 'x')!

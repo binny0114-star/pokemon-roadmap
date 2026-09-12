@@ -392,6 +392,14 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       .toEqual([140, 142, 345, 347, 410, 566])
     expect(encounterGames['alpha-sapphire'].filter((row) => row.method === 'fossil').map((row) => row.species).sort((a, b) => a - b))
       .toEqual([138, 142, 345, 347, 408, 564])
+    const mirageConditions = ['mirage-cave', 'rock-smash', 'soaring', 'story-progress-primal-defeated']
+    const omegaRubyFossils = encounterGames['omega-ruby'].filter((row) => row.method === 'fossil')
+    for (const species of [140, 410, 566]) {
+      expect(omegaRubyFossils.find((row) => row.species === species)?.conditions)
+        .toEqual([...mirageConditions, 'version-exclusive-fossil'])
+    }
+    expect(omegaRubyFossils.find((row) => row.species === 142)?.conditions).toEqual(mirageConditions)
+    expect(omegaRubyFossils.some((row) => row.conditions.includes('one-per-save'))).toBe(false)
   })
 
   it('모든 조우가 장소·세부구역·방식·조건·유효 레벨을 가진다', () => {
