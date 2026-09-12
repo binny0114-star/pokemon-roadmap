@@ -1,4 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import legalitySnapshot from '../generated/gen67-legality.json'
+import learnsetSnapshot from '../generated/learnsets.json'
+import modernEncounterSnapshot from '../generated/modern-encounters.json'
 import { catalogCoverage, encounterMethodUnlockChapter, getAvailability, loadCatalog, speciesByDex, speciesCatalog, supportedEncounterMethods } from './catalog'
 import { families, games, getBosses, getFamily } from './games'
 import { getLegalMoves } from './learnsets'
@@ -73,6 +76,18 @@ describe('정적 데이터셋 검증 스크립트', () => {
     expect(speciesByDex.get(891)?.encounters['35']?.length).toBeGreaterThan(0)
     expect(catalogCoverage?.serializedEncounterEntriesByVersion['23']).toBeGreaterThan(1_000)
     expect(catalogCoverage?.serializedEncounterEntriesByVersion['35']).toBeGreaterThan(0)
+    const generatedGames = modernEncounterSnapshot.games as Record<string, unknown[]>
+    for (const [gameId, versionId] of Object.entries({
+      x: 23,
+      y: 24,
+      'omega-ruby': 25,
+      'alpha-sapphire': 26,
+    })) {
+      const overlaidRows = speciesCatalog.flatMap((species) =>
+        (species.encounters[String(versionId)] ?? []).filter((encounter) => encounter.source === 'pkhex'),
+      )
+      expect(overlaidRows, gameId).toHaveLength(generatedGames[gameId].length)
+    }
   })
 
   it('버전별 진화 방식의 세부 조건을 손실 없이 보존한다', () => {
@@ -120,6 +135,35 @@ describe('정적 데이터셋 검증 스크립트', () => {
       }
       for (const dex of game.starters) expect(speciesByDex.has(dex)).toBe(true)
     }
+  })
+
+  it('Gen 6–7 전체 합법성 행을 폼별 식별자와 네 가지 습득법으로 보존한다', () => {
+    expect(legalitySnapshot.coverage.versionGroupIds).toEqual([15, 16, 17, 18])
+    expect(legalitySnapshot.coverage.pokemonByVersionGroup).toEqual({
+      15: 784,
+      16: 811,
+      17: 944,
+      18: 959,
+    })
+    for (const groupId of ['15', '16', '17', '18'] as const) {
+      const methods = new Set(Object.values(legalitySnapshot.learnsets[groupId]).flat().map((row) => row[1]))
+      const expectedMethods = groupId === '15' || groupId === '16'
+        ? ['level', 'egg', 'tutor', 'machine', 'light-ball-egg', 'form-change']
+        : ['level', 'egg', 'tutor', 'machine', 'light-ball-egg', 'form-change', 'zygarde-cube']
+      expect(methods, groupId).toEqual(new Set(expectedMethods))
+    }
+    const male = legalitySnapshot.learnsets['15']['meowstic-male']
+    const female = legalitySnapshot.learnsets['15']['meowstic-female']
+    const moves = learnsetSnapshot.moves as Record<string, { id: string }>
+    const moveName = (row: (typeof male)[number]) => moves[String(row[0])].id
+    expect(male.some((row) => moveName(row) === 'reflect' && row[1] === 'level' && row[2] === 35)).toBe(true)
+    expect(female.some((row) => moveName(row) === 'extrasensory' && row[1] === 'level' && row[2] === 35)).toBe(true)
+    expect(female.some((row) => moveName(row) === 'reflect' && row[1] === 'level' && row[2] === 35)).toBe(false)
+    expect(legalitySnapshot.learnsets['15'].pichu.some((row) =>
+      moveName(row as (typeof male)[number]) === 'volt-tackle' && row[1] === 'light-ball-egg',
+    )).toBe(true)
+    expect(Object.values(legalitySnapshot.learnsets['15']).flat().some((row) => row[1] === 'form-change')).toBe(true)
+    expect(Object.values(legalitySnapshot.learnsets['17']).flat().some((row) => row[1] === 'zygarde-cube')).toBe(true)
   })
 
   it('21개 버전의 선택 입수 경로가 방식 해금과 엔딩 경계를 지킨다', () => {

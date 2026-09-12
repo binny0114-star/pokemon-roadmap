@@ -5,6 +5,7 @@ import {
   modernEncounterChapter,
   modernFamilies,
   modernGames,
+  modernStoryProvenance,
   type ModernFamilyId,
   type ModernPlannerGameId,
 } from './modernGames'
@@ -17,6 +18,7 @@ interface ModernEncounterRow {
   minLevel: number
   maxLevel: number
   method: string
+  slot: number | null
   conditions: string[]
 }
 
@@ -186,6 +188,23 @@ describe('6–9세대 스토리 패밀리', () => {
       expect(family.fieldMoves, family.id).toEqual([])
     }
   })
+
+  it('Gen 6 기술 떠올리기 위치와 최초 장을 고정한다', () => {
+    expect(modernFamilies.kalos6.moveReminder).toEqual({
+      chapter: 7,
+      location: '버들비마을',
+      cost: '하트비늘 1개',
+    })
+    expect(modernFamilies.hoenn6.moveReminder).toEqual({
+      chapter: 4,
+      location: '단풍마을',
+      cost: '하트비늘 1개',
+    })
+    const xySource = modernStoryProvenance.sources.find((source) => (source.games as readonly string[]).includes('x'))
+    const orasSource = modernStoryProvenance.sources.find((source) => (source.games as readonly string[]).includes('omega-ruby'))
+    expect(xySource && 'revision' in xySource ? xySource.revision : undefined).toBe('4315929')
+    expect(orasSource && 'revision' in orasSource ? orasSource.revision : undefined).toBe('4247537')
+  })
 })
 
 describe('6–9세대 정적 입수 스냅샷', () => {
@@ -197,6 +216,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'legality/wild/Gen7/encounter_us.pkl',
       'legality/wild/Gen7/encounter_um.pkl',
       'Legality/Encounters/Data/Gen8/Encounters8.cs',
+      'Legality/Encounters/Data/Gen6/Encounters6XY.cs',
+      'Legality/Encounters/Data/Gen6/Encounters6AO.cs',
+      'Legality/Encounters/Templates/Gen6/EncounterArea6XY.cs',
       'Legality/Encounters/Data/Gen8/Encounters8b.cs',
       'Legality/Encounters/Data/Gen9/Encounters9.cs',
     ]))
@@ -266,10 +288,110 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(species('ultra-sun').has(691)).toBe(false)
   })
 
+  it('Gen 7의 분리된 레벨 구간을 연속 범위로 합치지 않는다', () => {
+    for (const gameId of ['sun', 'moon']) {
+      const wingull = encounterGames[gameId].filter((row) =>
+        row.species === 278
+        && row.location === 'route-1'
+        && row.method === 'wild-unspecified',
+      )
+      expect(wingull.map((row) => [row.minLevel, row.maxLevel]), gameId).toEqual([
+        [5, 7],
+        [15, 18],
+      ])
+      expect(wingull.some((row) => row.minLevel <= 8 && row.maxLevel >= 14), gameId).toBe(false)
+      expect(new Set(wingull.map((row) => row.slot)).size, gameId).toBe(2)
+    }
+  })
+
   it('Gen 6 Standard 슬롯을 확인할 수 없는 세부 방식으로 오표기하지 않는다', () => {
     for (const gameId of ['x', 'y', 'omega-ruby', 'alpha-sapphire']) {
       expect(encounterGames[gameId].some((row) => row.method === 'unsupported-standard')).toBe(false)
     }
+  })
+
+  it('Gen 6 코드 정의 선물·화석·교환·폼·버전 전용을 빠짐없이 보존한다', () => {
+    for (const gameId of ['x', 'y']) {
+      const rows = encounterGames[gameId]
+      expect(rows).toHaveLength(1_576)
+      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(995)
+      expect(rows.filter((row) => row.method === 'friend-safari')).toHaveLength(196)
+      expect(rows.filter((row) => row.method === 'fossil')).toHaveLength(9)
+      expect(rows.filter((row) => row.method === 'npc-trade')).toHaveLength(9)
+      expect(rows.some((row) =>
+        row.species === 83
+        && row.location === 'santalune-city'
+        && row.conditions.includes('trade-for-bunnelby'),
+      )).toBe(true)
+      expect(rows.some((row) =>
+        row.species === 710
+        && row.form === 3
+        && row.method === 'wild-unspecified'
+        && row.slot !== null,
+      )).toBe(true)
+    }
+    expect(encounterGames.x.some((row) => row.species === 716 && row.location === 'team-flare-secret-hq')).toBe(true)
+    expect(encounterGames.x.some((row) => row.species === 717)).toBe(false)
+    expect(encounterGames.x.some((row) => row.species === 345 && row.method === 'fossil')).toBe(true)
+    expect(encounterGames.x.some((row) => row.species === 138 && row.method === 'fossil')).toBe(false)
+    expect(encounterGames.y.some((row) => row.species === 717 && row.location === 'team-flare-secret-hq')).toBe(true)
+    expect(encounterGames.y.some((row) => row.species === 716)).toBe(false)
+    expect(encounterGames.y.some((row) => row.species === 138 && row.method === 'fossil')).toBe(true)
+    expect(encounterGames.y.some((row) => row.species === 345 && row.method === 'fossil')).toBe(false)
+
+    for (const gameId of ['omega-ruby', 'alpha-sapphire']) {
+      const rows = encounterGames[gameId]
+      expect(rows).toHaveLength(2_819)
+      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(2_092)
+      expect(rows.filter((row) => row.method === 'egg')).toHaveLength(2)
+      expect(rows.filter((row) => row.method === 'fossil')).toHaveLength(6)
+      expect(rows.filter((row) => row.method === 'npc-trade')).toHaveLength(3)
+      expect(rows.filter((row) => row.species === 25 && row.method === 'gift').map((row) => row.form))
+        .toEqual([1, 2, 3, 4, 5, 6])
+      expect(rows.some((row) =>
+        row.species === 352
+        && row.minLevel === 30
+        && ['route-119', 'route-120'].includes(row.location)
+        && row.method === 'static',
+      )).toBe(false)
+    }
+    expect(encounterGames['omega-ruby'].some((row) => row.species === 383 && row.location === 'cave-of-origin')).toBe(true)
+    expect(encounterGames['omega-ruby'].some((row) => row.species === 382)).toBe(false)
+    expect(encounterGames['alpha-sapphire'].some((row) => row.species === 382 && row.location === 'cave-of-origin')).toBe(true)
+    expect(encounterGames['alpha-sapphire'].some((row) => row.species === 383)).toBe(false)
+    for (const gameId of ['omega-ruby', 'alpha-sapphire']) {
+      const rows = encounterGames[gameId]
+      const togepi = rows.find((row) => row.species === 175 && row.method === 'egg')!
+      const beldum = rows.find((row) => row.species === 374 && row.method === 'gift')!
+      const eonGift = rows.find((row) =>
+        [380, 381].includes(row.species)
+        && row.method === 'gift'
+        && row.conditions.includes('story-progress-eon-gift'),
+      )
+      const eonTicket = rows.find((row) =>
+        [380, 381].includes(row.species)
+        && row.method === 'static'
+        && row.conditions.includes('event-item-eon-ticket'),
+      )
+      expect(modernEncounterChapter('hoenn6', togepi.location, togepi.conditions, togepi.method, togepi.minLevel)).toBe(9)
+      expect(beldum.conditions).toEqual(['delta-episode-complete', 'postgame'])
+      expect(eonGift).toBeTruthy()
+      expect(eonTicket).toBeTruthy()
+      const storyFossils = rows.filter((row) => [345, 347].includes(row.species) && row.method === 'fossil')
+      const mirageFossils = rows.filter((row) => ![345, 347].includes(row.species) && row.method === 'fossil')
+      expect(storyFossils).toHaveLength(2)
+      expect(mirageFossils).toHaveLength(4)
+      for (const row of storyFossils) {
+        expect(modernEncounterChapter('hoenn6', row.location, row.conditions, row.method, row.minLevel)).toBe(4)
+      }
+      for (const row of mirageFossils) {
+        expect(modernEncounterChapter('hoenn6', row.location, row.conditions, row.method, row.minLevel)).toBe(9)
+      }
+    }
+    expect(encounterGames['omega-ruby'].filter((row) => row.method === 'fossil').map((row) => row.species).sort((a, b) => a - b))
+      .toEqual([140, 142, 345, 347, 410, 566])
+    expect(encounterGames['alpha-sapphire'].filter((row) => row.method === 'fossil').map((row) => row.species).sort((a, b) => a - b))
+      .toEqual([138, 142, 345, 347, 408, 564])
   })
 
   it('모든 조우가 장소·세부구역·방식·조건·유효 레벨을 가진다', () => {

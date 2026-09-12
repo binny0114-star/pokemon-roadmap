@@ -32,6 +32,9 @@ interface Snapshot {
     versionGroupIds: number[]
     versionGroupGeneration: Record<string, number>
     learnsetSpeciesByVersionGroup: Record<string, number>
+    completeLegalityVersionGroupIds: number[]
+    completeLegalityPokemonByVersionGroup: Record<string, number>
+    completeLegalityMethods: string[]
     methods: string[]
     isolatedVersionGroups: boolean
     plannerDataPolicy: {
@@ -76,6 +79,8 @@ function readSnapshot(value: unknown): Snapshot {
     || data.coverage.isolatedVersionGroups !== true
     || data.coverage.plannerDataPolicy?.eggMoves !== 'not-ingested'
     || data.coverage.plannerDataPolicy?.acquisitionTiming !== 'not-ingested'
+    || data.coverage.completeLegalityVersionGroupIds.join(',') !== '15,16,17,18'
+    || data.coverage.completeLegalityMethods.join(',') !== 'level,egg,tutor,machine,light-ball-egg,form-change,zygarde-cube'
     || data.coverage.versionGroupIds.join(',') !== catalogVersionGroupIds.join(',')
     || !data.moves
     || !data.versions

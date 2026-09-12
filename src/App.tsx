@@ -106,6 +106,8 @@ const accuracyGateKo: Record<AccuracyGateId, string> = {
   integration: '플래너·저장 통합',
 }
 const modernPreviewGameIds = new Set<string>(modernGames.map((entry) => entry.id))
+const gatedGen67Entries = gameCatalog.filter((entry) => entry.plannerSupport.accuracyGates)
+const promotedGen67Count = gatedGen67Entries.filter((entry) => entry.plannerSupport.status === 'full').length
 const modernMethodKo: Record<string, string> = {
   walk: '일반 조우',
   grass: '풀숲',
@@ -804,6 +806,9 @@ function App() {
             <div className="game-count">{bosses.length}<small>BOSSES</small></div>
           </div>
           <p className="data-note">ⓘ 6–9세대의 검수된 스토리·입수 데이터는 아래에서 미리볼 수 있습니다. 스토리·입수·버전별 기술 데이터가 모두 완비되기 전에는 파티 로드맵 생성을 열지 않습니다.</p>
+          <p className="generation-promotion-summary">
+            Gen 6–7 정확성 승격 <strong>{promotedGen67Count}/{gatedGen67Entries.length}</strong>
+          </p>
           {game.notes?.map((note) => <p className="data-note" key={note}>ⓘ {note}</p>)}
           <details className="version-catalog">
             <summary>
@@ -1254,7 +1259,10 @@ function App() {
       <footer>
         <div className="brand footer-brand"><span className="brand-mark"><i /></span><span>POKÉ <b>ROUTE</b></span></div>
         <p>팬이 만든 비공식 공략 콘텐츠입니다. Nintendo, Game Freak, Pokémon Company와 제휴하거나 승인을 받지 않았습니다.</p>
-        <span>{isCloudConfigured() ? '온라인 로그인 시 설정과 진행률이 계정에 동기화됩니다.' : '계정, 설정과 진행률은 이 브라우저에만 저장됩니다.'}</span>
+        <span>
+          {isCloudConfigured() ? '온라인 로그인 시 설정과 진행률이 계정에 동기화됩니다.' : '계정, 설정과 진행률은 이 브라우저에만 저장됩니다.'}
+          {' · '}<a href="./THIRD_PARTY_NOTICES.md">오픈소스 고지</a>
+        </span>
       </footer>
     </div>
   )

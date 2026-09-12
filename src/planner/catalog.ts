@@ -106,7 +106,7 @@ export function loadCatalog(): Promise<void> {
       const modern = modernModule.default as ModernEncounterSnapshot
       if (
         !/^[a-f0-9]{40}$/.test(modern.provenance.revision)
-        || modern.provenance.license !== 'GPL-3.0'
+        || modern.provenance.license !== 'GPL-3.0-or-later'
         || !Array.isArray(modern.provenance.files)
         || modern.provenance.files.length === 0
       ) {

@@ -1,11 +1,14 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import registryJson from '../data/version-registry.json'
+import legalitySnapshot from '../generated/gen67-legality.json'
+import speciesSnapshot from '../generated/species.json'
 import { getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
 import { canLearnFieldMove, generateParty, isMoveLegalForSpecies, validateRequired } from './engine'
 import { families, games, getBosses, getFamily } from './games'
 import { modernGames } from './modernGames'
 import { composeRoadmap, roadmapReferencesAreAvailable } from './roadmap'
 import type { PlannerPreferences } from './types'
-import { gameCatalog } from './versionRegistry'
+import { gameCatalog, gen67Completeness, validateCompletenessManifest, validateRegistry } from './versionRegistry'
 
 const defaults: PlannerPreferences = {
   noTrade: true,
@@ -20,6 +23,55 @@ beforeAll(async () => {
 }, 20_000)
 
 describe('릴리스 레지스트리와 전국도감', () => {
+  it('문자열 gate 값이 truthy여도 완전 지원으로 승격하지 않는다', () => {
+    const malformed = structuredClone(registryJson) as unknown as {
+      games: {
+        id: string
+        plannerSupport: {
+          accuracyGates?: Record<string, { complete: boolean | string; evidence: string }>
+        }
+      }[]
+    }
+    const x = malformed.games.find((game) => game.id === 'x')!
+    x.plannerSupport.accuracyGates!.availability.complete = 'false'
+    expect(() => validateRegistry(malformed)).toThrow('x/availability')
+  })
+
+  it('완전성 매니페스트가 누락 도메인과 시도한 대안을 요구한다', () => {
+    const malformed = structuredClone(gen67Completeness)
+    const blocked = malformed.families.kalos6.gates.availability.requirements
+      .find((requirement) => requirement.status === 'blocked')!
+    blocked.attemptedAlternatives = []
+    expect(() => validateCompletenessManifest(malformed)).toThrow('kalos6/availability')
+  })
+
+  it('레지스트리 게이트를 행 수만으로 수동 승격할 수 없다', () => {
+    const malformed = structuredClone(registryJson)
+    const x = malformed.games.find((game) => game.id === 'x')!
+    x.plannerSupport.accuracyGates!.availability.complete = true
+    expect(() => validateRegistry(malformed)).toThrow('완전성 매니페스트')
+  })
+
+  it('완료로 선언한 소스 행 수가 고정 스냅샷과 정확히 일치한다', () => {
+    const registryById = new Map(registryJson.games.map((game) => [game.id, game]))
+    const legalityCounts = legalitySnapshot.coverage.pokemonByVersionGroup as Record<string, number>
+    const encounterCounts = speciesSnapshot.coverage.encounterRowsByVersion as Record<string, number>
+    for (const family of Object.values(gen67Completeness.families)) {
+      for (const gate of Object.values(family.gates)) {
+        for (const requirement of gate.requirements) {
+          if (requirement.status !== 'complete' || !requirement.expected) continue
+          for (const [key, expected] of Object.entries(requirement.expected)) {
+            const versionGroupId = Number(key)
+            const actual = Number.isInteger(versionGroupId)
+              ? legalityCounts[key]
+              : encounterCounts[String(registryById.get(key)!.versionId)]
+            expect(actual, `${requirement.id}/${key}`).toBe(expected)
+          }
+        }
+      }
+    }
+  })
+
   it('39개 스토리 게임과 지원 경계를 고유하고 상호 참조 가능하게 유지한다', () => {
     expect(gameCatalog).toHaveLength(39)
     expect(new Set(gameCatalog.map((game) => game.id)).size).toBe(39)

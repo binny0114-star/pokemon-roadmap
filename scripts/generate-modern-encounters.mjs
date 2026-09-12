@@ -35,6 +35,9 @@ const inputFiles = [
   'text/locations/gen8/text_swsh_00000_en.txt',
   'text/locations/gen8b/text_bdsp_00000_en.txt',
   'text/locations/gen9/text_sv_00000_en.txt',
+  'Legality/Encounters/Data/Gen6/Encounters6XY.cs',
+  'Legality/Encounters/Data/Gen6/Encounters6AO.cs',
+  'Legality/Encounters/Templates/Gen6/EncounterArea6XY.cs',
   'Legality/Encounters/Data/Gen8/Encounters8.cs',
   'Legality/Encounters/Data/Gen8/Encounters8Nest.cs',
   'Legality/Encounters/Data/Gen8/Encounters8b.cs',
@@ -136,7 +139,7 @@ function names(text) {
   return text.replace(/\r/g, '').split('\n')
 }
 
-function encounter(species, form, location, area, minLevel, maxLevel, method, conditions = []) {
+function encounter(species, form, location, area, minLevel, maxLevel, method, conditions = [], slot = null) {
   return {
     species,
     form,
@@ -147,7 +150,7 @@ function encounter(species, form, location, area, minLevel, maxLevel, method, co
     maxLevel,
     method,
     chance: null,
-    slot: null,
+    slot,
     conditions: [...new Set(conditions)].sort(),
   }
 }
@@ -157,6 +160,230 @@ function normalizeForm(form, generation = 8) {
   if (form === 30) return { form: 0, condition: 'form-region-dependent' }
   if (form === 31) return { form: 0, condition: 'form-random' }
   return { form, condition: null }
+}
+
+function sourceArray(source, name) {
+  const body = new RegExp(`${name}\\s*=\\s*\\[([\\s\\S]*?)\\n\\s*\\];`).exec(source)?.[1]
+  if (!body) throw new Error(`Missing PKHeX source array: ${name}`)
+  return body
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '')
+}
+
+function parseStaticSourceArray(source, name, game) {
+  return [...sourceArray(source, name).matchAll(/new\([^)]*\)\s*\{([^}]*)\}/g)].map((match) => {
+    const properties = match[1]
+    const number = (property, fallback = 0) => {
+      const value = new RegExp(`${property}\\s*=\\s*0*(\\d+)`).exec(properties)?.[1]
+      return value ? Number.parseInt(value, 10) : fallback
+    }
+    const species = number('Species')
+    const level = number('Level')
+    const locationId = number('Location')
+    if (!species || !level) throw new Error(`Incomplete PKHeX Gen 6 static row: ${name}/${match[0]}`)
+    return {
+      game,
+      species,
+      form: number('Form'),
+      level,
+      locationId,
+      properties,
+    }
+  })
+}
+
+function gen6StaticEncounter(row, locationNames, method, conditions = []) {
+  const location = locationNames[row.locationId] || `gen6-location-${row.locationId}`
+  return encounter(
+    row.species,
+    row.form,
+    location,
+    `${slug(location)}-pkhex-static-${row.species}-${row.form}`,
+    row.level,
+    row.level,
+    method,
+    conditions,
+  )
+}
+
+function parseFriendSafari(source) {
+  const speciesBody = /AllFriendSafariSpecies\s*=>\s*\[([\s\S]*?)\];/.exec(source)?.[1]
+  if (!speciesBody) throw new Error('Missing PKHeX Friend Safari species table.')
+  const species = [...speciesBody.matchAll(/\b0*(\d{1,3})\b/g)].map((match) => Number.parseInt(match[1], 10))
+  const rows = species.map((dex, slot) =>
+    encounter(dex, 0, 'Friend Safari', 'friend-safari', 30, 30, 'friend-safari', ['postgame', 'friend-code-dependent'], slot))
+  rows.push(
+    encounter(670, 0, 'Friend Safari', 'friend-safari', 30, 30, 'friend-safari', ['postgame', 'friend-code-dependent'], species.length),
+    encounter(670, 1, 'Friend Safari', 'friend-safari', 30, 30, 'friend-safari', ['postgame', 'friend-code-dependent'], species.length + 1),
+    encounter(670, 3, 'Friend Safari', 'friend-safari', 30, 30, 'friend-safari', ['postgame', 'friend-code-dependent'], species.length + 2),
+    encounter(666, 0, 'Friend Safari', 'friend-safari', 30, 30, 'friend-safari', ['postgame', 'friend-code-dependent', 'form-region-dependent'], species.length + 3),
+  )
+  return rows
+}
+
+const xyFossils = new Set([138, 140, 142, 345, 347, 408, 410, 564, 566, 696, 698])
+const xyGifts = new Set([1, 4, 7, 131, 448, 650, 653, 656])
+
+function xyStaticConditions(species) {
+  if ([650, 653, 656].includes(species)) return ['choice-group-kalos-starter']
+  if ([1, 4, 7].includes(species)) return ['choice-group-kanto-starter']
+  if ([696, 698].includes(species)) return ['choice-group-kalos-fossil']
+  if (xyFossils.has(species)) {
+    if (species === 142) return ['rock-smash']
+    return [138, 140, 345, 347].includes(species)
+      ? ['postgame', 'version-exclusive-fossil']
+      : ['postgame']
+  }
+  if (species === 144) return ['postgame', 'starter-chespin', 'roaming-found-11-times']
+  if (species === 145) return ['postgame', 'starter-fennekin', 'roaming-found-11-times']
+  if (species === 146) return ['postgame', 'starter-froakie', 'roaming-found-11-times']
+  if ([150, 718].includes(species)) return ['postgame']
+  if ([354, 479, 568, 569].includes(species)) return ['calendar-trash-can']
+  return []
+}
+
+function parseXySpecialEncounters(source, areaSource, locationNames) {
+  const common = parseStaticSourceArray(source, 'Encounter_XY', 'xy')
+  const xOnly = parseStaticSourceArray(source, 'StaticX', 'x')
+  const yOnly = parseStaticSourceArray(source, 'StaticY', 'y')
+  const normalizedCommon = common.map((row) => {
+    const method = xyFossils.has(row.species) ? 'fossil' : xyGifts.has(row.species) ? 'gift' : 'static'
+    return gen6StaticEncounter(row, locationNames, method, xyStaticConditions(row.species))
+  })
+  const trades = [
+    { species: 129, location: 'Random Kalos Hotel', level: 5, conditions: ['trade-for-gyarados', 'daily-roaming-trader'] },
+    { species: 133, location: 'Random Kalos Hotel', level: 5, conditions: ['trade-any', 'daily-roaming-trader'] },
+    { species: 83, location: 'Santalune City', level: 10, conditions: ['trade-for-bunnelby'] },
+    { species: 208, location: 'Cyllage City', level: 20, conditions: ['trade-for-luvdisc'] },
+    { species: 625, location: 'Snowbelle City', level: 50, conditions: ['trade-for-jigglypuff'] },
+    { species: 656, location: 'Vaniville Town', level: 5, conditions: ['postgame', 'trade-any', 'starter-chespin'] },
+    { species: 650, location: 'Vaniville Town', level: 5, conditions: ['postgame', 'trade-any', 'starter-fennekin'] },
+    { species: 653, location: 'Vaniville Town', level: 5, conditions: ['postgame', 'trade-any', 'starter-froakie'] },
+    { species: 280, location: 'Lumiose City', level: 5, conditions: ['postgame', 'trade-any'] },
+  ].map((row) => encounter(
+    row.species,
+    0,
+    row.location,
+    `${slug(row.location)}-pkhex-trade`,
+    row.level,
+    row.level,
+    'npc-trade',
+    row.conditions,
+  ))
+  return {
+    shared: [
+      ...normalizedCommon.filter((row) => ![138, 140, 345, 347].includes(row.species)),
+      ...trades,
+      ...parseFriendSafari(areaSource),
+    ],
+    x: [
+      ...normalizedCommon.filter((row) => [345, 347].includes(row.species)),
+      ...xOnly.map((row) => gen6StaticEncounter(row, locationNames, 'static')),
+    ],
+    y: [
+      ...normalizedCommon.filter((row) => [138, 140].includes(row.species)),
+      ...yOnly.map((row) => gen6StaticEncounter(row, locationNames, 'static')),
+    ],
+  }
+}
+
+const orasFossils = xyFossils
+const orasGifts = new Set([152, 155, 158, 175, 252, 255, 258, 296, 300, 319, 323, 351, 360, 374, 387, 390, 393, 495, 498, 501])
+
+function orasStaticConditions(row) {
+  if ([252, 255, 258].includes(row.species)) return ['choice-group-hoenn-starter']
+  if (row.species === 175) return ['story-progress-primal-defeated']
+  if (row.species === 374) return ['postgame', 'delta-episode-complete']
+  if ([152, 155, 158].includes(row.species)) return ['postgame', 'choice-group-johto-starter']
+  if ([387, 390, 393].includes(row.species)) return ['postgame', 'choice-group-sinnoh-starter']
+  if ([495, 498, 501].includes(row.species)) return ['postgame', 'choice-group-unova-starter']
+  if ([345, 347].includes(row.species)) return ['choice-group-hoenn-fossil', 'story-progress-go-goggles']
+  if (orasFossils.has(row.species)) {
+    return [
+      'mirage-cave',
+      'rock-smash',
+      'soaring',
+      'story-progress-primal-defeated',
+      'one-per-save',
+      ...([138, 140, 408, 410, 564, 566].includes(row.species) ? ['version-exclusive-fossil'] : []),
+    ]
+  }
+  if ([384, 386].includes(row.species)) return ['postgame', 'delta-episode']
+  if ([382, 383].includes(row.species)) return []
+  if ([243, 244, 245, 249, 250, 377, 378, 379, 380, 381, 480, 481, 482, 483, 484, 485, 486, 487, 488, 638, 639, 640, 641, 642, 643, 644, 645, 646].includes(row.species)) {
+    return ['special-prerequisite-unresolved']
+  }
+  return []
+}
+
+function parseOrasSpecialEncounters(source, locationNames) {
+  const common = parseStaticSourceArray(source, 'Encounter_AO_Regular', 'oras')
+  const alpha = parseStaticSourceArray(source, 'StaticA', 'alpha-sapphire')
+  const omega = parseStaticSourceArray(source, 'StaticO', 'omega-ruby')
+  const normalize = (row) => {
+    const method = orasFossils.has(row.species)
+      ? 'fossil'
+      : row.species === 175 || row.species === 360
+        ? 'egg'
+        : orasGifts.has(row.species)
+          ? 'gift'
+          : 'static'
+    if (method === 'egg') {
+      return encounter(
+        row.species,
+        row.form,
+        'Lavaridge Town',
+        `lavaridge-town-pkhex-egg-${row.species}`,
+        row.level,
+        row.level,
+        method,
+        orasStaticConditions(row),
+      )
+    }
+    return gen6StaticEncounter(row, locationNames, method, orasStaticConditions(row))
+  }
+  const normalizedCommon = common.map(normalize)
+  const normalizeVersionStatic = (row) => {
+    const isEonPokemon = row.species === 380 || row.species === 381
+    const isGift = isEonPokemon && /\bFixedBall\s*=/.test(row.properties)
+    const conditions = isGift
+      ? ['story-progress-eon-gift']
+      : isEonPokemon
+        ? ['event-item-eon-ticket']
+        : orasStaticConditions(row)
+    return gen6StaticEncounter(row, locationNames, isGift ? 'gift' : 'static', conditions)
+  }
+  const cosplay = Array.from({ length: 6 }, (_, form) =>
+    encounter(25, form + 1, 'Slateport City', `slateport-city-cosplay-pikachu-${form + 1}`, 20, 20, 'gift', ['choice-group-cosplay-pikachu']))
+  const trades = [
+    { species: 296, location: 'Rustboro City', level: 9, conditions: ['trade-for-slakoth'] },
+    { species: 300, location: 'Fortree City', level: 30, conditions: ['trade-for-spinda'] },
+    { species: 222, location: 'Pacifidlog Town', level: 50, conditions: ['trade-for-bellossom'] },
+  ].map((row) => encounter(
+    row.species,
+    0,
+    row.location,
+    `${slug(row.location)}-pkhex-trade`,
+    row.level,
+    row.level,
+    'npc-trade',
+    row.conditions,
+  ))
+  return {
+    shared: [
+      ...normalizedCommon.filter((row) => ![138, 140, 408, 410, 564, 566, 696, 698].includes(row.species)),
+      ...cosplay,
+      ...trades,
+    ],
+    omega: [
+      ...normalizedCommon.filter((row) => [140, 410, 566].includes(row.species)),
+      ...omega.map(normalizeVersionStatic),
+    ],
+    alpha: [
+      ...normalizedCommon.filter((row) => [138, 408, 564].includes(row.species)),
+      ...alpha.map(normalizeVersionStatic),
+    ],
+  }
 }
 
 const weather8 = [
@@ -287,9 +514,8 @@ function parseBdsp(buffer, locationNames) {
 }
 
 function parseGen6(buffer, locationNames) {
-  const typeNames = ['unsupported-standard', 'grass', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash', 'horde', 'friend-safari']
-  return unpack(buffer).flatMap((area) => {
-    if (area[2] === 0) return []
+  const typeNames = ['wild-unspecified', 'grass', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash', 'horde', 'friend-safari']
+  return unpack(buffer).flatMap((area, areaIndex) => {
     const locationId = area.readUInt16LE(0)
     const location = locationNames[locationId] || `gen6-location-${locationId}`
     const method = typeNames[area[2]] ?? 'unknown'
@@ -297,7 +523,18 @@ function parseGen6(buffer, locationNames) {
     for (let offset = 4; offset + 3 < area.length; offset += 4) {
       const encoded = area.readUInt16LE(offset)
       const decoded = normalizeForm(encoded >> 11)
-      result.push(encounter(encoded & 0x3ff, decoded.form, location, `${location}-${locationId}`, area[offset + 2], area[offset + 3], method, decoded.condition ? [decoded.condition] : []))
+      const slot = (offset - 4) / 4
+      result.push(encounter(
+        encoded & 0x3ff,
+        decoded.form,
+        location,
+        `${location}-${locationId}-${method}-${areaIndex}`,
+        area[offset + 2],
+        area[offset + 3],
+        method,
+        decoded.condition ? [decoded.condition] : [],
+        slot,
+      ))
     }
     return result
   })
@@ -305,7 +542,7 @@ function parseGen6(buffer, locationNames) {
 
 function parseGen7(buffer, locationNames, transferLocationNames) {
   const typeNames = ['wild-unspecified', 'sos']
-  return unpack(buffer).flatMap((area) => {
+  return unpack(buffer).flatMap((area, areaIndex) => {
     const locationId = area.readUInt16LE(0)
     const locationName = locationId >= 30000 && locationId < 40000
       ? transferLocationNames[locationId - 30000]
@@ -316,15 +553,17 @@ function parseGen7(buffer, locationNames, transferLocationNames) {
     for (let offset = 4; offset + 3 < area.length; offset += 4) {
       const encoded = area.readUInt16LE(offset)
       const decoded = normalizeForm(encoded >> 11)
+      const slot = (offset - 4) / 4
       result.push(encounter(
         encoded & 0x3ff,
         decoded.form,
         location,
-        `${location}-${locationId}-${method}`,
+        `${location}-${locationId}-${method}-${areaIndex}`,
         area[offset + 2],
         area[offset + 3],
         method,
         decoded.condition ? [decoded.condition] : [],
+        slot,
       ))
     }
     return result
@@ -359,14 +598,18 @@ function deduplicate(rows) {
   const byKey = new Map()
   for (const row of rows) {
     if (row.species === 0) continue
-    const key = [row.species, row.form, row.location, row.area, row.method, row.conditions.join('|')].join(':')
-    const prior = byKey.get(key)
-    if (prior) {
-      prior.minLevel = Math.min(prior.minLevel, row.minLevel)
-      prior.maxLevel = Math.max(prior.maxLevel, row.maxLevel)
-    } else {
-      byKey.set(key, { ...row })
-    }
+    const key = [
+      row.species,
+      row.form,
+      row.location,
+      row.area,
+      row.method,
+      row.slot,
+      row.minLevel,
+      row.maxLevel,
+      row.conditions.join('|'),
+    ].join(':')
+    if (!byKey.has(key)) byKey.set(key, { ...row })
   }
   return [...byKey.values()].sort((a, b) =>
     a.species - b.species
@@ -376,7 +619,18 @@ function deduplicate(rows) {
   )
 }
 
-const [gen6Names, gen7Names, gen7TransferNames, galarNames, sinnohNames, paldeaNames, nestSource] = await Promise.all([
+const [
+  gen6Names,
+  gen7Names,
+  gen7TransferNames,
+  galarNames,
+  sinnohNames,
+  paldeaNames,
+  nestSource,
+  xyStaticSource,
+  orasStaticSource,
+  xyAreaSource,
+] = await Promise.all([
   fetchText('text/locations/gen6/text_xy_00000_en.txt').then(names),
   fetchText('text/locations/gen7/text_sm_00000_en.txt').then(names),
   fetchText('text/locations/gen7/text_sm_30000_en.txt').then(names),
@@ -384,14 +638,26 @@ const [gen6Names, gen7Names, gen7TransferNames, galarNames, sinnohNames, paldeaN
   fetchText('text/locations/gen8b/text_bdsp_00000_en.txt').then(names),
   fetchText('text/locations/gen9/text_sv_00000_en.txt').then(names),
   fetchCode('Legality/Encounters/Data/Gen8/Encounters8Nest.cs'),
+  fetchCode('Legality/Encounters/Data/Gen6/Encounters6XY.cs'),
+  fetchCode('Legality/Encounters/Data/Gen6/Encounters6AO.cs'),
+  fetchCode('Legality/Encounters/Templates/Gen6/EncounterArea6XY.cs'),
 ])
 const nestLocations = parseNestLocations(nestSource)
 const inaccessibleNests = parseInaccessibleNests(nestSource)
 
 const rowsByGame = {}
+const xySpecial = parseXySpecialEncounters(xyStaticSource, xyAreaSource, gen6Names)
+const orasSpecial = parseOrasSpecialEncounters(orasStaticSource, gen6Names)
 for (const game of ['x', 'y', 'omega-ruby', 'alpha-sapphire']) {
   const [wild] = await Promise.all(sources[game].map(fetchBytes))
-  rowsByGame[game] = deduplicate(parseGen6(wild, gen6Names))
+  const special = game === 'x'
+    ? [...xySpecial.shared, ...xySpecial.x]
+    : game === 'y'
+      ? [...xySpecial.shared, ...xySpecial.y]
+      : game === 'omega-ruby'
+        ? [...orasSpecial.shared, ...orasSpecial.omega]
+        : [...orasSpecial.shared, ...orasSpecial.alpha]
+  rowsByGame[game] = deduplicate([...parseGen6(wild, gen6Names), ...special])
 }
 for (const game of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
   const [wild] = await Promise.all(sources[game].map(fetchBytes))
@@ -440,10 +706,12 @@ await writeFile(
       source: 'PKHeX encounter resources',
       repository: 'https://github.com/kwsch/PKHeX',
       revision: pkhexRevision,
-      license: 'GPL-3.0',
+      license: 'GPL-3.0-or-later',
       files: [...new Set(inputFiles)].sort(),
       notes: [
-        'X/Y and Omega Ruby/Alpha Sapphire slots preserve form and level ranges from separate version resources; PKHeX Standard slots are excluded because they do not distinguish grass, cave, surf and fishing methods.',
+        'X/Y and Omega Ruby/Alpha Sapphire slots preserve form, source-area, slot and disjoint level ranges from separate version resources; PKHeX Standard slots are retained as wild-unspecified because the resource does not distinguish grass, cave, surf and fishing methods.',
+        'X/Y code-defined static, gift, fossil, in-game trade and Friend Safari tables are normalized from the pinned PKHeX source; unresolved fossil origin and calendar or postgame prerequisites remain explicit conditions.',
+        'ORAS code-defined static, gift, egg, fossil, in-game trade, Cosplay Pikachu and version-exclusive tables are normalized from the pinned PKHeX source; unresolved Mirage, party, time and event prerequisites remain explicit conditions.',
         'Sun/Moon and Ultra Sun/Ultra Moon preserve separate version resources, forms, level ranges and SOS identity; ordinary Gen 7 slots are labeled wild-unspecified because the resource does not encode grass, cave, surf or fishing as distinct methods.',
         'Gen 7 code-defined static, gift, fossil, in-game trade, Island Scan/QR and Ultra Space tables are not included until their story prerequisites can be normalized without inference.',
         'Sword/Shield weather, method and level ranges are decoded from separate version resources.',

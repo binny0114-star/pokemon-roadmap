@@ -97,7 +97,7 @@ main { padding: 48px 0 70px; }
 .hm-table-wrap { overflow-x: auto; }.hm-table { border-collapse: collapse; width: 100%; min-width: 750px; font-size: 10px; text-align: center; }.hm-table th, .hm-table td { border: 1px solid var(--line); padding: 11px 8px; }.hm-table thead th { background: #eef1ee; color: #738079; font-size: 9px; }.hm-table tbody th { text-align: left; font-size: 11px; }.hm-check { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 800; }.coverage { border-radius: 20px; padding: 4px 7px; white-space: nowrap; font-size: 8px; font-weight: 700; }.coverage.covered { background: #e3f5e9; color: #24723f; }.coverage.temp { background: #fff1d4; color: #926619; }.matrix-note { background: #edf5ff; color: #41627d; }
 .boss-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }.boss-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 17px; display: grid; grid-template-columns: auto 1fr auto; gap: 9px 11px; }.boss-index { font: 800 18px/1 monospace; color: var(--accent); }.boss-card h3 { margin: 0; font-size: 15px; }.boss-card > div:nth-child(2) small { color: var(--muted); font-size: 8px; }.boss-meta { text-align: right; display: flex; flex-direction: column; font-size: 9px; }.boss-meta span { color: var(--accent); font-weight: 800; }.boss-card > p { grid-column: 1 / -1; margin: 5px 0; font-size: 10px; line-height: 1.55; color: #505c57; }.recommended { grid-column: 1 / -1; border-top: 1px dashed var(--line); padding-top: 9px; display: flex; flex-wrap: wrap; gap: 5px; }.recommended small { width: 100%; color: #939e98; font-size: 8px; }.recommended span { background: var(--accent-soft); border-radius: 20px; padding: 3px 7px; color: var(--accent); font-size: 8px; font-weight: 700; }
 .postgame-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }.postgame-card { padding: 22px; background: #fff; border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: 4px; }.postgame-icon { float: right; font-size: 24px; color: var(--accent); }.postgame-card > small { color: var(--accent); font: 800 8px/1 monospace; letter-spacing: .1em; }.postgame-card h3 { margin: 8px 0; font-size: 17px; }.postgame-card > p { color: var(--muted); font-size: 10px; line-height: 1.5; min-height: 30px; }
-footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 30px; color: #7b8781; font-size: 9px; }.footer-brand { color: var(--ink); }.footer-brand .brand-mark { transform: scale(.85); }.footer-brand + p { max-width: 470px; line-height: 1.6; }
+footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 30px; color: #7b8781; font-size: 9px; }.footer-brand { color: var(--ink); }.footer-brand .brand-mark { transform: scale(.85); }.footer-brand + p { max-width: 470px; line-height: 1.6; } footer a { color: inherit; }
 
 @media (max-width: 900px) {
   .hero-content { grid-template-columns: 1fr .7fr; }.version-grid { grid-template-columns: repeat(2, 1fr); }.preference-layout { grid-template-columns: 1fr; }.party-grid, .boss-grid { grid-template-columns: repeat(2, 1fr); }.guide-banner { grid-template-columns: auto 1fr; }.guide-facts { grid-column: 1 / -1; grid-template-columns: repeat(4, 1fr); }.chapter-body { grid-template-columns: 1fr 1fr; }.chapter-checklist { grid-column: 1 / -1; }.postgame-grid { grid-template-columns: 1fr; }.postgame-card > p { min-height: 0; } footer { grid-template-columns: auto 1fr; } footer > span { grid-column: 1 / -1; }
@@ -288,6 +288,23 @@ footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-t
   border: 1px solid var(--line);
   border-radius: 0.5rem;
   background: var(--paper);
+}
+
+.generation-promotion-summary {
+  width: fit-content;
+  margin: 0.7rem 0 0;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #6f5624;
+  border-radius: 0.4rem;
+  color: #e8c273;
+  background: #241c0d;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.generation-promotion-summary strong {
+  margin-left: 0.3rem;
+  font-size: 0.82rem;
 }
 
 .version-catalog summary {
