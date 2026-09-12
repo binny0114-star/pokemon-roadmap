@@ -1,10 +1,11 @@
-export type FamilyId = 'kanto1' | 'johto2' | 'hoenn3' | 'kanto3' | 'sinnoh4' | 'johto4' | 'unova5' | 'unova5-2'
+export type FamilyId = 'kanto1' | 'johto2' | 'hoenn3' | 'kanto3' | 'sinnoh4' | 'johto4' | 'unova5' | 'unova5-2' | 'galar8' | 'sinnoh8'
 export type PlannerGameId =
   | 'red' | 'green' | 'blue' | 'yellow'
   | 'gold' | 'silver' | 'crystal'
   | 'ruby' | 'sapphire' | 'emerald' | 'firered' | 'leafgreen'
   | 'diamond' | 'pearl' | 'platinum' | 'heartgold' | 'soulsilver'
   | 'black' | 'white' | 'black-2' | 'white-2'
+  | 'sword' | 'shield' | 'brilliant-diamond' | 'shining-pearl'
 
 export interface CatalogEncounter {
   form?: number
@@ -92,6 +93,11 @@ export interface PlannerBoss {
   chapter: number
   types: string[]
   level: string
+  sequence?: number
+  gameIds?: GameConfig['id'][]
+  branchGroup?: string
+  winRequired?: boolean
+  warning?: string
 }
 
 export interface FieldMove {
@@ -116,6 +122,7 @@ export interface FamilyConfig {
   bosses: PlannerBoss[]
   fieldMoves: FieldMove[]
   moveReminder?: MoveReminder
+  mainStoryChapterCount?: number
   postgame: string[]
 }
 
@@ -155,6 +162,30 @@ export interface Availability {
   sourceSpeciesName?: string
   conditions?: string[]
   mutuallyExclusiveGroup?: string
+  requiredStarterDex?: number
+  dlcMilestone?: string
+  dlcChapter?: number
+  dlcFinalChapter?: number
+  evolutionDlcMilestone?: string
+  evolutionDlcChapter?: number
+  evolutionDlcFinalChapter?: number
+  formIndex?: number
+  formIdentifier?: string
+  formName?: string
+  formTypes?: string[]
+  formStats?: Record<string, number>
+  formChoices?: {
+    formIndex: number
+    formIdentifier: string
+    formName?: string
+    types: string[]
+    evolutionTrigger: string
+  }[]
+  sourceSpeciesDex?: number
+  sourceFormIndex?: number
+  sourceFormIdentifier?: string
+  sourceFormName?: string
+  gigantamaxCapable?: boolean
   reason?: string
   quality: DataQuality
 }
@@ -174,6 +205,15 @@ export interface GeneratedMove {
   category: '물리' | '특수' | '변화'
   source: string
   availableChapter: number
+  dlcMilestone?: string
+  dlcChapter?: number
+  resourceId?: string
+  reusable?: boolean
+  repeatable?: boolean
+  guaranteedCopies?: number
+  repeatableChapter?: number
+  unitCost?: number
+  currency?: string
   quality: DataQuality
 }
 
@@ -200,9 +240,11 @@ export interface CoverageSummary {
 
 export interface GeneratedPlan {
   id: string
+  legacyId?: string
   gameId: PlannerGameId
   challengeType: string | null
   challengeStarterDex: number | null
+  formSelections: Record<number, string>
   members: GeneratedMember[]
   alternatives: GeneratedMember[]
   coverage: CoverageSummary

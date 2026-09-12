@@ -4,6 +4,7 @@ import {
   loadBuilderState,
   loadClearRecords,
   loadPlanProgress,
+  loadPlanProgressWithLegacy,
   loadPlanSession,
   saveBuilderState,
   saveClearRecord,
@@ -79,6 +80,7 @@ describe('로컬 트레이너 계정', () => {
       memberDexes: [4, 60, 64, 75, 130, 143],
       lockedDexes: [143],
       variant: 2,
+      formSelections: { 892: 'urshifu-single-strike' },
     }
 
     saveBuilderState(builder)
@@ -108,6 +110,7 @@ describe('로컬 트레이너 계정', () => {
       gameId: 'red',
       requiredDexes: [1],
     })
+
     expect(loadPlanSession()?.gameId).toBe('red')
     expect(loadPlanProgress('red', 'legacy-plan')).toEqual(new Set(['kan-1:capture:1']))
 
@@ -116,5 +119,14 @@ describe('로컬 트레이너 계정', () => {
       gameId: 'yellow',
       requiredDexes: [25],
     })
+  })
+
+  it('폼 고정으로 플랜 ID가 바뀌어도 기존 v3 진행률을 한 번 이어받는다', () => {
+    savePlanProgress('sword', 'legacy-plan', new Set(['galar-1:capture:892']))
+    expect(loadPlanProgressWithLegacy('sword', 'form-plan', 'legacy-plan'))
+      .toEqual(new Set(['galar-1:capture:892']))
+
+    savePlanProgress('sword', 'form-plan', new Set())
+    expect(loadPlanProgressWithLegacy('sword', 'form-plan', 'legacy-plan')).toEqual(new Set())
   })
 })

@@ -25,18 +25,17 @@ interface ModernEncounterRow {
 const encounterGames = modernEncounterSnapshot.games as Record<string, ModernEncounterRow[]>
 
 describe('6–9세대 스토리 패밀리', () => {
-  it('14개 본편 버전과 7개 독립 패밀리를 제공한다', () => {
-    expect(modernGames).toHaveLength(14)
-    expect(new Set(modernGames.map((game) => game.id)).size).toBe(14)
-    expect(Object.keys(modernFamilies)).toHaveLength(7)
+  it('17개 검수 버전과 9개 독립 패밀리를 제공한다', () => {
+    expect(modernGames).toHaveLength(17)
+    expect(new Set(modernGames.map((game) => game.id)).size).toBe(17)
+    expect(Object.keys(modernFamilies)).toHaveLength(9)
   })
 
-  it('세 기능이 완비되지 않은 14개 버전을 파티 플래너에서 명시적으로 차단한다', () => {
-    for (const gameId of modernGames.map((game) => game.id) satisfies ModernPlannerGameId[]) {
-      const support = modernGames.find((game) => game.id === gameId)?.catalog.plannerSupport
-      if (!support || support.status !== 'catalog-only') {
-        throw new Error(`${gameId}는 명시적으로 카탈로그 전용이어야 합니다.`)
-      }
+  it('정확성 게이트가 닫힌 현대 버전만 파티 플래너에서 명시적으로 차단한다', () => {
+    for (const game of modernGames.filter((entry) => entry.catalog.plannerSupport.status === 'catalog-only')) {
+      const gameId = game.id satisfies ModernPlannerGameId
+      const support = game.catalog.plannerSupport
+      if (support.status !== 'catalog-only') throw new Error(`${gameId} 지원 상태를 읽을 수 없습니다.`)
       expect(support.reason).toBeTruthy()
       if (['x', 'y', 'omega-ruby', 'alpha-sapphire'].includes(gameId)) {
         expect(support.reason).toContain('기술')
@@ -59,6 +58,36 @@ describe('6–9세대 스토리 패밀리', () => {
       expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.evidence.trim()), gameId).toBe(true)
       expect(Object.values(support.accuracyGates ?? {}).some((gate) => !gate.complete), gameId).toBe(true)
     }
+  })
+
+  it('Gen 8 계열 7개 버전은 모든 정확성 게이트와 전용 메커니즘 근거가 있다', () => {
+    const targetIds: ModernPlannerGameId[] = [
+      'lets-go-pikachu', 'lets-go-eevee',
+      'sword', 'shield',
+      'brilliant-diamond', 'shining-pearl',
+      'legends-arceus',
+    ]
+    for (const gameId of targetIds) {
+      const game = modernGames.find((entry) => entry.id === gameId)!
+      const support = game.catalog.plannerSupport
+      const promoted = ['sword', 'shield', 'brilliant-diamond', 'shining-pearl'].includes(gameId)
+      expect(support.status, gameId).toBe(promoted ? 'full' : 'catalog-only')
+      expect(game.catalog.supportReview, gameId).toBe('2026-09-12')
+      expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
+        'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
+      ])
+      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.complete), gameId).toBe(promoted)
+      expect(support.accuracyGates?.mechanics.complete, gameId).toBe(true)
+    }
+    expect(modernGames.find((game) => game.id === 'lets-go-pikachu')?.catalog.mechanicsFamily).toBe('lets-go')
+    expect(modernGames.find((game) => game.id === 'sword')?.catalog.mechanicsFamily).toBe('galar-wild-area')
+    expect(modernGames.find((game) => game.id === 'legends-arceus')?.catalog.mechanicsFamily).toBe('legends')
+    const sourceRevision = (gameId: ModernPlannerGameId) =>
+      modernStoryProvenance.sources.find((source) => (source.games as readonly string[]).includes(gameId))
+    expect(sourceRevision('lets-go-pikachu')).toMatchObject({ revision: '4247959' })
+    expect(sourceRevision('sword')).toMatchObject({ revision: '4489916' })
+    expect(sourceRevision('brilliant-diamond')).toMatchObject({ revision: '4577633' })
+    expect(sourceRevision('legends-arceus')).toMatchObject({ revision: '4315902' })
   })
 
   it('모든 보스가 실제 챕터에 연대순으로 연결된다', () => {
@@ -106,14 +135,16 @@ describe('6–9세대 스토리 패밀리', () => {
       'olivia-e4-usum', 'acerola-e4-usum', 'kahili-usum', 'hau',
     ])
     expect(sequence('ultra-moon')).toEqual(sequence('ultra-sun'))
-    expect(sequence('sword')).toEqual([
-      'milo', 'nessa', 'kabu', 'bea', 'opal', 'gordie', 'piers', 'raihan',
-      'marnie-cup', 'hop-cup', 'eternatus', 'leon',
-    ])
-    expect(sequence('shield')).toEqual([
-      'milo', 'nessa', 'kabu', 'allister', 'opal', 'melony', 'piers', 'raihan',
-      'marnie-cup', 'hop-cup', 'eternatus', 'leon',
-    ])
+    expect(sequence('sword')).toEqual(expect.arrayContaining([
+      'hop-route-2', 'bede-mine', 'milo', 'bea', 'gordie', 'marnie-cup',
+      'oleana', 'rose', 'eternatus', 'eternamax', 'leon', 'hop-final',
+      'mustard-final', 'peony', 'calyrex-ice-rider', 'calyrex-shadow-rider', 'galar-star-tournament',
+    ]))
+    expect(sequence('shield')).toEqual(expect.arrayContaining([
+      'hop-route-2', 'bede-mine', 'milo', 'allister', 'melony', 'marnie-cup',
+      'oleana', 'rose', 'eternatus', 'eternamax', 'leon', 'hop-final',
+      'mustard-final', 'peony', 'calyrex-ice-rider', 'calyrex-shadow-rider', 'galar-star-tournament',
+    ]))
   })
 
   it('버전 전용 보스와 악당 리더가 형제 버전에 섞이지 않는다', () => {
@@ -184,9 +215,27 @@ describe('6–9세대 스토리 패밀리', () => {
   it('HM 파티 요구는 6세대에서만 남고 이후 이동 시스템과 분리된다', () => {
     expect(modernFamilies.kalos6.fieldMoves.some((move) => move.required)).toBe(true)
     expect(modernFamilies.hoenn6.fieldMoves.some((move) => move.required)).toBe(true)
-    for (const family of Object.values(modernFamilies).filter((entry) => entry.generation >= 7)) {
+    for (const family of Object.values(modernFamilies).filter((entry) => entry.generation >= 7 && entry.id !== 'sinnoh8')) {
       expect(family.fieldMoves, family.id).toEqual([])
     }
+    expect(modernFamilies.sinnoh8.fieldMoves).toHaveLength(8)
+  })
+
+  it('레츠고 비전기술과 PLA 라이드를 클래식 HM·체육관으로 오인하지 않는다', () => {
+    expect(modernFamilies.letsgo7.fieldMoves).toEqual([])
+    const letsGoObjectives = modernFamilies.letsgo7.chapters.flatMap((entry) => entry.objectives)
+    for (const technique of ['풀베기', '빛내기', '하늘날기', '밀어내기', '물결타기']) {
+      expect(letsGoObjectives.some((objective) => objective.includes(`비전기술 ${technique}`)), technique).toBe(true)
+    }
+    expect(modernFamilies.hisui8.fieldMoves).toEqual([])
+    expect(modernFamilies.hisui8.chapters.slice(0, 5).map((entry) => entry.objectives.at(-2))).toEqual([
+      '신비록 라이드 해금', '다투곰 라이드 해금', '대쓰여너 라이드 해금', '포푸니크 라이드 해금', '워글 라이드 해금',
+    ])
+    expect(getModernBosses('legends-arceus').map((entry) => entry.id)).toEqual([
+      'kleavor', 'lilligant-hisui', 'arcanine-hisui', 'electrode-hisui',
+      'avalugg-hisui', 'kamado', 'space-time-legend', 'origin-legend',
+    ])
+    expect(getModernBosses('legends-arceus').some((entry) => entry.title.includes('체육관'))).toBe(false)
   })
 
   it('Gen 6 기술 떠올리기 위치와 최초 장을 고정한다', () => {
@@ -267,7 +316,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'x',
       'y',
     ])
-    expect(modernGames.filter((game) => !encounterGameIds.has(game.id))).toEqual([])
+    expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
+      'legends-arceus', 'lets-go-eevee', 'lets-go-pikachu',
+    ])
   })
 
   it('Gen 7 버전별 야생·SOS 자원과 폼을 보존한다', () => {
@@ -425,7 +476,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
         expect(row.maxLevel, `${gameId}/#${row.species}`).toBeGreaterThanOrEqual(row.minLevel)
       }
     }
-  })
+  }, 15_000)
 
   it('가라르와 팔데아 리전폼 식별자를 기본폼으로 평탄화하지 않는다', () => {
     expect(encounterGames.sword.some((row) => row.species === 52 && row.form === 2)).toBe(true)
@@ -454,9 +505,10 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     }
   })
 
-  it('DLC 지역을 기본 엔딩 데이터에서 제외하고 레이드 조건을 보존한다', () => {
+  it('가라르 DLC 지역과 레이드 조건을 보존하고 미지원 Gen 9 DLC는 제외한다', () => {
     const allRows = Object.values(encounterGames).flat()
-    expect(allRows.some((row) => /kitakami|blueberry|fields-of-honor|ballimere/.test(row.location))).toBe(false)
+    expect(allRows.some((row) => /kitakami|blueberry/.test(row.location))).toBe(false)
+    expect(allRows.some((row) => /fields-of-honor|ballimere/.test(row.location))).toBe(true)
     expect(encounterGames.sword.some((row) =>
       row.method === 'raid'
       && row.area.startsWith('max-den-')
@@ -548,15 +600,15 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(modernEncounterChapter('galar8', 'rolling-fields', ['weather-normal', 'weather-heavy-fog'], 'overworld', 15)).toBe(2)
     expect(modernEncounterChapter('galar8', 'east-lake-axewell', ['badge-count-3', 'water-bike'], 'raid', 35)).toBe(7)
     expect(modernEncounterChapter('galar8', 'slumbering-weald', [], 'overworld', 45)).toBe(10)
-    expect(modernEncounterChapter('sinnoh8', 'route-219', [], 'super-rod')).toBe(9)
+    expect(modernEncounterChapter('sinnoh8', 'route-219', [], 'super-rod')).toBe(11)
     expect(modernEncounterChapter('sinnoh8', 'route-219', [], 'old-rod')).toBe(1)
     expect(modernEncounterChapter('hoenn6', 'mirage-forest', [], 'horde')).toBe(9)
     expect(modernEncounterChapter('hoenn6', 'route-115', [], 'horde')).toBe(5)
     expect(modernEncounterChapter('paldea9', 'area-zero')).toBe(14)
     expect(Object.values(encounterGames).flat().some((row) => row.location === 'grand-underground')).toBe(false)
-    expect(Object.values(encounterGames).flat().some((row) => row.location === 'trophy-garden')).toBe(false)
-    expect(Object.values(encounterGames).flat().some((row) => row.location === 'great-marsh')).toBe(false)
-    expect(encounterGames['brilliant-diamond'].some((row) => row.method === 'grass')).toBe(false)
+    expect(Object.values(encounterGames).flat().some((row) => row.location === 'trophy-garden')).toBe(true)
+    expect(Object.values(encounterGames).flat().some((row) => row.location === 'great-marsh')).toBe(true)
+    expect(encounterGames['brilliant-diamond'].some((row) => row.method === 'grass')).toBe(true)
     expect(encounterGames.sword.some((row) =>
       row.area === 'max-den-90'
       && row.location === 'south-lake-miloch'

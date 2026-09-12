@@ -30,7 +30,8 @@ belong to their respective owners.
 ## PokéAPI-derived data snapshots
 
 The normalized facts in `src/generated/species.json`,
-`src/generated/learnsets.json`, and `src/generated/gen67-legality.json` are
+`src/generated/learnsets.json`, `src/generated/gen67-legality.json`, and
+`src/generated/gen8-legality.json`, and `src/generated/gen8-form-profiles.json` are
 derived from PokéAPI CSV data pinned at revision
 `3a588cf66475bd05a34aba29bd538480889829fb`. The exact input paths are listed
 in each artifact's `provenance.files` array.

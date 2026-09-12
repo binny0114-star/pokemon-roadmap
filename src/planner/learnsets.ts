@@ -1,3 +1,5 @@
+import gen8LegalityJson from '../generated/gen8-legality.json'
+import { getGen8DefaultFormProfile, getGen8FormProfileByIdentifier } from './gen8Forms'
 import type { CatalogSpecies, GameConfig, GeneratedMove } from './types'
 import { catalogVersionGroupIds, versionRegistrySource } from './versionRegistry'
 
@@ -58,10 +60,19 @@ interface Snapshot {
 
 export interface LegalMove extends Omit<SnapshotMove, 'category'> {
   category: GeneratedMove['category']
-  method: 'level' | 'machine' | 'tutor'
+  method: 'level' | 'egg' | 'machine' | 'tutor'
   level: number
   machine: string | null
+  eggParentIdentifiers?: string[]
 }
+
+interface Gen8LegalitySnapshot {
+  moves: Record<string, SnapshotMove>
+  learnsets: Record<string, Record<string, (string | number | null | string[])[][]>>
+}
+
+const gen8Legality = gen8LegalityJson as Gen8LegalitySnapshot
+const gen8VersionGroups = new Set([19, 20, 23, 24])
 
 let snapshot: Snapshot | null = null
 export let learnsetProvenance: Snapshot['provenance'] | null = null
@@ -117,25 +128,41 @@ export function learnsetSource(): string {
   return snapshot?.source ?? '기술 데이터 로딩 중'
 }
 
-export function getLegalMoves(species: CatalogSpecies, game: GameConfig): LegalMove[] {
+export function getLegalMoves(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): LegalMove[] {
   if (!snapshot || species.generation > game.generation) return []
-  const entries = snapshot.learnsets[String(game.versionGroupId)]?.[String(species.dex)] ?? []
-  return entries.flatMap(([moveId, method, level, machine]) => {
+  const useGen8Legality = gen8VersionGroups.has(game.versionGroupId)
+  const identifier = formIdentifier
+    ? getGen8FormProfileByIdentifier(formIdentifier)?.pokemonIdentifier ?? formIdentifier
+    : getGen8DefaultFormProfile(species.dex)?.pokemonIdentifier ?? species.id
+  const entries = useGen8Legality
+    ? gen8Legality.learnsets[String(game.versionGroupId)]?.[identifier] ?? []
+    : snapshot.learnsets[String(game.versionGroupId)]?.[String(species.dex)] ?? []
+  return entries.flatMap(([moveId, method, level, machine, eggParentIdentifiers]) => {
     if (
       typeof moveId !== 'number'
-      || !['level', 'machine', 'tutor'].includes(String(method))
+      || !['level', 'egg', 'machine', 'tutor'].includes(String(method))
       || typeof level !== 'number'
       || (machine !== null && typeof machine !== 'string')
     ) return []
-    const move = snapshot?.moves[String(moveId)]
-    const override = snapshot?.versions[String(game.versionGroupId)]?.[String(moveId)]
+    const move = useGen8Legality
+      ? gen8Legality.moves[String(moveId)]
+      : snapshot?.moves[String(moveId)]
+    const override = useGen8Legality
+      ? undefined
+      : snapshot?.versions[String(game.versionGroupId)]?.[String(moveId)]
     if (!move || move.generation > game.generation) return []
     const category: GeneratedMove['category'] = move.category === '변화'
       ? '변화'
       : move.category === '특수'
         ? '특수'
         : '물리'
-    const legalMethod: LegalMove['method'] = method === 'level' ? 'level' : method === 'machine' ? 'machine' : 'tutor'
+    const legalMethod: LegalMove['method'] = method === 'level'
+      ? 'level'
+      : method === 'egg'
+        ? 'egg'
+        : method === 'machine'
+          ? 'machine'
+          : 'tutor'
     return [{
       ...move,
       ...override,
@@ -143,6 +170,7 @@ export function getLegalMoves(species: CatalogSpecies, game: GameConfig): LegalM
       method: legalMethod,
       level,
       machine,
+      eggParentIdentifiers: Array.isArray(eggParentIdentifiers) ? eggParentIdentifiers : undefined,
     }]
   })
 }

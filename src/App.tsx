@@ -17,12 +17,13 @@ import {
   challengeCandidateCount,
   challengeTypeOrder,
   generateParty,
+  speciesDisplayName,
   speciesIcon,
   speciesTypes,
   typeKo,
   validateRequired,
 } from './planner/engine'
-import { getBosses, getFamily, getGame } from './planner/games'
+import { families, games, getBosses, getFamily, getGame } from './planner/games'
 import {
   getModernBosses,
   getModernGame,
@@ -51,6 +52,7 @@ import {
   loadBuilderState,
   loadPlanSession,
   loadPlanProgress,
+  loadPlanProgressWithLegacy,
   loadClearRecords,
   mergePlanProgress,
   reconcilePlanProgress,
@@ -70,6 +72,7 @@ type TabId = 'party' | 'roadmap' | 'hm' | 'bosses' | 'postgame'
 interface BuilderState {
   gameId: PlannerGameId
   requiredDexes: number[]
+  formSelections: Record<number, string>
   preferences: PlannerPreferences
   challengeType: string | null
 }
@@ -77,6 +80,7 @@ interface BuilderState {
 const defaultState: BuilderState = {
   gameId: 'emerald',
   requiredDexes: [],
+  formSelections: {},
   challengeType: null,
   preferences: {
     noTrade: true,
@@ -106,8 +110,29 @@ const accuracyGateKo: Record<AccuracyGateId, string> = {
   integration: '플래너·저장 통합',
 }
 const modernPreviewGameIds = new Set<string>(modernGames.map((entry) => entry.id))
-const gatedGen67Entries = gameCatalog.filter((entry) => entry.plannerSupport.accuracyGates)
-const promotedGen67Count = gatedGen67Entries.filter((entry) => entry.plannerSupport.status === 'full').length
+const gen67AccuracyGateIds = new Set([
+  'x', 'y', 'omega-ruby', 'alpha-sapphire',
+  'sun', 'moon', 'ultra-sun', 'ultra-moon',
+])
+const gen8AccuracyGateIds = new Set([
+  'lets-go-pikachu', 'lets-go-eevee',
+  'sword', 'shield',
+  'brilliant-diamond', 'shining-pearl',
+  'legends-arceus',
+])
+const gen67AccuracyEntries = gameCatalog.filter((entry) => gen67AccuracyGateIds.has(entry.id))
+const gen8AccuracyEntries = gameCatalog.filter((entry) => gen8AccuracyGateIds.has(entry.id))
+const promotedGen67Count = gen67AccuracyEntries.filter((entry) => entry.plannerSupport.status === 'full').length
+const promotedGen8Count = gen8AccuracyEntries.filter((entry) => entry.plannerSupport.status === 'full').length
+const fullSupportCount = gameCatalog.filter((entry) => entry.plannerSupport.status === 'full').length
+const catalogOnlyCount = gameCatalog.length - fullSupportCount
+const mechanicsFamilyKo = {
+  classic: '클래식 본편',
+  'galar-wild-area': '가라르 와일드에리어·DLC',
+  'sinnoh-underground': '신오 포켓치·지하대동굴',
+  'lets-go': '레츠고 전용',
+  legends: 'LEGENDS 전용',
+} as const
 const modernMethodKo: Record<string, string> = {
   walk: '일반 조우',
   grass: '풀숲',
@@ -128,6 +153,9 @@ const modernMethodKo: Record<string, string> = {
   gift: '선물',
   egg: '알',
   fossil: '화석 복원',
+  trade: '게임 내 교환',
+  'honey-tree': '꿀나무',
+  'grand-underground': '지하대동굴 심볼 조우',
 }
 const modernConditionKo: Record<string, string> = {
   'max-raid': '맥스 레이드',
@@ -149,6 +177,20 @@ const modernConditionKo: Record<string, string> = {
   'weather-sandstorm': '모래바람',
   'weather-heavy-fog': '짙은 안개',
   'weather-mist': '안개',
+  'grand-underground': '지하대동굴',
+  'explorer-kit': '탐험세트',
+  'defog': '안개제거',
+  'strength': '괴력',
+  'icicle-badge': '글레이셔배지',
+  'waterfall': '폭포오르기',
+  'national-dex': '전국도감 이후',
+  'elite-four-defeated': '사천왕 격파 이후',
+  'daily-swarm': '오늘의 대량발생',
+  'poke-radar': '포켓트레',
+  'daily-trophy-garden': '자랑의 뒤뜰 일일 풀',
+  'daily-great-marsh-binoculars': '대습초원 망원경 일일 풀',
+  'friday-only': '금요일 한정',
+  'night-only': '밤 한정',
 }
 
 function modernConditionLabel(condition: string): string {
@@ -160,7 +202,7 @@ function modernConditionLabel(condition: string): string {
 }
 
 function loadCurrentPlanProgress(gameId: PlannerGameId, plan: GeneratedPlan): Set<string> {
-  const saved = loadPlanProgress(gameId, plan.id)
+  const saved = loadPlanProgressWithLegacy(gameId, plan.id, plan.legacyId)
   const actionIds = composeRoadmap(getGame(gameId), plan)
     .flatMap((chapter) => chapter.actions.map((action) => action.id))
   return reconcilePlanProgress(saved, actionIds)
@@ -170,18 +212,20 @@ function Toggle({
   checked,
   title,
   description,
+  disabled = false,
   onChange,
 }: {
   checked: boolean
   title: string
   description: string
+  disabled?: boolean
   onChange: (checked: boolean) => void
 }) {
   return (
-    <label className="toggle-row">
+    <label className={`toggle-row${disabled ? ' disabled' : ''}`}>
       <span><strong>{title}</strong><small>{description}</small></span>
       <span className="toggle">
-        <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+        <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
         <span aria-hidden="true" />
       </span>
     </label>
@@ -189,7 +233,8 @@ function Toggle({
 }
 
 function App() {
-  const initial = loadBuilderState(defaultState)
+  const loadedInitial = loadBuilderState(defaultState)
+  const initial = { ...loadedInitial, formSelections: loadedInitial.formSelections ?? {} }
   const [builder, setBuilder] = useState<BuilderState>(initial)
   const initialBuilderRef = useRef(initial)
   const [query, setQuery] = useState('')
@@ -224,7 +269,13 @@ function App() {
   const game = getGame(builder.gameId)
   const family = getFamily(game)
   const bosses = getBosses(game)
-  const validation = validateRequired(builder.requiredDexes, game, builder.preferences, builder.challengeType)
+  const validation = validateRequired(
+    builder.requiredDexes,
+    game,
+    builder.preferences,
+    builder.challengeType,
+    builder.formSelections,
+  )
   const roadmap = plan ? composeRoadmap(game, plan) : []
   const roadmapActions = roadmap.flatMap((chapter) => chapter.actions)
   const progress = roadmapActions.length ? Math.round(completed.size / roadmapActions.length * 100) : 0
@@ -361,13 +412,16 @@ function App() {
         || (initialBuilder.requiredDexes.length === 0 && !initialBuilder.challengeType)
       ) return
       try {
+        const restoredFormSelections = saved.formSelections ?? initialBuilder.formSelections
         const restored = generateParty(getGame(initialBuilder.gameId), initialBuilder.preferences, {
           requiredDexes: initialBuilder.requiredDexes,
           lockedDexes: saved.lockedDexes,
           previousMembers: saved.memberDexes,
           variant: saved.variant,
           challengeType: initialBuilder.challengeType,
+          formSelections: restoredFormSelections,
         })
+        setBuilder((current) => ({ ...current, formSelections: { ...restoredFormSelections } }))
         setPlan(restored)
         setVariant(saved.variant)
         setCompleted(loadCurrentPlanProgress(initialBuilder.gameId, restored))
@@ -385,6 +439,7 @@ function App() {
       memberDexes: plan.members.map((member) => member.species.dex),
       lockedDexes: plan.members.filter((member) => member.locked).map((member) => member.species.dex),
       variant,
+      formSelections: plan.formSelections,
     })
   }, [plan, variant])
 
@@ -393,7 +448,7 @@ function App() {
   }
 
   const selectGame = (gameId: PlannerGameId) => {
-    setBuilder((current) => ({ ...current, gameId, requiredDexes: [], challengeType: null }))
+    setBuilder((current) => ({ ...current, gameId, requiredDexes: [], formSelections: {}, challengeType: null }))
     setPlan(null)
     setQuery('')
     setMessage('')
@@ -405,13 +460,26 @@ function App() {
     const species = speciesByDex.get(dex)
     if (!species) return
     if (builder.requiredDexes.includes(dex)) {
-      setBuilder((current) => ({ ...current, requiredDexes: current.requiredDexes.filter((entry) => entry !== dex) }))
+      setBuilder((current) => {
+        const formSelections = { ...current.formSelections }
+        delete formSelections[dex]
+        return {
+          ...current,
+          requiredDexes: current.requiredDexes.filter((entry) => entry !== dex),
+          formSelections,
+        }
+      })
       setMessage('')
       return
     }
     const availability = getAvailability(species, game)
+    const matchingForm = availability.formChoices?.find((choice) =>
+      !builder.challengeType || choice.types.includes(builder.challengeType))
+    const availableTypes = availability.formChoices?.length
+      ? [...new Set(availability.formChoices.flatMap((choice) => choice.types))]
+      : speciesTypes(species, game.generation, game)
     const selectingChallengeStarter = Boolean(builder.challengeType && builder.requiredDexes.length === 0)
-    if (builder.challengeType && !speciesTypes(species, game.generation).includes(builder.challengeType)) {
+    if (builder.challengeType && !availableTypes.includes(builder.challengeType)) {
       setMessage(`${species.name}은(는) ${typeKo[builder.challengeType]} 타입을 공유하지 않아 현재 챌린지에 참가할 수 없습니다.`)
       return
     }
@@ -457,7 +525,13 @@ function App() {
         return
       }
     }
-    setBuilder((current) => ({ ...current, requiredDexes: [...current.requiredDexes, dex] }))
+    setBuilder((current) => ({
+      ...current,
+      requiredDexes: [...current.requiredDexes, dex],
+      formSelections: matchingForm
+        ? { ...current.formSelections, [dex]: matchingForm.formIdentifier }
+        : current.formSelections,
+    }))
     setMessage('')
   }
 
@@ -469,6 +543,7 @@ function App() {
         previousMembers: previous?.members.map((member) => member.species.dex),
         variant: nextVariant,
         challengeType: builder.challengeType,
+        formSelections: builder.formSelections,
       })
       setPlan(generated)
       setVariant(nextVariant)
@@ -495,7 +570,13 @@ function App() {
       noTrade: true,
       allowPostgame: false,
     }
-    setBuilder((current) => ({ ...current, requiredDexes: dexes, preferences, challengeType: null }))
+    setBuilder((current) => ({
+      ...current,
+      requiredDexes: dexes,
+      formSelections: {},
+      preferences,
+      challengeType: null,
+    }))
     try {
       const generated = generateParty(game, preferences, { requiredDexes: dexes, challengeType: null })
       setPlan(generated)
@@ -527,6 +608,7 @@ function App() {
         lockedDexes: [...kept, alternativeDex],
         previousMembers: [...kept, alternativeDex],
         challengeType: builder.challengeType,
+        formSelections: builder.formSelections,
       })
       setPlan(generated)
       setVariant(0)
@@ -569,7 +651,36 @@ function App() {
   }
 
   const setChallengeType = (challengeType: string | null) => {
-    setBuilder((current) => ({ ...current, challengeType }))
+    setBuilder((current) => {
+      const formSelections = { ...current.formSelections }
+      for (const dex of current.requiredDexes) {
+        const species = speciesByDex.get(dex)
+        const choices = species ? getAvailability(species, game).formChoices : undefined
+        if (!choices?.length) continue
+        const currentChoice = choices.find((choice) => choice.formIdentifier === formSelections[dex])
+        const nextChoice = choices.find((choice) => !challengeType || choice.types.includes(challengeType))
+        if (!currentChoice || (challengeType && !currentChoice.types.includes(challengeType))) {
+          if (nextChoice) formSelections[dex] = nextChoice.formIdentifier
+        }
+      }
+      return { ...current, challengeType, formSelections }
+    })
+    setPlan(null)
+    setCompleted(new Set())
+    setMessage('')
+    clearPlanSession()
+  }
+
+  const selectForm = (dex: number, formIdentifier: string) => {
+    const species = speciesByDex.get(dex)
+    const choice = species
+      ? getAvailability(species, game).formChoices?.find((entry) => entry.formIdentifier === formIdentifier)
+      : undefined
+    if (!choice) return
+    setBuilder((current) => ({
+      ...current,
+      formSelections: { ...current.formSelections, [dex]: formIdentifier },
+    }))
     setPlan(null)
     setCompleted(new Set())
     setMessage('')
@@ -600,13 +711,13 @@ function App() {
     .filter(({ species }) =>
       query.trim()
       || !builder.challengeType
-      || speciesTypes(species, game.generation).includes(builder.challengeType),
+      || speciesTypes(species, game.generation, game).includes(builder.challengeType),
     )
     .sort((a, b) =>
       Number(
-        !builder.challengeType || speciesTypes(b.species, game.generation).includes(builder.challengeType),
+        !builder.challengeType || speciesTypes(b.species, game.generation, game).includes(builder.challengeType),
       ) - Number(
-        !builder.challengeType || speciesTypes(a.species, game.generation).includes(builder.challengeType),
+        !builder.challengeType || speciesTypes(a.species, game.generation, game).includes(builder.challengeType),
       )
       ||
       Number(b.availability.obtainable) - Number(a.availability.obtainable)
@@ -679,14 +790,14 @@ function App() {
         </nav>
         <div className="builder-intro" id="top">
           <div>
-            <span className="kicker">GENERATION I–V · 21 VERSIONS</span>
+            <span className="kicker">GENERATION I–VIII · {games.length} VERSIONS</span>
             <h1>좋아하는 포켓몬으로<br /><em>끝까지 가는 길.</em></h1>
             <p>좋아하는 멤버나 단일 타입 챌린지를 고르면 획득 시점, 보스 상성과 필드기를 계산해<br className="desktop-only" /> 맞춤 파티와 전용 스토리 로드맵을 만듭니다.</p>
           </div>
           <div className="hero-stat-grid">
             <span><b>{catalogCoverage?.nationalDex.count ?? 1025}</b><small>전국도감 데이터</small></span>
-            <span><b>21</b><small>원작 버전</small></span>
-            <span><b>8</b><small>스토리 패밀리</small></span>
+            <span><b>{games.length}</b><small>완전 지원 버전</small></span>
+            <span><b>{Object.keys(families).length}</b><small>스토리 패밀리</small></span>
             <span><b>0</b><small>런타임 API</small></span>
           </div>
         </div>
@@ -807,13 +918,16 @@ function App() {
           </div>
           <p className="data-note">ⓘ 6–9세대의 검수된 스토리·입수 데이터는 아래에서 미리볼 수 있습니다. 스토리·입수·버전별 기술 데이터가 모두 완비되기 전에는 파티 로드맵 생성을 열지 않습니다.</p>
           <p className="generation-promotion-summary">
-            Gen 6–7 정확성 승격 <strong>{promotedGen67Count}/{gatedGen67Entries.length}</strong>
+            Gen 6–7 정확성 승격 <strong>{promotedGen67Count}/{gen67AccuracyEntries.length}</strong>
+          </p>
+          <p className="generation-promotion-summary">
+            Gen 8 계열 정확성 승격 <strong>{promotedGen8Count}/{gen8AccuracyEntries.length}</strong>
           </p>
           {game.notes?.map((note) => <p className="data-note" key={note}>ⓘ {note}</p>)}
           <details className="version-catalog">
             <summary>
               <span>전 버전 지원 상태 보기</span>
-              <small>39개 버전 · 완전 지원 21 · 카탈로그 전용 18</small>
+              <small>{gameCatalog.length}개 버전 · 완전 지원 {fullSupportCount} · 카탈로그 전용 {catalogOnlyCount}</small>
             </summary>
             <div className="version-catalog-grid">
               {gameCatalog.map((entry) => {
@@ -825,7 +939,7 @@ function App() {
                 const encounterPreviewAvailable = encounterPreviewGameIds.has(entry.id)
                 return (
                   <article key={entry.id}>
-                    <span>{entry.generation}세대 · {entry.region}</span>
+                    <span>{entry.generation}세대 · {entry.region} · {mechanicsFamilyKo[entry.mechanicsFamily]}</span>
                     <strong>{entry.shortName}</strong>
                     <b className={full ? 'support-full' : 'support-catalog'}>
                       {full ? '파티·로드맵 지원' : '카탈로그 전용'}
@@ -875,10 +989,15 @@ function App() {
             </label>
             <div>
               <div className="preview-capabilities" aria-label="미리보기 지원 범위">
+                <span className="available">{mechanicsFamilyKo[previewGame.catalog.mechanicsFamily]}</span>
                 <span className={previewHasEncounterSnapshot ? 'available' : 'unavailable'}>
-                  {previewHasEncounterSnapshot ? '부분 입수 스냅샷' : '정확한 입수 스냅샷 없음'}
+                  {previewHasEncounterSnapshot
+                    ? previewGame.catalog.plannerSupport.status === 'full' ? '완전 입수 스냅샷' : '부분 입수 스냅샷'
+                    : '정확한 입수 스냅샷 없음'}
                 </span>
-                <span className="unavailable">파티 로드맵 생성 미지원</span>
+                <span className={previewGame.catalog.plannerSupport.status === 'full' ? 'available' : 'unavailable'}>
+                  {previewGame.catalog.plannerSupport.status === 'full' ? '파티 로드맵 완전 지원' : '파티 로드맵 생성 미지원'}
+                </span>
               </div>
               <p>{previewGame.catalog.plannerSupport.status === 'catalog-only' && previewGame.catalog.plannerSupport.reason}</p>
               {previewAccuracyGates && (
@@ -1037,10 +1156,35 @@ function App() {
           <div className="required-tray">
             {builder.requiredDexes.length ? builder.requiredDexes.map((dex, index) => {
               const species = speciesByDex.get(dex)
+              const availability = species ? getAvailability(species, game) : undefined
               return species && (
-                <button key={dex} onClick={() => selectSpecies(dex)} title={`${species.name} 필수 선택 해제`}>
-                  <span>{speciesIcon(species, game.generation)}</span><b>{species.name}{builder.challengeType && index === 0 ? ' · 개조 스타팅' : ''}</b><small>×</small>
-                </button>
+                <div className="required-choice" key={dex}>
+                  <button onClick={() => selectSpecies(dex)} title={`${species.name} 필수 선택 해제`}>
+                    <span>{speciesIcon(species, game.generation, game, builder.formSelections[dex])}</span>
+                    <b>{speciesDisplayName(species, game, builder.formSelections[dex])}{builder.challengeType && index === 0 ? ' · 개조 스타팅' : ''}</b>
+                    <small>×</small>
+                  </button>
+                  {availability?.formChoices?.length && (
+                    <label>
+                      <span>{species.name} 폼</span>
+                      <select
+                        aria-label={`${species.name} 폼 선택`}
+                        value={builder.formSelections[dex] ?? ''}
+                        onChange={(event) => selectForm(dex, event.target.value)}
+                      >
+                        {availability.formChoices.map((choice) => (
+                          <option
+                            key={choice.formIdentifier}
+                            value={choice.formIdentifier}
+                            disabled={Boolean(builder.challengeType && !choice.types.includes(builder.challengeType))}
+                          >
+                            {choice.formName ?? choice.formIdentifier} · {choice.types.map((type) => typeKo[type]).join('/')}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
               )
             }) : <p>{builder.challengeType ? `${typeKo[builder.challengeType]} 타입에서 개조 스타팅으로 쓸 포켓몬을 먼저 선택하세요.` : '1–6마리를 선택하세요. 나머지는 엔진이 균형 있게 채웁니다.'}</p>}
           </div>
@@ -1052,7 +1196,10 @@ function App() {
           <div className="picker-grid" aria-busy={!catalogReady}>
             {!catalogReady && <p className="catalog-loading">전국도감 정적 데이터를 불러오는 중입니다…</p>}
             {results.map(({ species, availability }) => {
-              const challengeMismatch = Boolean(builder.challengeType && !speciesTypes(species, game.generation).includes(builder.challengeType))
+              const availableTypes = availability.formChoices?.length
+                ? [...new Set(availability.formChoices.flatMap((choice) => choice.types))]
+                : speciesTypes(species, game.generation, game)
+              const challengeMismatch = Boolean(builder.challengeType && !availableTypes.includes(builder.challengeType))
               const selectingChallengeStarter = Boolean(builder.challengeType && builder.requiredDexes.length === 0)
               const futureGeneration = species.generation > game.generation
               const selected = builder.requiredDexes.includes(species.dex)
@@ -1077,7 +1224,9 @@ function App() {
                     : `${species.name} 선택`}
                 >
                   <span className="picker-icon">{speciesIcon(species, game.generation)}</span>
-                  <span className="picker-name"><small>#{String(species.dex).padStart(3, '0')}</small><strong>{species.name}</strong><i>{speciesTypes(species, game.generation).map((type) => typeKo[type]).join(' · ')}</i></span>
+                  <span className="picker-name"><small>#{String(species.dex).padStart(3, '0')}</small><strong>{speciesDisplayName(species, game)}</strong><i>{availability.formChoices?.length
+                    ? availability.formChoices.map((choice) => choice.types.map((type) => typeKo[type]).join(' · ')).join(' / ')
+                    : speciesTypes(species, game.generation, game).map((type) => typeKo[type]).join(' · ')}</i></span>
                   <span className="picker-badges">
                     {selectingChallengeStarter && !challengeMismatch && !futureGeneration
                       ? <b className="modified-starter">Lv.5 개조 스타팅</b>
@@ -1108,7 +1257,15 @@ function App() {
           <div className="preference-layout">
             <div className="settings-card">
               <Toggle checked={builder.preferences.noTrade} title="통신교환 없이" description="교환진화가 필요한 최종 형태를 추천에서 제외합니다." onChange={(noTrade) => updatePreferences({ noTrade })} />
-              <Toggle checked={builder.preferences.hmConvenience} title="필드기 편의성 우선" description="해당 버전의 실제 HM/필드기 목록을 점수에 반영합니다." onChange={(hmConvenience) => updatePreferences({ hmConvenience })} />
+              <Toggle
+                checked={game.familyId === 'sinnoh8' || builder.preferences.hmConvenience}
+                disabled={game.familyId === 'sinnoh8'}
+                title={game.familyId === 'sinnoh8' ? '포켓치 비전기술 자동 사용' : '필드기 편의성 우선'}
+                description={game.familyId === 'sinnoh8'
+                  ? 'BDSP 비전기술은 스토리 진행으로 해금되며 파티 기술칸이나 전용 요원이 필요하지 않습니다.'
+                  : '해당 버전의 실제 HM/필드기 목록을 점수에 반영합니다.'}
+                onChange={(hmConvenience) => updatePreferences({ hmConvenience })}
+              />
             </div>
             <div className="settings-card">
               <Toggle checked={builder.preferences.allowLegendary} title="전설 포켓몬 허용" description="스토리 완료 전에 잡을 수 있는 전설만 후보에 포함합니다." onChange={(allowLegendary) => updatePreferences({ allowLegendary })} />
@@ -1137,7 +1294,7 @@ function App() {
               <div className="coverage-chips">
                 <span><b>{plan.coverage.bossCoverage}%</b> 보스 상성</span>
                 <span><b>{plan.coverage.offensiveTypes.length}</b> 공격 타입</span>
-                <span><b>{plan.coverage.fieldMovesCovered.length}/{family.fieldMoves.length}</b> 필드기</span>
+                <span><b>{plan.coverage.fieldMovesCovered.length}/{family.fieldMoves.length}</b> {game.familyId === 'sinnoh8' ? '포켓치 비전기술' : '필드기'}</span>
               </div>
             </div>
             <div className="progress-strip">
@@ -1145,7 +1302,7 @@ function App() {
               <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
             </div>
             <div className="tabs" role="tablist">
-              {tabs.map((tab) => <button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}><span>{tab.icon}</span>{tab.name}</button>)}
+              {tabs.map((tab) => <button key={tab.id} role="tab" aria-selected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}><span>{tab.icon}</span>{game.familyId === 'sinnoh8' && tab.id === 'hm' ? '비전기술' : tab.name}</button>)}
             </div>
 
             <div className="tab-panel">
@@ -1159,15 +1316,18 @@ function App() {
                     {plan.members.map((member) => (
                       <article className="generated-member" key={member.species.dex}>
                         <div className="member-top">
-                          <span className="member-icon">{speciesIcon(member.species, game.generation)}</span>
-                          <div><small>#{String(member.species.dex).padStart(3, '0')}</small><h3>{member.species.name}</h3><p>{speciesTypes(member.species, game.generation).map((type) => typeKo[type]).join(' · ')}</p></div>
+                          <span className="member-icon">{speciesIcon(member.species, game.generation, game, member.availability.formIdentifier)}</span>
+                          <div><small>#{String(member.species.dex).padStart(3, '0')}</small><h3>{speciesDisplayName(member.species, game, member.availability.formIdentifier)}</h3><p>{
+                            (member.availability.formTypes ?? speciesTypes(member.species, game.generation, game))
+                              .map((type) => typeKo[type]).join(' · ')
+                          }</p></div>
                           <button onClick={() => toggleLock(member.species.dex)} disabled={member.required} title={member.required ? '필수 멤버는 항상 잠김' : '추천 멤버 잠금 전환'}>{member.locked ? '🔒' : '🔓'}</button>
                         </div>
                         <div className="member-flags"><span>{member.challengeStarter ? 'Lv.5 개조 스타팅' : member.required ? '필수 선택' : '자동 추천'}</span><b>{member.role}</b><i>점수 {Math.round(member.score)}</i></div>
                         <p className="recommend-reason"><strong>추천 이유</strong>{member.reason}</p>
                         <dl>
                           <div><dt>합류</dt><dd>{member.availability.chapter}장 · {member.availability.location}{member.availability.method ? ` · ${member.availability.method}` : ''} {member.availability.level}{member.availability.sourceSpeciesName ? ` · ${member.availability.sourceSpeciesName}부터 육성` : ''}</dd></div>
-                          <div><dt>진화</dt><dd>{evolutionText(member.species, game)}</dd></div>
+                          <div><dt>진화</dt><dd>{evolutionText(member.species, game, member.availability.formIdentifier)}</dd></div>
                         </dl>
                         <div className="generated-moves">
                           {member.moves.map((move) => <span key={move.name}><b>{move.name}</b><small>{typeKo[move.type]} · {move.category}</small><em>{move.source}</em>{move.quality === 'inferred' && <i>시점 추론</i>}</span>)}
@@ -1216,11 +1376,23 @@ function App() {
 
               {activeTab === 'hm' && (
                 <>
-                  <div className="panel-heading"><div><span className="eyebrow">FIELD MOVE MATRIX</span><h2>{game.generation}세대 필드기 배치</h2><p>버전별 실제 HM 목록과 해당 버전의 포켓몬별 호환 데이터를 사용합니다.</p></div></div>
-                  <div className="hm-table-wrap"><table className="hm-table"><thead><tr><th>필드기</th>{plan.members.map((member) => <th key={member.species.dex}>{member.species.name}</th>)}<th>진행 필수</th></tr></thead><tbody>
-                    {family.fieldMoves.map((move) => <tr key={move.id}><th>{move.name}</th>{plan.members.map((member) => <td key={member.species.dex}>{member.fieldMoves.includes(move.id) ? <span className="hm-check">✓</span> : '·'}</td>)}<td>{move.required ? '필수' : '선택'}</td></tr>)}
-                  </tbody></table></div>
-                  <p className="matrix-note">알려진 예외를 반영합니다: 지그제구리는 괴력을 배울 수 없고 직구리부터 가능합니다. “필드기 편의성” 점수는 원작 HM 목록을 세대별로 분리합니다.</p>
+                  {game.familyId === 'sinnoh8' ? (
+                    <>
+                      <div className="panel-heading"><div><span className="eyebrow">POKÉTCH HIDDEN MOVES</span><h2>포켓치 비전기술 해금</h2><p>야생 포켓몬을 호출하므로 파티 멤버의 기술칸이나 호환성에 의존하지 않습니다.</p></div></div>
+                      <div className="hm-table-wrap"><table className="hm-table"><thead><tr><th>비전기술</th><th>최초 해금</th><th>진행 필수</th><th>사용 방식</th></tr></thead><tbody>
+                        {family.fieldMoves.map((move) => <tr key={move.id}><th>{move.name}</th><td>{move.unlockChapter}장</td><td>{move.required ? '필수' : '선택'}</td><td><span className="hm-check">✓</span> 포켓치 앱</td></tr>)}
+                      </tbody></table></div>
+                      <p className="matrix-note">비전기술 해금은 동적 로드맵에 별도 행동으로 표시되며 파티 기술칸을 차지하지 않습니다.</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="panel-heading"><div><span className="eyebrow">FIELD MOVE MATRIX</span><h2>{game.generation}세대 필드기 배치</h2><p>버전별 실제 HM 목록과 해당 버전의 포켓몬별 호환 데이터를 사용합니다.</p></div></div>
+                      <div className="hm-table-wrap"><table className="hm-table"><thead><tr><th>필드기</th>{plan.members.map((member) => <th key={member.species.dex}>{member.species.name}</th>)}<th>진행 필수</th></tr></thead><tbody>
+                        {family.fieldMoves.map((move) => <tr key={move.id}><th>{move.name}</th>{plan.members.map((member) => <td key={member.species.dex}>{member.fieldMoves.includes(move.id) ? <span className="hm-check">✓</span> : '·'}</td>)}<td>{move.required ? '필수' : '선택'}</td></tr>)}
+                      </tbody></table></div>
+                      <p className="matrix-note">알려진 예외를 반영합니다: 지그제구리는 괴력을 배울 수 없고 직구리부터 가능합니다. “필드기 편의성” 점수는 원작 HM 목록을 세대별로 분리합니다.</p>
+                    </>
+                  )}
                 </>
               )}
 
@@ -1249,7 +1421,7 @@ function App() {
           <summary>데이터 및 추천 방법론 <span>DATA / METHODOLOGY</span></summary>
           <div>
             <section><h3>정적 데이터 출처</h3><p>{catalogSource}. {learnsetSource()}. 전국도감 #001–{catalogCoverage?.nationalDex.max ?? 1025}의 종·진화와 조우 장소·세부 구역·방식·조건, 버전별 자력기·TM/HM·기술가르침 호환 데이터를 빌드 전에 정규화했습니다. 브라우저는 외부 API를 호출하지 않습니다.</p></section>
-            <section><h3>현대 미리보기 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료와 버전별 공개 워크스루를 사용합니다. 미리보기는 출처가 확보된 범위만 표시하며 파티 로드맵 완전 지원을 뜻하지 않습니다.</p></section>
+            <section><h3>현대 미리보기 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료와 버전별 공개 워크스루를 사용합니다. 카탈로그 전용 게임의 미리보기는 출처가 확보된 범위만 표시합니다.</p></section>
             <section><h3>결정론 점수</h3><p>스토리 합류 시점, 남은 관장·사천왕 상성, 새 공격 타입, 종족값·역할, 공통 약점 감점, 버전별 필드기 기여를 합산합니다. 단일 타입 모드는 해당 타입을 공유하는 진화 계열 안에서만 같은 점수를 적용합니다.</p></section>
             <section><h3>한계와 품질 표시</h3><p>낚싯대·파도타기·바위깨기·박치기와 엔딩 후 조건은 실제 조우 방식의 해금 시점보다 앞당기지 않습니다. 시간대·계절·대량발생·포켓트레·라디오 같은 조건도 입수 안내에 표시합니다. 특수 심볼의 세부 이벤트나 일반 TM·기술가르침의 지도상 획득 시점을 완전히 확정할 수 없는 경우에는 “시점 추론”으로 구분합니다.</p></section>
           </div>

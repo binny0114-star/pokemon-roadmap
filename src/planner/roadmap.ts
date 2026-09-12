@@ -1,5 +1,5 @@
 import { generationLineage, getAvailability, speciesCatalog } from './catalog'
-import { effectiveChapter, evolutionText, fieldMoveKo, speciesTypes, typeKo } from './engine'
+import { effectiveChapter, evolutionText, fieldMoveKo, speciesDisplayName, speciesTypes, typeKo } from './engine'
 import { getBosses, getFamily } from './games'
 import { isStrongAgainst } from './typeChart'
 import type { DynamicRoadmapChapter, GameConfig, GeneratedMember, GeneratedPlan } from './types'
@@ -34,12 +34,12 @@ function temporaryCounter(
         && !availability.tradeRequired
         && (!availability.mutuallyExclusiveGroup || !consumedChoiceGroups.has(availability.mutuallyExclusiveGroup))
     })
-    .filter((species) => !challengeType || speciesTypes(species, game.generation).includes(challengeType))
-    .filter((species) => speciesTypes(species, game.generation).some((type) => bossTypes.some((bossType) => isStrongAgainst(type, bossType))))
+    .filter((species) => !challengeType || speciesTypes(species, game.generation, game).includes(challengeType))
+    .filter((species) => speciesTypes(species, game.generation, game).some((type) => bossTypes.some((bossType) => isStrongAgainst(type, bossType))))
     .sort((a, b) => getAvailability(a, game).chapter - getAvailability(b, game).chapter || a.dex - b.dex)[0]
   if (!candidate) return null
   const availability = getAvailability(candidate, game)
-  return `${candidate.name}(${availability.location}) 같은 ${speciesTypes(candidate, game.generation).map((type) => typeKo[type]).join('/')} ${challengeType ? '챌린지 내 ' : ''}임시 카운터를 고려하세요.`
+  return `${speciesDisplayName(candidate, game)}(${availability.location}) 같은 ${speciesTypes(candidate, game.generation, game).map((type) => typeKo[type]).join('/')} ${challengeType ? '챌린지 내 ' : ''}임시 카운터를 고려하세요.`
 }
 
 export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRoadmapChapter[] {
@@ -59,67 +59,103 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
     }
 
     const chronologicalMembers = [...plan.members].sort(
-      (a, b) => a.availability.storyOrder - b.availability.storyOrder || a.species.dex - b.species.dex,
+      (a, b) => (a.availability.dlcChapter ? a.availability.dlcChapter * 1_000 : a.availability.storyOrder)
+        - (b.availability.dlcChapter ? b.availability.dlcChapter * 1_000 : b.availability.storyOrder)
+        || a.species.dex - b.species.dex,
     )
     for (const member of chronologicalMembers) {
-      if (member.availability.chapter === number) {
+      const captureChapter = member.availability.dlcChapter ?? member.availability.chapter
+      if (captureChapter === number) {
         actions.push({
           id: `${chapter.id}:capture:${member.species.dex}`,
           kind: 'capture',
           memberDex: member.species.dex,
           quality: member.availability.quality,
           text: member.challengeStarter
-            ? `${member.species.name} 스타팅 합류 — 시작 데이터의 포켓몬을 직접 교체, Lv.5`
+            ? `${speciesDisplayName(member.species, game, member.availability.formIdentifier)} 스타팅 합류 — 시작 데이터의 포켓몬을 직접 교체, Lv.5`
             : member.availability.sourceSpeciesName
-              ? `${member.species.name} 준비 — ${member.availability.sourceSpeciesName} 포획: ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}`
-              : `${member.species.name} 합류 — ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}`,
+              ? `${speciesDisplayName(member.species, game, member.availability.formIdentifier)} 준비 — ${member.availability.sourceSpeciesName}${member.availability.sourceFormName ? ` (${member.availability.sourceFormName})` : ''} 포획: ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}`
+              : `${speciesDisplayName(member.species, game, member.availability.formIdentifier)} 합류 — ${member.availability.location}${member.availability.method ? ` · ${member.availability.method}` : ''}, ${member.availability.level}`,
         })
       }
       if (member.availability.sourceSpeciesName) {
         for (const stage of generationLineage(member.species, game.generation).slice(1)) {
-          const evolutionAt = effectiveChapter(stage, game)
-          if (evolutionAt !== number || evolutionAt < member.availability.chapter) continue
+          const evolutionAt = member.availability.evolutionDlcFinalChapter
+            ?? member.availability.dlcFinalChapter
+            ?? (member.availability.dlcChapter ? Math.max(member.availability.dlcChapter, effectiveChapter(stage, game)) : effectiveChapter(stage, game))
+          if (evolutionAt !== number || evolutionAt < captureChapter) continue
           const parent = stage.evolvesFrom ? speciesCatalog.find((species) => species.dex === stage.evolvesFrom) : undefined
           actions.push({
             id: `${chapter.id}:evolve:${stage.dex}`,
             kind: 'evolution',
             memberDex: member.species.dex,
             quality: stage.evolution?.trigger ? 'verified' : 'inferred',
-            text: `${parent?.name ?? '진화 전 형태'} → ${evolutionText(stage, game)}`,
+            text: `${parent?.name ?? '진화 전 형태'} → ${evolutionText(
+              stage,
+              game,
+              stage.dex === member.species.dex ? member.availability.formIdentifier : undefined,
+            )}`,
           })
         }
       }
-      for (const move of member.moves.filter((entry) => entry.availableChapter === number)) {
+      for (const move of member.moves.filter((entry) =>
+        Math.max(captureChapter, entry.dlcChapter ?? entry.availableChapter) === number)) {
         actions.push({
           id: `${chapter.id}:move:${member.species.dex}:${move.name}`,
           kind: 'move',
           memberDex: member.species.dex,
           quality: move.quality,
-          text: `${member.species.name}: ${move.name} (${typeKo[move.type] ?? move.type}·${move.category}) — ${move.source}`,
+          text: `${speciesDisplayName(member.species, game, member.availability.formIdentifier)}: ${move.name} (${typeKo[move.type] ?? move.type}·${move.category}) — ${move.source}`,
         })
       }
     }
 
-    for (const boss of bosses.filter((entry) => entry.chapter === number)) {
-      const counters = plan.members.filter((member) =>
-        stageAtChapter(member, game, number)
-        && member.moves.some((move) =>
-          move.availableChapter <= number
-          && boss.types.some((bossType) => isStrongAgainst(move.type, bossType)),
-        ),
-      )
-      const counterText = counters.length
-        ? counters.map((member) => {
-            const move = member.moves.find((entry) => entry.availableChapter <= number && boss.types.some((type) => isStrongAgainst(entry.type, type)))
-            const stage = stageAtChapter(member, game, number)
-            return `${stage?.name ?? member.species.name}${move ? `의 ${move.name}` : ''}`
-          }).join(', ')
-        : temporaryCounter(game, boss.types, number, plan.members, plan.challengeType) ?? '직접 약점 공략 수단이 부족하므로 레벨 우위와 상태이상을 활용하세요.'
+    const chapterBosses = bosses.filter((entry) => entry.chapter === number)
+    for (const boss of chapterBosses) {
+      const branchAlternatives = boss.branchGroup
+        ? chapterBosses.filter((entry) => entry.branchGroup === boss.branchGroup)
+        : [boss]
+      if (branchAlternatives[0] !== boss) continue
+      const bossTypes = [...new Set(branchAlternatives.flatMap((entry) => entry.types))]
+      const counterFor = (types: string[]) => {
+        const counters = plan.members.filter((member) => {
+          const memberChapter = member.availability.dlcChapter ?? member.availability.chapter
+          return memberChapter <= number
+            && stageAtChapter(member, game, number)
+            && member.moves.some((move) =>
+              Math.max(memberChapter, move.dlcChapter ?? move.availableChapter) <= number
+              && types.some((bossType) => isStrongAgainst(move.type, bossType)))
+        })
+        const text = counters.length
+          ? counters.map((member) => {
+              const memberChapter = member.availability.dlcChapter ?? member.availability.chapter
+              const move = member.moves.find((entry) =>
+                Math.max(memberChapter, entry.dlcChapter ?? entry.availableChapter) <= number
+                && types.some((type) => isStrongAgainst(entry.type, type)))
+              const stage = stageAtChapter(member, game, number)
+              return `${stage?.name ?? member.species.name}${move ? `의 ${move.name}` : ''}`
+            }).join(', ')
+          : temporaryCounter(game, types, number, plan.members, plan.challengeType)
+            ?? '직접 약점 공략 수단이 부족하므로 레벨 우위와 상태이상을 활용하세요.'
+        return { counters, text }
+      }
+      const branchCounters = branchAlternatives.map((alternative) => ({
+        alternative,
+        ...counterFor(alternative.types),
+      }))
+      const counters = branchCounters.flatMap((entry) => entry.counters)
+      const counterText = branchAlternatives.length > 1
+        ? branchCounters.map(({ alternative, text }) => `${alternative.name}: ${text}`).join(' / ')
+        : branchCounters[0].text
+      const branchLabel = branchAlternatives.length > 1
+        ? `분기 선택: ${branchAlternatives.map((entry) => `${entry.title} ${entry.name}`).join(' 또는 ')}`
+        : `${boss.title} ${boss.name}`
+      const branchWarning = branchAlternatives.map((entry) => entry.warning).filter(Boolean).join(' / ')
       actions.push({
-        id: `${chapter.id}:boss:${boss.id}`,
+        id: `${chapter.id}:boss:${branchAlternatives.length > 1 ? boss.branchGroup : boss.id}`,
         kind: 'boss',
         quality: counters.length ? (counters.some((member) => member.moves.some((move) => move.quality !== 'verified')) ? 'inferred' : 'verified') : 'inferred',
-        text: `${boss.title} ${boss.name} (${boss.types.map((type) => typeKo[type] ?? type).join('/')}·${boss.level}) — ${counterText}`,
+        text: `${branchLabel} (${bossTypes.map((type) => typeKo[type] ?? type).join('/')}·${boss.level})${boss.winRequired === false ? ' · 승리 불필요' : ''} — ${counterText}${branchWarning ? ` · 주의: ${branchWarning}` : ''}`,
       })
     }
 
@@ -137,6 +173,15 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
     }
 
     for (const move of family.fieldMoves.filter((entry) => entry.unlockChapter === number)) {
+      if (game.familyId === 'sinnoh8') {
+        actions.push({
+          id: `${chapter.id}:field:${move.id}`,
+          kind: 'move',
+          quality: 'verified',
+          text: `배지 조건 충족 후 포켓치 비전기술 ${fieldMoveKo[move.id]} 사용 가능 · 파티 기술칸 불필요`,
+        })
+        continue
+      }
       const owner = plan.members.find((member) => member.fieldMoves.includes(move.id))
       const ownerAvailable = owner && owner.availability.chapter <= number
       actions.push({
