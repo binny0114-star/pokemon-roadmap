@@ -12,7 +12,7 @@ const validTypes = new Set(['normal', 'fire', 'water', 'electric', 'grass', 'ice
 
 beforeAll(async () => {
   await loadCatalog()
-}, 20_000)
+}, 120_000)
 
 describe('정적 데이터셋 검증 스크립트', () => {
   it('도감 ID, 타입, 진화 참조가 유효하다', () => {

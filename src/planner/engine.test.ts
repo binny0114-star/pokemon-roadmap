@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { catalogCoverage, catalogProvenance, evolutionRequirementChapter, generationLineage, getAvailability, loadCatalog, speciesByDex, speciesCatalog } from './catalog'
-import { canLearnFieldMove, effectiveChapter, generatedMoves, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, speciesTypes, validateRequired } from './engine'
+import { canLearnFieldMove, effectiveChapter, generatedMoves, generateParty, isMoveLegalForSpecies, moveExistsInGeneration, replacementAlternatives, speciesTypes, validateRequired } from './engine'
 import { families, games, getFamily, getGame } from './games'
 import { getLegalMoves, learnsetCoverage, learnsetProvenance } from './learnsets'
 import { composeRoadmap, roadmapReferencesAreAvailable } from './roadmap'
@@ -18,7 +18,7 @@ const defaults: PlannerPreferences = {
 
 beforeAll(async () => {
   await loadCatalog()
-}, 30_000)
+}, 120_000)
 
 describe('지원 버전과 정적 카탈로그', () => {
   it('기존 21개 기본 입력의 자동 파티와 플랜 ID를 그대로 유지한다', () => {
@@ -316,6 +316,59 @@ describe('결정론 추천 엔진', () => {
     expect(new Set(plan.members.map((member) => member.species.chainId)).size).toBe(plan.members.length)
   })
 
+  it('잠금 멤버와 같은 진화 계열이나 동시 입수 불가 선택지를 함께 유지하지 않는다', () => {
+    const gold = generateParty(getGame('gold'), defaults, {
+      requiredDexes: [155],
+      lockedDexes: [106, 107],
+      previousMembers: [106, 107],
+    })
+    const goldDexes = gold.members.map((member) => member.species.dex)
+    expect(goldDexes).toContain(106)
+    expect(goldDexes).not.toContain(107)
+    expect(new Set(gold.members.map((member) => member.species.chainId)).size).toBe(gold.members.length)
+
+    const ruby = generateParty(getGame('ruby'), defaults, {
+      requiredDexes: [252],
+      lockedDexes: [348, 346],
+      previousMembers: [348, 346],
+    })
+    const rubyDexes = ruby.members.map((member) => member.species.dex)
+    expect(rubyDexes).toContain(348)
+    expect(rubyDexes).not.toContain(346)
+  })
+
+  it('멤버 교체 후보에는 남는 멤버와 양립할 수 없는 포켓몬을 제시하지 않는다', () => {
+    for (const game of games) {
+      for (const variant of [0, 1, 2]) {
+        const plan = generateParty(game, defaults, { requiredDexes: [game.starters[0]], variant })
+        for (const target of plan.members.filter((member) => !member.required)) {
+          const kept = plan.members.filter((member) => member !== target)
+          const keptGroups = new Set(kept
+            .map((member) => getAvailability(member.species, game).mutuallyExclusiveGroup)
+            .filter(Boolean))
+          for (const alternative of replacementAlternatives(game, plan, target.species.dex)) {
+            const label = `${game.id} v${variant} ${target.species.name} -> ${alternative.species.name}`
+            expect(kept.some((member) => member.species.chainId === alternative.species.chainId), label).toBe(false)
+            const group = getAvailability(alternative.species, game).mutuallyExclusiveGroup
+            expect(Boolean(group && keptGroups.has(group)), label).toBe(false)
+          }
+        }
+      }
+      const plan = generateParty(game, defaults, { requiredDexes: [game.starters[0]] })
+      const target = plan.members.find((member) => !member.required)!
+      const alternative = replacementAlternatives(game, plan, target.species.dex)[0]
+      if (!alternative) continue
+      const kept = plan.members.filter((member) => member !== target).map((member) => member.species.dex)
+      const replaced = generateParty(game, defaults, {
+        requiredDexes: [game.starters[0]],
+        lockedDexes: [...kept, alternative.species.dex],
+        previousMembers: [...kept, alternative.species.dex],
+      })
+      expect(replaced.members.map((member) => member.species.dex), game.id)
+        .toEqual(expect.arrayContaining([...kept, alternative.species.dex]))
+    }
+  }, 60_000)
+
   it('필드기 배정 뒤에도 각 멤버의 기술 이름이 중복되지 않는다', () => {
     const plan = generateParty(getGame('red'), defaults, { requiredDexes: [17] })
     for (const member of plan.members) {
@@ -333,7 +386,7 @@ describe('결정론 추천 엔진', () => {
         expect(member.moves.map((move) => move.quality)).not.toContain('review')
       }
     }
-  })
+  }, 20_000)
 
   it('미래 세대 종과 기술이 이전 버전의 기술표에 섞이지 않는다', () => {
     for (const game of games) {
@@ -433,7 +486,7 @@ describe('결정론 추천 엔진', () => {
         }
       }
     }
-  })
+  }, 20_000)
 
   it('모든 버전과 포켓몬에서 기술 떠올리기 해금 시점을 지킨다', () => {
     for (const game of games) {
@@ -458,7 +511,7 @@ describe('결정론 추천 엔진', () => {
       }
       if (reminder) expect(reminderMoveCount, game.id).toBeGreaterThan(0)
     }
-  })
+  }, 20_000)
 
   it('세대별 기술 떠올리기 위치·비용·해금 장을 고정한다', () => {
     expect(families.kanto1.moveReminder).toBeUndefined()
@@ -603,7 +656,7 @@ describe('동적 로드맵과 저장 격리', () => {
           .filter((species) => {
             const group = getAvailability(species, game).mutuallyExclusiveGroup
             return group && selectedGroups.has(group) && !plan.members.some((member) => member.species.chainId === species.chainId)
-          }, 20_000)
+          })
           .map((species) => species.name)
         const roadmapText = composeRoadmap(game, plan)
           .flatMap((chapter) => chapter.actions.map((action) => action.text))

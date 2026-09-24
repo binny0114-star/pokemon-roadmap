@@ -17,6 +17,7 @@ import {
   challengeCandidateCount,
   challengeTypeOrder,
   generateParty,
+  replacementAlternatives,
   speciesDisplayName,
   speciesIcon,
   speciesTypes,
@@ -916,7 +917,7 @@ function App() {
             <div className="game-count">{family.chapters.length}<small>CHAPTERS</small></div>
             <div className="game-count">{bosses.length}<small>BOSSES</small></div>
           </div>
-          <p className="data-note">ⓘ 6–9세대의 검수된 스토리·입수 데이터는 아래에서 미리볼 수 있습니다. 스토리·입수·버전별 기술 데이터가 모두 완비되기 전에는 파티 로드맵 생성을 열지 않습니다.</p>
+          <p className="data-note">ⓘ 소드·실드·BDSP는 파티 로드맵을 지원합니다. 나머지 6–9세대 버전은 스토리·입수·버전별 기술 데이터가 모두 완비되기 전까지 아래 미리보기만 제공합니다.</p>
           <p className="generation-promotion-summary">
             Gen 6–7 정확성 승격 <strong>{promotedGen67Count}/{gen67AccuracyEntries.length}</strong>
           </p>
@@ -1335,7 +1336,7 @@ function App() {
                         {!member.required && <button className="replace-button" onClick={() => setReplaceTarget(replaceTarget === member.species.dex ? null : member.species.dex)}>이 멤버 교체</button>}
                         {replaceTarget === member.species.dex && (
                           <div className="replacement-list">
-                            {plan.alternatives.slice(0, 6).map((alternative) => (
+                            {replacementAlternatives(game, plan, member.species.dex).slice(0, 6).map((alternative) => (
                               <button key={alternative.species.dex} onClick={() => replaceMember(alternative.species.dex)}>{speciesIcon(alternative.species, game.generation)} {alternative.species.name}<small>{Math.round(alternative.score)}점</small></button>
                             ))}
                           </div>
@@ -1354,9 +1355,9 @@ function App() {
                     <div className="tool-row"><label className="search-box"><span>⌕</span><input value={roadmapQuery} onChange={(event) => setRoadmapQuery(event.target.value)} placeholder="로드맵 검색" /></label><button className="reset-button" onClick={resetProgress}>현재 플랜 초기화</button></div>
                   </div>
                   <div className="dynamic-roadmap">
-                    {roadmap.filter((chapter) => !roadmapQuery.trim() || `${chapter.title} ${chapter.subtitle} ${chapter.objectives.join(' ')} ${chapter.actions.map((action) => action.text).join(' ')}`.toLocaleLowerCase('ko').includes(roadmapQuery.toLocaleLowerCase('ko'))).map((chapter, index) => (
+                    {roadmap.map((chapter, index) => ({ chapter, number: index + 1 })).filter(({ chapter }) => !roadmapQuery.trim() || `${chapter.title} ${chapter.subtitle} ${chapter.objectives.join(' ')} ${chapter.actions.map((action) => action.text).join(' ')}`.toLocaleLowerCase('ko').includes(roadmapQuery.toLocaleLowerCase('ko'))).map(({ chapter, number }, index) => (
                       <details key={chapter.id} open={index === 0}>
-                        <summary><b>{String(index + 1).padStart(2, '0')}</b><span><small>{chapter.subtitle}</small><strong>{chapter.title}</strong></span><i>{chapter.level}</i></summary>
+                        <summary><b>{String(number).padStart(2, '0')}</b><span><small>{chapter.subtitle}</small><strong>{chapter.title}</strong></span><i>{chapter.level}</i></summary>
                         <div className="dynamic-chapter-body">
                           <div className="base-objectives"><span className="eyebrow">STORY</span>{chapter.objectives.map((objective) => <p key={objective}>□ {objective}</p>)}</div>
                           <div className="dynamic-actions"><span className="eyebrow">YOUR PARTY ACTIONS</span>{chapter.actions.map((action) => (
@@ -1400,8 +1401,8 @@ function App() {
                 <>
                   <div className="panel-heading"><div><span className="eyebrow">LIVE MATCHUPS</span><h2>현재 파티의 보스 대응</h2><p>해당 장까지 실제 합류·진화·기술 가능 여부를 반영합니다.</p></div></div>
                   <div className="boss-grid">
-                    {roadmap.flatMap((chapter) => chapter.actions.filter((action) => action.kind === 'boss').map((action) => ({ chapter, action }))).map(({ chapter, action }) => (
-                      <article className="boss-card" key={action.id}><span className="boss-index">{String(family.chapters.indexOf(chapter) + 1).padStart(2, '0')}</span><div><small>{chapter.title}</small><h3>{action.text.split(' — ')[0]}</h3></div><p>{action.text.split(' — ')[1]}</p><span className={`quality ${action.quality}`}>{qualityLabel[action.quality]}</span></article>
+                    {roadmap.flatMap((chapter, index) => chapter.actions.filter((action) => action.kind === 'boss').map((action) => ({ chapter, number: index + 1, action }))).map(({ chapter, number, action }) => (
+                      <article className="boss-card" key={action.id}><span className="boss-index">{String(number).padStart(2, '0')}</span><div><small>{chapter.title}</small><h3>{action.text.split(' — ')[0]}</h3></div><p>{action.text.split(' — ')[1]}</p><span className={`quality ${action.quality}`}>{qualityLabel[action.quality]}</span></article>
                     ))}
                   </div>
                 </>

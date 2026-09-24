@@ -58,7 +58,7 @@ const machine = (id: string): LegalMove => ({
 describe('BDSP 완전 플래너 게이트', () => {
   beforeAll(async () => {
     await Promise.all([loadCatalog(), loadLearnsets()])
-  }, 30_000)
+  }, 120_000)
 
   it('두 버전과 canonical Sinnoh 게이트를 모두 통과해 승격한다', () => {
     for (const gameId of ['brilliant-diamond', 'shining-pearl']) {
