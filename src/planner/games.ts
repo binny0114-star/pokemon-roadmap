@@ -229,6 +229,7 @@ export const families: Record<string, FamilyConfig> = {
   unova5: { id: 'unova5', generation: 5, region: '하나', chapters: withFieldMoveUnlocks(unovaChapters, fields.unova), bosses: unovaBosses, fieldMoves: fields.unova, moveReminder: { chapter: 5, location: '궐수시티', cost: '하트비늘 1개' }, postgame: ['쌍용시티 동쪽 11–15번도로와 산로마을', '챔피언 노간주', '블랙시티/화이트포리스트'] },
   'unova5-2': { id: 'unova5-2', generation: 5, region: '하나', chapters: withFieldMoveUnlocks(unova2Chapters, fields.unova2), bosses: unova2Bosses, fieldMoves: fields.unova2, moveReminder: { chapter: 4, location: '포켓몬 월드 토너먼트', cost: '하트비늘 1개' }, postgame: ['포켓몬 월드 토너먼트', '검은마천루/하얀수동', 'N·아크로마 재대결'] },
   kalos6: { ...modernFamilies.kalos6, id: 'kalos6' },
+  hoenn6: { ...modernFamilies.hoenn6, id: 'hoenn6' },
   galar8: { ...modernFamilies.galar8, id: 'galar8' },
   sinnoh8: { ...modernFamilies.sinnoh8, id: 'sinnoh8' },
 }
@@ -279,6 +280,8 @@ export const games: GameConfig[] = [
   game('white-2', '챔피언 아이리스', '#9ca5a9', [495, 498, 501], [[564, 566]]),
   game('x', '챔피언 카르네', '#4267b2', [650, 653, 656], [[696, 698]], { familyId: 'kalos6', notes: ['미르시티에서 받는 관동 스타터와 빛나는동굴 화석은 각각 하나만 고를 수 있습니다.', '기술머신은 재사용할 수 있지만 입수 장소는 시점 추론으로 표시합니다.'] }),
   game('y', '챔피언 카르네', '#b3313c', [650, 653, 656], [[696, 698]], { familyId: 'kalos6', notes: ['미르시티에서 받는 관동 스타터와 빛나는동굴 화석은 각각 하나만 고를 수 있습니다.', '기술머신은 재사용할 수 있지만 입수 장소는 시점 추론으로 표시합니다.'] }),
+  game('omega-ruby', '챔피언 성호', '#c53b48', [252, 255, 258], [[345, 347]], { familyId: 'hoenn6', notes: ['마그마단·원시 그란돈 경로를 따르며 뿌리·발톱화석은 하나만 고를 수 있습니다.', '도감내비 전용 칸은 전국도감 이후, 환상의 장소는 원시회귀 사건 이후로 분리합니다.'] }),
+  game('alpha-sapphire', '챔피언 성호', '#345fbd', [252, 255, 258], [[345, 347]], { familyId: 'hoenn6', notes: ['아쿠아단·원시 가이오가 경로를 따르며 뿌리·발톱화석은 하나만 고를 수 있습니다.', '도감내비 전용 칸은 전국도감 이후, 환상의 장소는 원시회귀 사건 이후로 분리합니다.'] }),
   game('sword', '챔피언 단델', '#39a7d7', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
   game('shield', '챔피언 단델', '#d84b89', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
   game('brilliant-diamond', '챔피언 난천', '#5c8eba', [387, 390, 393], [[408]], { familyId: 'sinnoh8', notes: ['포켓치 비전기술은 파티 기술칸을 차지하지 않으며 지하대동굴 풀은 진행 플래그에 따라 확장됩니다.'] }),
@@ -318,7 +321,7 @@ type BossPatch = Partial<Pick<PlannerBoss, 'level' | 'types'>>
 
 // 6세대 이후 버전은 modernGames.ts의 버전별 보스표를 그대로 씁니다.
 const modernPlannerGameIds = new Set<GameConfig['id']>([
-  'x', 'y', 'sword', 'shield', 'brilliant-diamond', 'shining-pearl',
+  'x', 'y', 'omega-ruby', 'alpha-sapphire', 'sword', 'shield', 'brilliant-diamond', 'shining-pearl',
 ])
 
 const frlgBossPatches: Record<string, BossPatch> = {

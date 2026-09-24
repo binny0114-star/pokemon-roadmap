@@ -3,4 +3,4 @@
 // - 입수처를 모델링하지 않은 기술가르침은 추천하지 않습니다.
 // - 입수 장을 확인하지 못한 진화 도구는 본편 마지막 장의 시점 추론으로 둡니다.
 // - 야생·선물로 합류한 포켓몬은 합류 레벨의 기본 기술 4개만 바로 쓰고 나머지는 기술 떠올리기로 배웁니다.
-export const modernClassicFamilies = new Set<string>(['kalos6'])
+export const modernClassicFamilies = new Set<string>(['kalos6', 'hoenn6'])

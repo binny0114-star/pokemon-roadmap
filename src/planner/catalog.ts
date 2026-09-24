@@ -172,6 +172,11 @@ const locationKo: Record<string, string> = {
   'granite-cave': '바위동굴',
   'fiery-path': '불꽃샛길',
   'new-mauville': '뉴보라',
+  'petalburg-woods': '등화숲',
+  'meteor-falls': '유성폭포',
+  'shoal-cave': '여울의 동굴',
+  'mt-pyre': '송화산',
+  'sea-mauville': '해상보라',
   'safari-zone': '사파리존',
   'twinleaf-town': '떡잎마을',
   'oreburgh-city': '무쇠시티',
@@ -204,6 +209,7 @@ const postgameMarkers: Record<string, string[]> = {
   unova5: ['route-11', 'route-12', 'route-13', 'route-14', 'route-15', 'undella', 'giant-chasm', 'abundant-shrine'],
   'unova5-2': ['nature-preserve'],
   kalos6: ['kiloude-city', 'friend-safari', 'unknown-dungeon', 'sea-spirits-den'],
+  hoenn6: ['battle-resort', 'sky-pillar'],
 }
 
 const gamePostgameMarkers: Partial<Record<GameConfig['id'], string[]>> = {
@@ -318,6 +324,9 @@ const postgameConditions = [
 ]
 
 const unavailableConditions = [
+  // ORAS 전설 고정 심볼 중 파티·환상의 장소 전제를 검증하지 못한 경로와 배포 무한의티켓 경로
+  'special-prerequisite-unresolved',
+  'event-item-eon-ticket',
   'other-event-arceus-in-party',
   'other-virtual-console',
   'other-regirock-regice-registeel-in-party',
@@ -344,6 +353,14 @@ const conditionKo: Record<string, string> = {
   'form-region-dependent': '본체 지역 설정에 따른 폼',
   'roaming-found-11-times': '배회 포켓몬을 11번 조우한 뒤',
   'version-exclusive-fossil': '버전 전용 화석',
+  'devon-scope': '데봉스코프 필요',
+  'mirage-spot': '날짜마다 바뀌는 환상의 장소',
+  soaring: '무한의 피리로 하늘 날기',
+  'story-progress-primal-defeated': '원시 그란돈·가이오가 사건 이후',
+  'story-progress-go-goggles': 'Go고글 입수 후',
+  'story-progress-eon-gift': '남쪽 외딴섬 이벤트',
+  'delta-episode': '델타 에피소드',
+  'delta-episode-complete': '델타 에피소드 완료 후',
   'time-morning': '아침',
   'time-day': '낮',
   'time-night': '밤',
@@ -504,6 +521,13 @@ function humanizeLocation(location: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
+function shedEvolutionLevel(species: CatalogSpecies): number {
+  return speciesCatalog.find((candidate) =>
+    candidate.evolvesFrom === species.evolvesFrom
+    && candidate.dex !== species.dex
+    && candidate.evolution?.trigger === 'level-up')?.evolution?.minLevel ?? 0
+}
+
 function ancestors(species: CatalogSpecies): CatalogSpecies[] {
   const result: CatalogSpecies[] = []
   let current = species
@@ -589,7 +613,7 @@ function isPostgameEncounter(game: GameConfig, encounter: CatalogEncounter): boo
 function encounterChapter(game: GameConfig, encounter: CatalogEncounter): Pick<RankedEncounter, 'chapter' | 'storyOrder' | 'quality'> {
   const family = getFamily(game)
   const mainStoryChapterCount = getMainStoryChapterCount(game)
-  if (['kalos6', 'galar8', 'sinnoh8', 'letsgo7', 'hisui8'].includes(game.familyId)) {
+  if (['kalos6', 'hoenn6', 'galar8', 'sinnoh8', 'letsgo7', 'hisui8'].includes(game.familyId)) {
     const chapter = modernEncounterChapter(
       game.familyId as ModernFamilyId,
       encounter.location,
@@ -747,7 +771,8 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         timing.chapter,
         ...evolutionLine.map((entry, index) => {
           const evolution = pathMethods[index]
-          const level = evolution?.minLevel ?? 0
+          // 껍질몬은 토중몬이 아이스크(Lv.20)로 진화할 때 함께 생깁니다.
+          const level = evolution?.minLevel ?? (evolution?.trigger === 'shed' ? shedEvolutionLevel(entry) : 0)
           const levelChapter = level ? Math.ceil(level / (60 / mainStoryChapterCount)) : 1
           const requirementChapter = crossVersionEvolutionReason(entry, game)
             ? 1
@@ -786,6 +811,8 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
           : encounter.conditions.some((condition) => condition.startsWith('johto-safari-blocks-'))
             ? '사파리존 블록 배치와 대기 일수의 정확한 해금 시점이 모델링되지 않았습니다.'
           : eventOnlyLocations.some((location) => locationMatchesToken(encounter.location, location))
+            // ORAS 남쪽 외딴섬의 라티오스/라티아스 선물은 본편 스토리 이벤트입니다.
+            && !encounter.conditions.includes('story-progress-eon-gift')
             ? '배포 아이템 또는 이벤트가 필요한 입수 경로입니다.'
           : (game.id === 'black-2' && encounter.conditions.includes('item-ice-key'))
             || (game.id === 'white-2' && encounter.conditions.includes('item-iron-key'))
@@ -1069,6 +1096,12 @@ const evolutionItemUnlocks: Record<string, Partial<Record<string, number>>> = {
     'leaf-stone': 2, 'thunder-stone': 3, 'moon-stone': 3, 'dawn-stone': 3,
     'water-stone': 4, 'shiny-stone': 4, 'fire-stone': 5, 'dusk-stone': 9,
   },
+  // 불꽃샛길(괴력) 불꽃의돌, 유성폭포 달의돌, 해상보라 각성의돌, 119번도로 리프의돌, 121번도로 빛의돌,
+  // 송화산 어둠의돌, 이끼시티 우주센터 태양의돌, 124번도로 보물사냥꾼 물의돌, 뉴보라 천둥의돌
+  hoenn6: {
+    'fire-stone': 4, 'moon-stone': 4, 'dawn-stone': 5, 'leaf-stone': 6, 'shiny-stone': 7,
+    'dusk-stone': 7, 'sun-stone': 8, 'water-stone': 8, 'thunder-stone': 9,
+  },
 }
 
 
@@ -1167,6 +1200,13 @@ export function evolutionRequirementChapter(species: CatalogSpecies, game: GameC
     if (species.dex === 470) return 9
     if (species.dex === 706) return 6
   }
+  if (game.familyId === 'hoenn6') {
+    // 뉴보라 자기장, 등화숲 이끼 낀 바위, 여울의 동굴 얼음 바위, 잿빛시티에서 받는 포켓몬스넥 키트
+    if (species.dex === 462 || species.dex === 476) return 9
+    if (species.dex === 470) return 1
+    if (species.dex === 471) return 8
+    if (species.dex === 350) return 2
+  }
   if (species.dex === 462 || species.dex === 476) {
     if (game.familyId === 'sinnoh4' || game.familyId === 'sinnoh8') return 3
     if (game.familyId.startsWith('unova5')) return 5
@@ -1245,6 +1285,11 @@ const genderEvolutionKo: Record<number, string> = {
 function areaEvolutionText(species: CatalogSpecies, game?: GameConfig): string | null {
   if (![462, 470, 471, 476].includes(species.dex)) return null
   if (!game) return '특정 장소에서 레벨업'
+  if (game.familyId === 'hoenn6') {
+    if (species.dex === 470) return '등화숲 이끼 낀 바위 근처에서 레벨업'
+    if (species.dex === 471) return '여울의 동굴 얼음 바위 근처에서 레벨업'
+    return '뉴보라에서 레벨업'
+  }
   if (game.familyId === 'kalos6') {
     if (species.dex === 470) return '20번도로 이끼 낀 바위 근처에서 레벨업'
     if (species.dex === 471) return '프로스트케이브 얼음 바위 근처에서 레벨업'

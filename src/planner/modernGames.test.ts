@@ -48,7 +48,7 @@ describe('6–9세대 스토리 패밀리', () => {
       'x', 'y', 'omega-ruby', 'alpha-sapphire',
       'sun', 'moon', 'ultra-sun', 'ultra-moon',
     ]
-    const promotedIds = new Set<ModernPlannerGameId>(['x', 'y'])
+    const promotedIds = new Set<ModernPlannerGameId>(['x', 'y', 'omega-ruby', 'alpha-sapphire'])
     for (const gameId of targetIds) {
       const support = modernGames.find((game) => game.id === gameId)!.catalog.plannerSupport
       const promoted = promotedIds.has(gameId)
@@ -402,7 +402,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       expect(rows).toHaveLength(2_819)
       expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(0)
       // pk3DS RSWE 칸 순서: 풀숲·긴 풀숲·도감내비 전용 3칸·파도타기·낡은/좋은/대단한낚싯대
-      expect(rows.filter((row) => ['walk', 'tall-grass'].includes(row.method))).toHaveLength(1_116)
+      // 물길 도로의 풀숲 칸 72개는 다이빙으로 들어가는 해초 조우입니다.
+      expect(rows.filter((row) => ['walk', 'tall-grass'].includes(row.method))).toHaveLength(1_044)
+      expect(rows.filter((row) => row.method === 'seaweed')).toHaveLength(72)
       expect(rows.filter((row) => row.method === 'surf')).toHaveLength(295)
       expect(rows.filter((row) => row.method === 'dexnav')).toHaveLength(150)
       expect(rows.filter((row) => row.method === 'dexnav').every((row) =>

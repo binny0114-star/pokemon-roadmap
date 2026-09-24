@@ -323,16 +323,25 @@ export function generatedMoves(
     const nextEvolutionLevel = nextStage ? evolutionLevel(nextStage) : null
     return Boolean(nextEvolutionLevel) && move.level > nextEvolutionLevel!
   }
-  // 합류 레벨까지 배운 자력기 중 마지막 4개만 처음부터 알고 있습니다.
+  // 합류 레벨까지 배운 자력기 중 마지막 4개만 처음부터 알고 있습니다. 같은 레벨 기술의 게임 내 순서는
+  // 원본에 없으므로, 4칸 경계에 걸친 레벨의 기술은 모두 기술 떠올리기가 필요한 것으로 보수적으로 둡니다.
   const joinLevel = Number(/\d+/.exec(speciesAvailability.level)?.[0] ?? 1)
   const knownAtJoin = modernClassicFamilies.has(game.familyId) && directlyAcquired
-    ? new Set(getLegalMoves(species, game, speciesAvailability.formIdentifier)
-        .filter((move) => move.method === 'level' && move.level <= joinLevel)
-        .map((move, index) => ({ move, index }))
-        .sort((a, b) => a.move.level - b.move.level || a.index - b.index)
-        .map(({ move }) => move.id)
-        .filter((id, index, all) => all.lastIndexOf(id) === index)
-        .slice(-4))
+    ? (() => {
+        const byLevel = new Map<number, Set<string>>()
+        for (const move of getLegalMoves(species, game, speciesAvailability.formIdentifier)) {
+          if (move.method !== 'level' || move.level > joinLevel) continue
+          const level = Math.max(1, move.level)
+          byLevel.set(level, (byLevel.get(level) ?? new Set()).add(move.id))
+        }
+        const known = new Set<string>()
+        for (const level of [...byLevel.keys()].sort((a, b) => b - a)) {
+          const ids = [...byLevel.get(level)!].filter((id) => !known.has(id))
+          if (known.size + ids.length > 4) break
+          for (const id of ids) known.add(id)
+        }
+        return known
+      })()
     : null
   const isReminderOnly = (move: LegalMove, learnedBy: CatalogSpecies) =>
     (

@@ -363,7 +363,16 @@ function orasStaticConditions(row) {
     ]
   }
   if ([384, 386].includes(row.species)) return ['postgame', 'delta-episode']
+  // 데봉스코프 켈리몬: 레슨마을은 원시 그란돈·가이오가 이후, 이끼시티는 델타 에피소드 중에만 나옵니다.
+  if (row.species === 352 && row.locationId === 176) return ['devon-scope', 'story-progress-primal-defeated']
+  if (row.species === 352) return ['devon-scope', 'postgame', 'delta-episode']
+  // 해상보라 화강돌은 입수 조건을 확인하지 못했습니다.
+  if (row.species === 442) return ['special-prerequisite-unresolved']
   if ([382, 383].includes(row.species)) return []
+  // 하늘을 나는 중 만나는 고정 심볼은 원시회귀 뒤 무한의 피리를 받아야 합니다.
+  if (row.locationId === 348 && ![249, 250, 380, 381, 483, 484, 487, 641, 642, 645].includes(row.species)) {
+    return ['soaring', 'story-progress-primal-defeated']
+  }
   if ([243, 244, 245, 249, 250, 377, 378, 379, 380, 381, 480, 481, 482, 483, 484, 485, 486, 487, 488, 638, 639, 640, 641, 642, 643, 644, 645, 646].includes(row.species)) {
     return ['special-prerequisite-unresolved']
   }
@@ -956,13 +965,28 @@ function gen6StandardMethod(layout, slot) {
   return 'flowers'
 }
 
+// ORAS 물길 도로의 Standard 풀숲 칸은 다이빙으로 들어가는 해저 해초 조우입니다(초라기·진주몽·시라칸 등).
+const orasUnderwaterRoutes = new Set(['Route 107', 'Route 124', 'Route 126', 'Route 128', 'Route 129', 'Route 130'])
+
+function orasAreaConditions(location, areaType, occurrence) {
+  // 유성폭포는 첫 Standard·무리 구역만 입구 쪽이고, 나머지는 폭포 위 안쪽 동굴과 아공이 방입니다.
+  if (location === 'Meteor Falls' && ['standard', 'horde'].includes(areaType) && occurrence > 0) return ['waterfall']
+  if (location.startsWith('Mirage ')) return ['mirage-spot', 'soaring', 'story-progress-primal-defeated']
+  return []
+}
+
 function parseGen6(buffer, locationNames, layoutId) {
   const layout = gen6StandardLayouts[layoutId]
   const typeNames = ['standard', 'ambush', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash', 'horde', 'friend-safari']
+  const occurrences = new Map()
   return unpack(buffer).flatMap((area, areaIndex) => {
     const locationId = area.readUInt16LE(0)
     const location = locationNames[locationId] || `gen6-location-${locationId}`
     const areaType = typeNames[area[2]] ?? 'unknown'
+    const occurrenceKey = `${location}:${areaType}`
+    const occurrence = occurrences.get(occurrenceKey) ?? 0
+    occurrences.set(occurrenceKey, occurrence + 1)
+    const areaConditions = layoutId === 'oras' ? orasAreaConditions(location, areaType, occurrence) : []
     const result = []
     for (let offset = 4; offset + 3 < area.length; offset += 4) {
       const encoded = area.readUInt16LE(offset)
@@ -970,9 +994,12 @@ function parseGen6(buffer, locationNames, layoutId) {
       if (!species) continue
       const decoded = normalizeForm(encoded >> 11)
       const slot = (offset - 4) / 4
-      const method = areaType === 'standard' ? gen6StandardMethod(layout, slot) : areaType
+      const standardMethod = areaType === 'standard' ? gen6StandardMethod(layout, slot) : areaType
+      const method = layoutId === 'oras' && standardMethod === 'walk' && orasUnderwaterRoutes.has(location)
+        ? 'seaweed'
+        : standardMethod
       // ORAS DexNav-only slots hold non-Hoenn species that appear after the National Pokédex.
-      const conditions = method === 'dexnav' ? ['postgame', 'national-dex'] : []
+      const conditions = [...areaConditions, ...(method === 'dexnav' ? ['postgame', 'national-dex'] : [])]
       if (decoded.condition) conditions.push(decoded.condition)
       result.push(encounter(
         species,

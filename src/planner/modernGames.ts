@@ -114,7 +114,7 @@ const kalosBosses = [
 
 const orasChapters = [
   chapter('or-1', '미로마을 → 금탄시티', '첫 파트너와 스톤배지', 'Lv.5–14', ['littleroot', 'route-101', 'route-102', 'route-103', 'route-104', 'petalburg-woods', 'rustboro', 'route-116', 'rusturf-tunnel'], ['스타터 선택', '금탄체육관 원규 격파', '데봉화물 회수'], ['풀베기']),
-  chapter('or-2', '무로마을 → 잿빛시티', '너클배지와 해양박물관', 'Lv.14–20', ['route-105', 'route-106', 'dewford', 'granite-cave', 'route-107', 'route-108', 'route-109', 'slateport'], ['무로체육관 철구 격파', '성호에게 편지 전달', '해양박물관 사건 해결'], ['플래시']),
+  chapter('or-2', '무로마을 → 잿빛시티', '너클배지와 해양박물관', 'Lv.14–20', ['route-105', 'route-106', 'dewford', 'granite-cave', 'route-107', 'route-108', 'route-109', 'slateport'], ['무로체육관 철구 격파', '성호에게 편지 전달', '해양박물관 사건 해결']),
   chapter('or-3', '보라시티', '다이나모배지', 'Lv.19–25', ['route-110', 'mauville', 'route-117', 'verdanturf'], ['라이벌전 승리', '보라체육관 암페어 격파'], ['바위깨기']),
   chapter('or-4', '굴뚝산 → 용암마을', '히트배지와 운석', 'Lv.24–30', ['route-111', 'route-112', 'fiery-path', 'route-113', 'fallarbor', 'route-114', 'meteor-falls', 'mt-chimney', 'jagged-pass', 'lavaridge'], ['유성폭포에서 악당 조직 추적', '굴뚝산 간부전 승리', '용암체육관 연돌 격파'], ['괴력']),
   chapter('or-5', '등화시티', '밸런스배지와 파도타기', 'Lv.28–33', ['petalburg'], ['등화체육관 종길 격파', '파도타기 획득'], ['파도타기']),
@@ -575,12 +575,14 @@ export const modernBossOverrides: Partial<Record<ModernPlannerGameId, PlannerBos
   }),
   'omega-ruby': [
     ...orasBosses.slice(0, 7),
-    boss('maxie-or', '마적', '마그마단 리더 최종전', 8, ['ground', 'dark'], 'Lv.41–43'),
+    // 해저동굴: 또도가스 41, 크로뱃 41, 그라에나 41, 메가 폭타 43
+    boss('maxie-or', '마적', '마그마단 리더 최종전', 8, ['poison', 'flying', 'dark', 'fire', 'ground'], 'Lv.41–43'),
     ...orasBosses.slice(7),
   ],
   'alpha-sapphire': [
     ...orasBosses.slice(0, 7),
-    boss('archie-as', '아강', '아쿠아단 리더 최종전', 8, ['water', 'dark'], 'Lv.41–43'),
+    // 해저동굴: 질뻐기 41, 크로뱃 41, 그라에나 41, 메가 샤크니아 43
+    boss('archie-as', '아강', '아쿠아단 리더 최종전', 8, ['poison', 'flying', 'dark', 'water'], 'Lv.41–43'),
     ...orasBosses.slice(7),
   ],
   sword: galarBosses.filter((entry) => !entry.gameIds || entry.gameIds.includes('sword')),
@@ -760,7 +762,7 @@ export function modernEncounterChapter(
     .find(([token]) => tokenMatches(location, token))
   const methodUnlocks: Partial<Record<ModernFamilyId, Record<string, number>>> = {
     kalos6: { 'old-rod': 2, 'good-rod': 4, 'super-rod': 7, surf: 3, 'rock-smash': 2, 'friend-safari': 10 },
-    hoenn6: { 'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 5, 'rock-smash': 3 },
+    hoenn6: { 'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 5, 'rock-smash': 3, seaweed: 8 },
     letsgo7: {},
     galar8: { surf: 7 },
     sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 11, surf: 5, 'rock-smash': 1 },
@@ -777,6 +779,8 @@ export function modernEncounterChapter(
     if (conditions.includes('story-progress-go-goggles')) prerequisiteChapter = Math.max(prerequisiteChapter, 4)
     if (conditions.includes('story-progress-eon-gift')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)
     if (conditions.includes('story-progress-primal-defeated')) prerequisiteChapter = Math.max(prerequisiteChapter, 9)
+    if (conditions.includes('devon-scope')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)
+    if (conditions.includes('waterfall')) prerequisiteChapter = Math.max(prerequisiteChapter, 9)
   }
   if (familyId === 'galar8') {
     const isDlcArea = conditions.includes('isle-of-armor') || conditions.includes('crown-tundra')
