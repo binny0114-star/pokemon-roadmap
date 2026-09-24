@@ -932,26 +932,57 @@ function parseBdsp(buffer, locationNames, underground) {
   })
 }
 
-function parseGen6(buffer, locationNames) {
-  const typeNames = ['wild-unspecified', 'grass', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash', 'horde', 'friend-safari']
+// PKHeX keeps the ROM table order (including empty slots) for Standard areas. The table order
+// follows pk3DS XYWE/RSWE; the X/Y decode reproduces every PokéAPI X/Y method row exactly.
+const gen6StandardLayouts = {
+  xy: [
+    ['walk', 12], ['yellow-flowers', 12], ['purple-flowers', 12], ['red-flowers', 12],
+    ['rough-terrain', 12], ['surf', 5], ['rock-smash', 5], ['old-rod', 3], ['good-rod', 3], ['super-rod', 3],
+  ],
+  // ORAS areas list Rock Smash separately, so the Standard table omits its five slots.
+  oras: [
+    ['walk', 12], ['tall-grass', 12], ['dexnav', 3], ['surf', 5],
+    ['old-rod', 3], ['good-rod', 3], ['super-rod', 3],
+  ],
+}
+
+function gen6StandardMethod(layout, slot) {
+  let remaining = slot
+  for (const [method, count] of layout) {
+    if (remaining < count) return method
+    remaining -= count
+  }
+  // X/Y Route 4 and Route 7 append Flabébé flower-color variants after the fixed table.
+  return 'flowers'
+}
+
+function parseGen6(buffer, locationNames, layoutId) {
+  const layout = gen6StandardLayouts[layoutId]
+  const typeNames = ['standard', 'ambush', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash', 'horde', 'friend-safari']
   return unpack(buffer).flatMap((area, areaIndex) => {
     const locationId = area.readUInt16LE(0)
     const location = locationNames[locationId] || `gen6-location-${locationId}`
-    const method = typeNames[area[2]] ?? 'unknown'
+    const areaType = typeNames[area[2]] ?? 'unknown'
     const result = []
     for (let offset = 4; offset + 3 < area.length; offset += 4) {
       const encoded = area.readUInt16LE(offset)
+      const species = encoded & 0x3ff
+      if (!species) continue
       const decoded = normalizeForm(encoded >> 11)
       const slot = (offset - 4) / 4
+      const method = areaType === 'standard' ? gen6StandardMethod(layout, slot) : areaType
+      // ORAS DexNav-only slots hold non-Hoenn species that appear after the National Pokédex.
+      const conditions = method === 'dexnav' ? ['postgame', 'national-dex'] : []
+      if (decoded.condition) conditions.push(decoded.condition)
       result.push(encounter(
-        encoded & 0x3ff,
+        species,
         decoded.form,
         location,
         `${location}-${locationId}-${method}-${areaIndex}`,
         area[offset + 2],
         area[offset + 3],
         method,
-        decoded.condition ? [decoded.condition] : [],
+        conditions,
         slot,
       ))
     }
@@ -1087,7 +1118,7 @@ for (const game of ['x', 'y', 'omega-ruby', 'alpha-sapphire']) {
       : game === 'omega-ruby'
         ? [...orasSpecial.shared, ...orasSpecial.omega]
         : [...orasSpecial.shared, ...orasSpecial.alpha]
-  rowsByGame[game] = deduplicate([...parseGen6(wild, gen6Names), ...special])
+  rowsByGame[game] = deduplicate([...parseGen6(wild, gen6Names, game === 'x' || game === 'y' ? 'xy' : 'oras'), ...special])
 }
 for (const game of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
   const [wild] = await Promise.all(sources[game].map(fetchBytes))

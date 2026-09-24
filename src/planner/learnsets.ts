@@ -1,4 +1,3 @@
-import gen8LegalityJson from '../generated/gen8-legality.json'
 import { getGen8DefaultFormProfile, getGen8FormProfileByIdentifier } from './gen8Forms'
 import type { CatalogSpecies, GameConfig, GeneratedMove } from './types'
 import { catalogVersionGroupIds, versionRegistrySource } from './versionRegistry'
@@ -71,8 +70,16 @@ interface Gen8LegalitySnapshot {
   learnsets: Record<string, Record<string, (string | number | null | string[])[][]>>
 }
 
-const gen8Legality = gen8LegalityJson as Gen8LegalitySnapshot
+interface Gen67LegalitySnapshot {
+  learnsets: Record<string, Record<string, (string | number | null)[][]>>
+}
+
+// 폼별 전체 기술 원본은 크므로 기술 스냅샷과 함께 지연 로드합니다.
+let gen8Legality: Gen8LegalitySnapshot = { moves: {}, learnsets: {} }
+let gen67Legality: Gen67LegalitySnapshot = { learnsets: {} }
 const gen8VersionGroups = new Set([19, 20, 23, 24])
+// 6·7세대 플래너 버전은 PokéAPI 포켓몬 식별자별 행을 씁니다.
+const gen67VersionGroups = new Set([15, 16, 17, 18])
 
 let snapshot: Snapshot | null = null
 export let learnsetProvenance: Snapshot['provenance'] | null = null
@@ -118,7 +125,13 @@ function readSnapshot(value: unknown): Snapshot {
 
 export async function loadLearnsets(): Promise<void> {
   if (snapshot) return
-  const module = await import('../generated/learnsets.json')
+  const [module, gen8Module, gen67Module] = await Promise.all([
+    import('../generated/learnsets.json'),
+    import('../generated/gen8-legality.json'),
+    import('../generated/gen67-legality.json'),
+  ])
+  gen8Legality = gen8Module.default as Gen8LegalitySnapshot
+  gen67Legality = gen67Module.default as Gen67LegalitySnapshot
   snapshot = readSnapshot(module.default)
   learnsetProvenance = snapshot.provenance
   learnsetCoverage = snapshot.coverage
@@ -144,12 +157,15 @@ export function getLegalMoves(species: CatalogSpecies, game: GameConfig, formIde
 function readLegalMoves(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): LegalMove[] {
   if (!snapshot) return []
   const useGen8Legality = gen8VersionGroups.has(game.versionGroupId)
+  const useGen67Legality = gen67VersionGroups.has(game.versionGroupId)
   const identifier = formIdentifier
     ? getGen8FormProfileByIdentifier(formIdentifier)?.pokemonIdentifier ?? formIdentifier
     : getGen8DefaultFormProfile(species.dex)?.pokemonIdentifier ?? species.id
   const entries = useGen8Legality
     ? gen8Legality.learnsets[String(game.versionGroupId)]?.[identifier] ?? []
-    : snapshot.learnsets[String(game.versionGroupId)]?.[String(species.dex)] ?? []
+    : useGen67Legality
+      ? gen67Legality.learnsets[String(game.versionGroupId)]?.[identifier] ?? []
+      : snapshot.learnsets[String(game.versionGroupId)]?.[String(species.dex)] ?? []
   return entries.flatMap(([moveId, method, level, machine, eggParentIdentifiers]) => {
     if (
       typeof moveId !== 'number'

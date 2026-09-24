@@ -84,7 +84,7 @@ const boss = (
 
 const kalosChapters = [
   chapter('kal-1', '조아마을 → 백단시티', '첫 파트너와 버그배지', 'Lv.5–12', ['vaniville', 'aquacorde', 'route-2', 'santalune-forest', 'route-3', 'santalune'], ['스타터 선택', '백단체육관 비올라 격파']),
-  chapter('kal-2', '미르시티 → 삼채시티', '화석과 월배지', 'Lv.12–25', ['route-4', 'lumiose', 'route-5', 'camphrier', 'parfum-palace', 'route-6', 'connecting-cave', 'route-7', 'route-8', 'ambrette', 'glittering-cave', 'cyllage'], ['미르시티에서 관동 스타터 받기', '파르팽궁전에서 포켓몬피리 회수', '빛나는동굴에서 플레어단 격퇴', '삼채체육관 자크로 격파'], ['바위깨기', '괴력']),
+  chapter('kal-2', '미르시티 → 삼채시티', '화석과 월배지', 'Lv.12–25', ['route-4', 'lumiose', 'route-5', 'camphrier', 'parfum-palace', 'route-6', 'connecting-cave', 'route-7', 'route-8', 'ambrette', 'glittering-cave', 'cyllage'], ['미르시티에서 관동 스타터 받기', '파르팽궁전에서 포켓몬피리 회수', '빛나는동굴에서 플레어단 격퇴', '삼채체육관 자크로 격파'], ['풀베기', '바위깨기', '괴력']),
   chapter('kal-3', '사라시티', '코스트배지와 메가진화', 'Lv.25–34', ['route-10', 'geosenge', 'route-11', 'reflection-cave', 'shalour', 'tower-of-mastery'], ['사라체육관 코르니 격파', '마스터타워에서 메가링 획득'], ['파도타기', '메가진화']),
   chapter('kal-4', '비익시티', '플랜트배지', 'Lv.30–37', ['route-12', 'azure-bay', 'coumarine'], ['비익체육관 후쿠지 격파'], ['공중날기']),
   chapter('kal-5', '미르시티', '프리즘배지와 발전소', 'Lv.35–42', ['route-13', 'kalos-power-plant', 'lumiose'], ['칼로스발전소 탈환', '미르체육관 시트론 격파']),
@@ -102,7 +102,8 @@ const kalosBosses = [
   boss('clemont', '시트론', '미르 체육관', 5, ['electric'], 'Lv.35–37'),
   boss('valerie', '마슈', '후늬 체육관', 6, ['fairy'], 'Lv.38–42'),
   boss('olympia', '고지카', '향전 체육관', 7, ['psychic'], 'Lv.44–48'),
-  boss('lysandre', '플라드리', '플레어단 최종전', 8, ['dark', 'water'], 'Lv.49–53'),
+  // 비밀기지 두 번째 전투: 비조도 49, 돈크로우 49, 화염레오 51, 메가갸라도스 53
+  boss('lysandre', '플라드리', '플레어단 최종전', 8, ['fighting', 'dark', 'flying', 'fire', 'normal', 'water'], 'Lv.49–53'),
   boss('wulfric', '우르프', '이설 체육관', 9, ['ice'], 'Lv.55–59'),
   boss('malva', '파키라', '사천왕', 9, ['fire'], 'Lv.63–65'),
   boss('siebold', '즈미', '사천왕', 9, ['water'], 'Lv.63–65'),
@@ -708,6 +709,7 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
 }
 
 const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
+  kalos6: ['kiloude-city', 'friend-safari', 'unknown-dungeon', 'sea-spirits-den'],
   hoenn6: ['battle-resort', 'sky-pillar'],
   alola7: [
     'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
@@ -723,6 +725,12 @@ const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
   ],
   hisui8: [],
   paldea9: [],
+}
+
+// 같은 장소 안에서도 필드기가 있어야 들어가는 구역은 방식별로 따로 막습니다.
+const gatedAreaMethods: Partial<Record<ModernFamilyId, Record<string, number>>> = {
+  // 22번도로 노란 꽃밭(Lv.25–27)은 파도타기와 폭포오르기로만 들어갑니다.
+  kalos6: { 'route-22:yellow-flowers': 9 },
 }
 
 function tokenMatches(location: string, token: string): boolean {
@@ -759,6 +767,12 @@ export function modernEncounterChapter(
     hisui8: {},
   }
   let prerequisiteChapter = methodUnlocks[familyId]?.[method] ?? 1
+  if (familyId === 'kalos6' && conditions.includes('rock-smash')) {
+    // 기술머신94 바위깨기는 Ambrette Town에서 받습니다.
+    prerequisiteChapter = Math.max(prerequisiteChapter, 2)
+  }
+  const gatedMethod = gatedAreaMethods[familyId]?.[`${location}:${method}`]
+  if (gatedMethod) prerequisiteChapter = Math.max(prerequisiteChapter, gatedMethod)
   if (familyId === 'hoenn6') {
     if (conditions.includes('story-progress-go-goggles')) prerequisiteChapter = Math.max(prerequisiteChapter, 4)
     if (conditions.includes('story-progress-eon-gift')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)

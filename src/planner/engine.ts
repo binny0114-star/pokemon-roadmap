@@ -3,6 +3,7 @@ import { getGen8DefaultFormProfile, getGen8FormProfile, getGen8FormProfileByIden
 import { getBosses, getFamily, getMainStoryChapterCount } from './games'
 import { getLegalMoves, moveExistsInGeneration, type LegalMove } from './learnsets'
 import { getMoveAcquisition } from './moveResources'
+import { modernClassicFamilies } from './modernPolicy'
 import { isStrongAgainst, typeCategory, weaknesses } from './typeChart'
 import type {
   CatalogSpecies,
@@ -322,16 +323,36 @@ export function generatedMoves(
     const nextEvolutionLevel = nextStage ? evolutionLevel(nextStage) : null
     return Boolean(nextEvolutionLevel) && move.level > nextEvolutionLevel!
   }
+  // 합류 레벨까지 배운 자력기 중 마지막 4개만 처음부터 알고 있습니다.
+  const joinLevel = Number(/\d+/.exec(speciesAvailability.level)?.[0] ?? 1)
+  const knownAtJoin = modernClassicFamilies.has(game.familyId) && directlyAcquired
+    ? new Set(getLegalMoves(species, game, speciesAvailability.formIdentifier)
+        .filter((move) => move.method === 'level' && move.level <= joinLevel)
+        .map((move, index) => ({ move, index }))
+        .sort((a, b) => a.move.level - b.move.level || a.index - b.index)
+        .map(({ move }) => move.id)
+        .filter((id, index, all) => all.lastIndexOf(id) === index)
+        .slice(-4))
+    : null
   const isReminderOnly = (move: LegalMove, learnedBy: CatalogSpecies) =>
-    includeAncestors
-    && move.method === 'level'
-    && evolvedStages.has(learnedBy.dex)
-    && !(directlyAcquired && learnedBy.dex === species.dex)
-    && (
-      move.level <= 1
-      || (
-        Boolean(evolutionLevel(learnedBy))
-        && move.level < evolutionLevel(learnedBy)!
+    (
+      knownAtJoin !== null
+      && move.method === 'level'
+      && learnedBy.dex === species.dex
+      && move.level <= joinLevel
+      && !knownAtJoin.has(move.id)
+    )
+    || (
+      includeAncestors
+      && move.method === 'level'
+      && evolvedStages.has(learnedBy.dex)
+      && !(directlyAcquired && learnedBy.dex === species.dex)
+      && (
+        move.level <= 1
+        || (
+          Boolean(evolutionLevel(learnedBy))
+          && move.level < evolutionLevel(learnedBy)!
+        )
       )
     )
   const levelChapter = (move: LegalMove, learnedBy: CatalogSpecies) =>
@@ -371,6 +392,8 @@ export function generatedMoves(
         && !requiresDelayedEvolution(move, learnedBy)
         && (!reminderOnly || Boolean(family.moveReminder))
         && (move.method !== 'egg' || Boolean(eggParentTiming(move)))
+        // 입수 장소를 모델링하지 않은 기술가르침은 추천하지 않습니다.
+        && !(modernClassicFamilies.has(game.familyId) && move.method === 'tutor')
         && (move.method === 'level' || !['sword', 'shield'].includes(game.id) || (
           Boolean(acquisition) && acquisition!.chapter <= getMainStoryChapterCount(game)
         ))
@@ -446,11 +469,11 @@ export function generatedMoves(
           eggParent?.chapter ?? 1,
         )
     const source = move.method === 'level'
-      ? move.level <= 1
-        ? reminderOnly
-          ? `${family.moveReminder!.location} 기술 떠올리기 · ${family.moveReminder!.cost}`
-          : `${learnedBy.name} Lv.1 기술 목록`
-        : `${learnedBy.name} Lv.${move.level} 자력 습득${learnedBy.dex !== species.dex ? ' 후 유지' : ''}`
+      ? reminderOnly
+        ? `${family.moveReminder!.location} 기술 떠올리기 · ${family.moveReminder!.cost}`
+        : move.level <= 1
+          ? `${learnedBy.name} Lv.1 기술 목록`
+          : `${learnedBy.name} Lv.${move.level} 자력 습득${learnedBy.dex !== species.dex ? ' 후 유지' : ''}`
       : acquisition
         ? `${acquisition.source}${eggParent ? ` · ${eggParent.parent.name} 부모 계열에서 유전` : ''}`
         : move.method === 'machine'
@@ -541,12 +564,14 @@ function assignFieldMoves(members: GeneratedMember[], game: GameConfig, enabled:
     if (!owner) continue
     owner.fieldMoves.push(move.id)
     assignedCount.set(owner.species.dex, (assignedCount.get(owner.species.dex) ?? 0) + 1)
+    const legalFieldMove = legalMovesForLineage(owner.species, game).find((entry) => entry.move.id === move.id)?.move
     const generated: GeneratedMove = {
       id: move.id,
       name: move.name,
       type: move.type,
-      category: typeCategory(move.type, game.generation),
-      source: `${legalMovesForLineage(owner.species, game).find((entry) => entry.move.id === move.id)?.move.machine ?? fieldMoveKo[move.id]} · ${family.chapters[move.unlockChapter - 1]?.title ?? `${move.unlockChapter}장`}에서 획득`,
+      // 4세대부터는 기술마다 물리·특수가 정해져 있습니다(예: 폭포오르기는 물리).
+      category: game.generation >= 4 && legalFieldMove ? legalFieldMove.category : typeCategory(move.type, game.generation),
+      source: `${legalFieldMove?.machine ?? fieldMoveKo[move.id]} · ${family.chapters[move.unlockChapter - 1]?.title ?? `${move.unlockChapter}장`}에서 획득`,
       availableChapter: Math.max(move.unlockChapter, owner.availability.chapter),
       quality: 'verified',
     }

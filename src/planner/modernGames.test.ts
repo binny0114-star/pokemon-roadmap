@@ -48,15 +48,16 @@ describe('6–9세대 스토리 패밀리', () => {
       'x', 'y', 'omega-ruby', 'alpha-sapphire',
       'sun', 'moon', 'ultra-sun', 'ultra-moon',
     ]
+    const promotedIds = new Set<ModernPlannerGameId>(['x', 'y'])
     for (const gameId of targetIds) {
       const support = modernGames.find((game) => game.id === gameId)!.catalog.plannerSupport
-      expect(support.status, gameId).toBe('catalog-only')
-      if (support.status !== 'catalog-only') throw new Error(`${gameId} 지원 게이트를 읽을 수 없습니다.`)
+      const promoted = promotedIds.has(gameId)
+      expect(support.status, gameId).toBe(promoted ? 'full' : 'catalog-only')
       expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
         'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
       ])
       expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.evidence.trim()), gameId).toBe(true)
-      expect(Object.values(support.accuracyGates ?? {}).some((gate) => !gate.complete), gameId).toBe(true)
+      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.complete), gameId).toBe(promoted)
     }
   })
 
@@ -365,7 +366,12 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     for (const gameId of ['x', 'y']) {
       const rows = encounterGames[gameId]
       expect(rows).toHaveLength(1_576)
-      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(995)
+      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(0)
+      // pk3DS XYWE 칸 순서로 Standard 표를 풀숲·꽃밭·거친 지형·파도타기·바위깨기·낚싯대로 나눕니다.
+      expect(rows.filter((row) => row.method === 'walk')).toHaveLength(324)
+      expect(rows.filter((row) => row.method === 'surf')).toHaveLength(100)
+      expect(rows.filter((row) => ['old-rod', 'good-rod', 'super-rod'].includes(row.method))).toHaveLength(198)
+      expect(rows.filter((row) => row.method === 'horde')).toHaveLength(315)
       expect(rows.filter((row) => row.method === 'friend-safari')).toHaveLength(196)
       expect(rows.filter((row) => row.method === 'fossil')).toHaveLength(9)
       expect(rows.filter((row) => row.method === 'npc-trade')).toHaveLength(9)
@@ -377,7 +383,8 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       expect(rows.some((row) =>
         row.species === 710
         && row.form === 3
-        && row.method === 'wild-unspecified'
+        && row.location === 'route-16'
+        && row.method === 'rough-terrain'
         && row.slot !== null,
       )).toBe(true)
     }
@@ -393,7 +400,13 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     for (const gameId of ['omega-ruby', 'alpha-sapphire']) {
       const rows = encounterGames[gameId]
       expect(rows).toHaveLength(2_819)
-      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(2_092)
+      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(0)
+      // pk3DS RSWE 칸 순서: 풀숲·긴 풀숲·도감내비 전용 3칸·파도타기·낡은/좋은/대단한낚싯대
+      expect(rows.filter((row) => ['walk', 'tall-grass'].includes(row.method))).toHaveLength(1_116)
+      expect(rows.filter((row) => row.method === 'surf')).toHaveLength(295)
+      expect(rows.filter((row) => row.method === 'dexnav')).toHaveLength(150)
+      expect(rows.filter((row) => row.method === 'dexnav').every((row) =>
+        row.conditions.includes('postgame') && row.conditions.includes('national-dex'))).toBe(true)
       expect(rows.filter((row) => row.method === 'egg')).toHaveLength(2)
       expect(rows.filter((row) => row.method === 'fossil')).toHaveLength(6)
       expect(rows.filter((row) => row.method === 'npc-trade')).toHaveLength(3)

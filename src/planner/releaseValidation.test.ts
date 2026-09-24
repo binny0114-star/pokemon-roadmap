@@ -55,9 +55,8 @@ describe('릴리스 레지스트리와 전국도감', () => {
 
   it('완전성 매니페스트가 누락 도메인과 시도한 대안을 요구한다', () => {
     const malformed = structuredClone(gen67Completeness)
-    const blocked = malformed.families.kalos6.gates.availability.requirements
-      .find((requirement) => requirement.status === 'blocked')!
-    blocked.attemptedAlternatives = []
+    const requirement = malformed.families.kalos6.gates.availability.requirements[0]
+    Object.assign(requirement, { status: 'blocked', missingFields: ['earliest-story-prerequisite'], attemptedAlternatives: [] })
     expect(() => validateCompletenessManifest(malformed)).toThrow('kalos6/availability')
   })
 
@@ -114,9 +113,24 @@ describe('릴리스 레지스트리와 전국도감', () => {
 
   it('레지스트리 게이트를 행 수만으로 수동 승격할 수 없다', () => {
     const malformed = structuredClone(registryJson)
-    const x = malformed.games.find((game) => game.id === 'x')!
-    x.plannerSupport.accuracyGates!.availability.complete = true
-    expect(() => validateRegistry(malformed)).toThrow('완전성 매니페스트')
+    const blockedGame = malformed.games.find((game) =>
+      game.plannerSupport.accuracyGates
+      && Object.values(game.plannerSupport.accuracyGates).some((gate) => !gate.complete))
+    if (blockedGame) {
+      const gateId = Object.entries(blockedGame.plannerSupport.accuracyGates!)
+        .find(([, gate]) => !gate.complete)![0] as keyof NonNullable<typeof blockedGame.plannerSupport.accuracyGates>
+      blockedGame.plannerSupport.accuracyGates![gateId].complete = true
+      expect(() => validateRegistry(malformed)).toThrow('완전성 매니페스트')
+    }
+    const incompleteManifest = structuredClone(gen67Completeness)
+    Object.assign(incompleteManifest.families.kalos6.gates.availability.requirements[0], {
+      status: 'blocked',
+      missingFields: ['earliest-story-prerequisite'],
+      attemptedAlternatives: ['Row counts alone cannot prove story reachability.'],
+    })
+    expect(() => validateCompletenessManifest(incompleteManifest)).not.toThrow()
+    expect(incompleteManifest.families.kalos6.gates.availability.requirements
+      .every((requirement) => requirement.status === 'complete')).toBe(false)
   })
 
   it('완료로 선언한 소스 행 수가 고정 스냅샷과 정확히 일치한다', () => {
@@ -199,8 +213,8 @@ describe('릴리스 레지스트리와 전국도감', () => {
   it('39개 스토리 게임과 지원 경계를 고유하고 상호 참조 가능하게 유지한다', () => {
     expect(gameCatalog).toHaveLength(39)
     expect(new Set(gameCatalog.map((game) => game.id)).size).toBe(39)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(25)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(14)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(27)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(12)
     expect(gameCatalog.some((game) => game.id === ('champions' as string))).toBe(false)
 
     const byId = new Map(gameCatalog.map((game) => [game.id, game]))
@@ -233,7 +247,7 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(duplicateVersionIds).toEqual([[2, ['blue', 'green']]])
     expect(modernGames.every((game) => gameCatalog.some((entry) => entry.id === game.id))).toBe(true)
     expect(modernGames.filter((game) => game.catalog.plannerSupport.status === 'full').map((game) => game.id).sort())
-      .toEqual(['brilliant-diamond', 'shield', 'shining-pearl', 'sword'])
+      .toEqual(['brilliant-diamond', 'shield', 'shining-pearl', 'sword', 'x', 'y'])
   })
 
   it('전국도감 #001–1025를 누락과 중복 없이 유지한다', () => {
