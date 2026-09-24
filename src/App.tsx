@@ -1123,12 +1123,14 @@ function App() {
             <div className="settings-card">
               <Toggle checked={builder.preferences.noTrade} title="통신교환 없이" description="교환진화가 필요한 최종 형태를 추천에서 제외합니다." onChange={(noTrade) => updatePreferences({ noTrade })} />
               <Toggle
-                checked={game.familyId === 'sinnoh8' || builder.preferences.hmConvenience}
-                disabled={game.familyId === 'sinnoh8'}
+                checked={game.familyId === 'sinnoh8' || (family.fieldMoves.length > 0 && builder.preferences.hmConvenience)}
+                disabled={game.familyId === 'sinnoh8' || family.fieldMoves.length === 0}
                 title={game.familyId === 'sinnoh8' ? '포켓치 비전기술 자동 사용' : '필드기 편의성 우선'}
                 description={game.familyId === 'sinnoh8'
                   ? 'BDSP 비전기술은 스토리 진행으로 해금되며 파티 기술칸이나 전용 요원이 필요하지 않습니다.'
-                  : '해당 버전의 실제 HM/필드기 목록을 점수에 반영합니다.'}
+                  : family.fieldMoves.length === 0
+                    ? `${game.shortName}에는 비전머신이 없어 이 설정은 추천에 영향을 주지 않습니다.`
+                    : '해당 버전의 실제 HM/필드기 목록을 점수에 반영합니다.'}
                 onChange={(hmConvenience) => updatePreferences({ hmConvenience })}
               />
             </div>
@@ -1159,7 +1161,7 @@ function App() {
               <div className="coverage-chips">
                 <span><b>{plan.coverage.bossCoverage}%</b> 보스 상성</span>
                 <span><b>{plan.coverage.offensiveTypes.length}</b> 공격 타입</span>
-                <span><b>{plan.coverage.fieldMovesCovered.length}/{family.fieldMoves.length}</b> {game.familyId === 'sinnoh8' ? '포켓치 비전기술' : '필드기'}</span>
+                {family.fieldMoves.length > 0 && <span><b>{plan.coverage.fieldMovesCovered.length}/{family.fieldMoves.length}</b> {game.familyId === 'sinnoh8' ? '포켓치 비전기술' : '필드기'}</span>}
               </div>
             </div>
             <div className="progress-strip">
@@ -1249,13 +1251,15 @@ function App() {
                       </tbody></table></div>
                       <p className="matrix-note">비전기술 해금은 동적 로드맵에 별도 행동으로 표시되며 파티 기술칸을 차지하지 않습니다.</p>
                     </>
+                  ) : family.fieldMoves.length === 0 ? (
+                    <div className="panel-heading"><div><span className="eyebrow">NO HIDDEN MOVES</span><h2>필드기 없음</h2><p>{game.shortName}에는 비전머신이 없습니다. 이동은 로토무자전거와 스토리 진행으로 해금되며 파티 멤버의 기술칸을 차지하지 않습니다.</p></div></div>
                   ) : (
                     <>
                       <div className="panel-heading"><div><span className="eyebrow">FIELD MOVE MATRIX</span><h2>{game.generation}세대 필드기 배치</h2><p>버전별 실제 HM 목록과 해당 버전의 포켓몬별 호환 데이터를 사용합니다.</p></div></div>
                       <div className="hm-table-wrap"><table className="hm-table"><thead><tr><th>필드기</th>{plan.members.map((member) => <th key={member.species.dex}>{member.species.name}</th>)}<th>진행 필수</th></tr></thead><tbody>
                         {family.fieldMoves.map((move) => <tr key={move.id}><th>{move.name}</th>{plan.members.map((member) => <td key={member.species.dex}>{member.fieldMoves.includes(move.id) ? <span className="hm-check">✓</span> : '·'}</td>)}<td>{move.required ? '필수' : '선택'}</td></tr>)}
                       </tbody></table></div>
-                      <p className="matrix-note">알려진 예외를 반영합니다: 지그제구리는 괴력을 배울 수 없고 직구리부터 가능합니다. “필드기 편의성” 점수는 원작 HM 목록을 세대별로 분리합니다.</p>
+                      <p className="matrix-note">{game.generation >= 3 ? '알려진 예외를 반영합니다: 지그제구리는 괴력을 배울 수 없고 직구리부터 가능합니다. ' : ''}“필드기 편의성” 점수는 원작 HM 목록을 세대별로 분리합니다.</p>
                     </>
                   )}
                 </>

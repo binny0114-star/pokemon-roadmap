@@ -129,6 +129,7 @@ Supabase를 구성하면 이메일 매직 링크 기반 **온라인 동기화**�
 | [기존 플래너 호환 스냅샷](https://github.com/binny0114-star/pokemon-roadmap/tree/3b0c8754d3dd41f9237e56739cd960a9d18ba677) | `3b0c8754d3dd41f9237e56739cd960a9d18ba677` | 1–5세대 추천 결과와 기존 플랜 ID 보존 |
 | [PKHeX](https://github.com/kwsch/PKHeX) | `77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5` | X/Y·ORAS·SM·USUM·SWSH·BDSP·SV의 폼 보존 입수 스냅샷과 LGPE·SWSH·BDSP·PLA 완전성 소스 조사 |
 | [Bulbapedia Walkthroughs](https://bulbapedia.bulbagarden.net/wiki/Category:Walkthroughs) | 2026-09-11 검수 | Gen 6–9 클래식 본편 14개 버전의 스토리·보스·이동 해금 |
+| [pret 디스어셈블리](https://github.com/pret) | 2026-09-24 대조 (`pokered`·`pokeyellow`·`pokegold`·`pokecrystal`·`pokeruby`·`pokeemerald`·`pokefirered`·`pokediamond`·`pokeplatinum`·`pokeheartgold` 기본 브랜치) | 1–4세대와 BDSP 보스 레벨, 비전머신 지급 위치, 화석 선택 등 수작업 스토리 데이터 교차 검증. 코드나 데이터를 복사하지 않고 값만 대조 |
 
 정적 종·진화·조우·기술 스냅샷은 레지스트리에 고정된 원본에서 생성합니다. 기존 1–5세대 추천과 플랜 ID는 호환 스냅샷을 덮어써 그대로 보존합니다. 현대 입수 스냅샷은 GPL-3.0인 PKHeX 자원에서 생성하며, PokéAPI 버전 ID나 PKHeX 내부 enum 대신 안정적인 레지스트리 게임 ID로 저장합니다. 각 생성 파일은 리비전, 입력 파일, 전국도감/세대 경계, 버전·버전 그룹별 행 수와 명시적 데이터 공백을 기계 판독 가능한 `provenance`·`coverage`로 기록합니다. `npm run generate:data:check`는 같은 리비전에서 결과가 재현되지 않으면 실패합니다. 스토리·보스·이동 해금과 버전 차이는 공개 워크스루를 버전별로 검수했으며, 스칼렛/바이올렛은 실제 선행 조건 DAG와 권장 오픈월드 순서를 분리합니다.
 
