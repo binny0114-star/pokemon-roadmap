@@ -31,7 +31,7 @@ const johtoChapters = [
   chapter('joh-2', '연결동굴 → 고동마을', '야돈우물과 너도밤나무숲', 'Lv.12–18', ['route-32', 'route-33', 'union-cave', 'azalea', 'slowpoke', 'ilex'], ['호일 격파', '풀베기 획득'], ['풀베기']),
   chapter('joh-3', '금빛시티', '꼭두와 자연공원', 'Lv.18–24', ['route-34', 'goldenrod', 'route-35', 'national-park', 'route-36'], ['꼭두 격파', '꼬부기물뿌리개 획득']),
   chapter('joh-4', '인주시티', '불탄탑과 유빈', 'Lv.22–28', ['route-37', 'ecruteak', 'burned-tower', 'bell-tower'], ['전설의 포켓몬 해방', '유빈 격파', '파도타기 획득'], ['파도타기']),
-  chapter('joh-5', '담청·진청시티', '등대와 비전신약', 'Lv.27–34', ['route-38', 'route-39', 'olivine', 'route-40', 'route-41', 'cianwood'], ['사도 격파', '암페어 치료', '규리 격파'], ['공중날기', '괴력']),
+  chapter('joh-5', '담청·진청시티', '등대와 비전신약', 'Lv.27–34', ['route-38', 'route-39', 'olivine', 'route-40', 'route-41', 'cianwood'], ['사도 격파', '빛나리 치료', '규리 격파'], ['공중날기', '괴력']),
   chapter('joh-6', '분노의호수 → 라디오타워', '로켓단 최종 소탕', 'Lv.30–38', ['route-42', 'mahogany', 'lake-of-rage', 'route-43', 'rocket-hideout', 'radio-tower'], ['붉은 갸라도스 조사', '류옹 격파', '라디오타워 탈환'], ['소용돌이']),
   chapter('joh-7', '얼음샛길 → 검은먹시티', '드래곤 배지', 'Lv.36–42', ['route-44', 'route-45', 'ice-path', 'blackthorn', 'dragons-den'], ['이향 격파', '용의굴 시험'], ['폭포오르기']),
   chapter('joh-8', '동성폭포 → 성도리그', '사천왕과 목호', 'Lv.40–50', ['route-26', 'route-27', 'tohjo', 'victory-road', 'indigo'], ['챔피언로드 돌파', '사천왕과 목호 격파']),
@@ -85,19 +85,19 @@ const unova2Chapters = [
 
 const kantoBosses = [
   boss('brock', '웅', '회색 체육관', 1, ['rock'], 'Lv.12–14'), boss('misty', '이슬', '블루 체육관', 2, ['water'], 'Lv.18–21'),
-  boss('surge', '마티스', '갈색 체육관', 3, ['electric'], 'Lv.21–24'), boss('erika', '민화', '무지개 체육관', 4, ['grass'], 'Lv.24–29'),
+  boss('surge', '마티스', '갈색 체육관', 3, ['electric'], 'Lv.18–24'), boss('erika', '민화', '무지개 체육관', 4, ['grass'], 'Lv.24–29'),
   boss('koga', '독수', '연분홍 체육관', 5, ['poison'], 'Lv.37–43'), boss('sabrina', '초련', '노랑 체육관', 6, ['psychic'], 'Lv.37–43'),
-  boss('blaine', '강연', '홍련 체육관', 7, ['fire'], 'Lv.42–47'), boss('giovanni', '비주기', '상록 체육관', 8, ['ground'], 'Lv.42–50'),
-  boss('lorelei', '칸나', '사천왕', 8, ['ice', 'water'], 'Lv.51–54'), boss('bruno-k', '시바', '사천왕', 8, ['fighting', 'rock'], 'Lv.51–56'),
-  boss('agatha', '국화', '사천왕', 8, ['ghost', 'poison'], 'Lv.53–58'), boss('lance-k', '목호', '사천왕', 8, ['dragon', 'flying'], 'Lv.54–60'),
+  boss('blaine', '강연', '홍련 체육관', 7, ['fire'], 'Lv.40–47'), boss('giovanni', '비주기', '상록 체육관', 8, ['ground'], 'Lv.42–50'),
+  boss('lorelei', '칸나', '사천왕', 8, ['ice', 'water'], 'Lv.53–56'), boss('bruno-k', '시바', '사천왕', 8, ['fighting', 'rock'], 'Lv.53–58'),
+  boss('agatha', '국화', '사천왕', 8, ['ghost', 'poison'], 'Lv.55–60'), boss('lance-k', '목호', '사천왕', 8, ['dragon', 'flying'], 'Lv.56–62'),
   boss('champion-k', '라이벌', '챔피언', 8, ['normal'], 'Lv.59–65'),
 ]
 
 const johtoBosses = [
-  boss('falkner', '비상', '도라지 체육관', 1, ['flying'], 'Lv.7–13'), boss('bugsy', '호일', '고동 체육관', 2, ['bug'], 'Lv.14–17'),
+  boss('falkner', '비상', '도라지 체육관', 1, ['flying'], 'Lv.7–9'), boss('bugsy', '호일', '고동 체육관', 2, ['bug'], 'Lv.14–16'),
   boss('whitney', '꼭두', '금빛 체육관', 3, ['normal'], 'Lv.18–20'), boss('morty', '유빈', '인주 체육관', 4, ['ghost'], 'Lv.21–25'),
-  boss('chuck', '사도', '진청 체육관', 5, ['fighting'], 'Lv.27–31'), boss('jasmine', '규리', '담청 체육관', 5, ['steel'], 'Lv.30–35'),
-  boss('pryce', '류옹', '황토 체육관', 6, ['ice'], 'Lv.27–34'), boss('clair', '이향', '검은먹 체육관', 7, ['dragon'], 'Lv.37–41'),
+  boss('chuck', '사도', '진청 체육관', 5, ['fighting'], 'Lv.27–30'), boss('jasmine', '규리', '담청 체육관', 5, ['steel'], 'Lv.30–35'),
+  boss('pryce', '류옹', '황토 체육관', 6, ['ice'], 'Lv.27–31'), boss('clair', '이향', '검은먹 체육관', 7, ['dragon'], 'Lv.37–40'),
   boss('will', '일목', '사천왕', 8, ['psychic'], 'Lv.40–42'), boss('koga-j', '독수', '사천왕', 8, ['poison'], 'Lv.40–44'),
   boss('bruno-j', '시바', '사천왕', 8, ['fighting'], 'Lv.42–46'), boss('karen', '카렌', '사천왕', 8, ['dark'], 'Lv.42–47'),
   boss('lance-j', '목호', '챔피언', 8, ['dragon', 'flying'], 'Lv.44–50'),
@@ -187,24 +187,28 @@ const fields = {
     { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 5, required: true },
     { id: 'flash', name: '플래시', type: 'electric', unlockChapter: 4, required: false },
     { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 7, required: false },
-    { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 8, required: false },
   ],
   sinnoh: [
     { id: 'cut', name: '풀베기', type: 'normal', unlockChapter: 2, required: true }, { id: 'fly', name: '공중날기', type: 'flying', unlockChapter: 3, required: false },
     { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 5, required: true }, { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 5, required: true },
     { id: 'defog', name: '안개제거', type: 'flying', unlockChapter: 4, required: false }, { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 1, required: true },
-    { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 7, required: true }, { id: 'rock-climb', name: '락클라임', type: 'normal', unlockChapter: 6, required: true },
+    { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 8, required: true }, { id: 'rock-climb', name: '락클라임', type: 'normal', unlockChapter: 6, required: true },
   ],
   hgss: [
     { id: 'cut', name: '풀베기', type: 'normal', unlockChapter: 2, required: true }, { id: 'fly', name: '공중날기', type: 'flying', unlockChapter: 5, required: false },
-    { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 4, required: true }, { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 5, required: true },
-    { id: 'whirlpool', name: '소용돌이', type: 'water', unlockChapter: 6, required: true }, { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 1, required: false },
-    { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 7, required: true }, { id: 'rock-climb', name: '락클라임', type: 'normal', unlockChapter: 8, required: false },
+    { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 4, required: true }, { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 6, required: true },
+    { id: 'whirlpool', name: '소용돌이', type: 'water', unlockChapter: 6, required: true }, { id: 'rock-smash', name: '바위깨기', type: 'fighting', unlockChapter: 3, required: false },
+    { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 7, required: true },
   ],
   unova: [
-    { id: 'cut', name: '풀베기', type: 'normal', unlockChapter: 1, required: true }, { id: 'fly', name: '공중날기', type: 'flying', unlockChapter: 4, required: false },
-    { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 5, required: false }, { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 8, required: false },
-    { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 8, required: false }, { id: 'dive', name: '다이빙', type: 'water', unlockChapter: 8, required: false },
+    { id: 'cut', name: '풀베기', type: 'normal', unlockChapter: 1, required: true }, { id: 'fly', name: '공중날기', type: 'flying', unlockChapter: 5, required: false },
+    { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 6, required: false }, { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 4, required: false },
+    { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 8, required: false },
+  ],
+  unova2: [
+    { id: 'cut', name: '풀베기', type: 'normal', unlockChapter: 1, required: true }, { id: 'fly', name: '공중날기', type: 'flying', unlockChapter: 3, required: false },
+    { id: 'surf', name: '파도타기', type: 'water', unlockChapter: 4, required: false }, { id: 'strength', name: '괴력', type: 'normal', unlockChapter: 2, required: false },
+    { id: 'waterfall', name: '폭포오르기', type: 'water', unlockChapter: 8, required: false }, { id: 'dive', name: '다이빙', type: 'water', unlockChapter: 5, required: false },
   ],
 }
 
@@ -216,7 +220,7 @@ export const families: Record<string, FamilyConfig> = {
   sinnoh4: { id: 'sinnoh4', generation: 4, region: '신오', chapters: sinnohChapters, bosses: sinnohBosses, fieldMoves: fields.sinnoh, moveReminder: { chapter: 4, location: '들판시티', cost: '하트비늘 1개' }, postgame: ['전국도감과 파이트에리어', '배틀타워/프런티어', '하드마운틴·전설 포켓몬'] },
   johto4: { id: 'johto4', generation: 4, region: '성도·관동', chapters: johtoChapters, bosses: johtoBosses, fieldMoves: fields.hgss, moveReminder: { chapter: 7, location: '검은먹시티', cost: '하트비늘 1개' }, postgame: ['관동 8개 배지', '은빛산 레드', '배틀프런티어'] },
   unova5: { id: 'unova5', generation: 5, region: '하나', chapters: unovaChapters, bosses: unovaBosses, fieldMoves: fields.unova, moveReminder: { chapter: 5, location: '궐수시티', cost: '하트비늘 1개' }, postgame: ['칠보시티 이후 동쪽 하나', '챔피언 노간주', '블랙시티/화이트포리스트'] },
-  'unova5-2': { id: 'unova5-2', generation: 5, region: '하나', chapters: unova2Chapters, bosses: unova2Bosses, fieldMoves: fields.unova, moveReminder: { chapter: 4, location: '포켓몬 월드 토너먼트', cost: '하트비늘 1개' }, postgame: ['포켓몬 월드 토너먼트', '검은마천루/하얀수동', 'N·아크로마 재대결'] },
+  'unova5-2': { id: 'unova5-2', generation: 5, region: '하나', chapters: unova2Chapters, bosses: unova2Bosses, fieldMoves: fields.unova2, moveReminder: { chapter: 4, location: '포켓몬 월드 토너먼트', cost: '하트비늘 1개' }, postgame: ['포켓몬 월드 토너먼트', '검은마천루/하얀수동', 'N·아크로마 재대결'] },
   galar8: { ...modernFamilies.galar8, id: 'galar8' },
   sinnoh8: { ...modernFamilies.sinnoh8, id: 'sinnoh8' },
 }
@@ -247,7 +251,7 @@ export const games: GameConfig[] = [
   game('red', '챔피언 라이벌', '#df4b45', [1, 4, 7], [[138, 140]], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
   game('green', '챔피언 라이벌', '#439b66', [1, 4, 7], [[138, 140]], { notes: ['그린 조우 데이터는 기존 저장 데이터와 추천 결과를 보존하기 위해 PokéAPI Blue 스냅샷을 사용합니다.'] }),
   game('blue', '챔피언 라이벌', '#447ed1', [1, 4, 7], [[138, 140]], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
-  game('yellow', '챔피언 라이벌', '#d5aa24', [25], [], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
+  game('yellow', '챔피언 라이벌', '#d5aa24', [25], [[138, 140]], { notes: ['1세대 원작은 공식 한국어 카트리지판이 없어 커뮤니티 통용 표기를 사용합니다.'] }),
   game('gold', '챔피언 목호', '#c99c2e', [152, 155, 158], []),
   game('silver', '챔피언 목호', '#8da1b5', [152, 155, 158], [], { curatedGuideId: 'silver' }),
   game('crystal', '챔피언 목호', '#25a8c7', [152, 155, 158], [], { curatedGuideId: 'crystal' }),
@@ -284,6 +288,36 @@ export function getMainStoryChapterCount(game: GameConfig): number {
   return family.mainStoryChapterCount ?? family.chapters.length
 }
 
+type BossPatch = Partial<Pick<PlannerBoss, 'level' | 'types'>>
+
+const frlgBossPatches: Record<string, BossPatch> = {
+  lorelei: { level: 'Lv.51–54' }, 'bruno-k': { level: 'Lv.51–56' }, agatha: { level: 'Lv.53–58' },
+  'lance-k': { level: 'Lv.54–60' }, 'champion-k': { level: 'Lv.57–63' },
+}
+const hgssBossPatches: Record<string, BossPatch> = {
+  falkner: { level: 'Lv.9–13' }, bugsy: { level: 'Lv.15–17' }, whitney: { level: 'Lv.17–19' },
+  chuck: { level: 'Lv.29–31' }, pryce: { level: 'Lv.30–34' }, clair: { level: 'Lv.38–41' }, 'lance-j': { level: 'Lv.46–50' },
+}
+const rubySapphireBossPatches: Record<string, BossPatch> = {
+  roxanne: { level: 'Lv.14–15' }, brawly: { level: 'Lv.17–18' }, wattson: { level: 'Lv.20–23' },
+  flannery: { level: 'Lv.26–28' }, norman: { level: 'Lv.28–31' }, winona: { level: 'Lv.30–33' }, 'tate-liza': { level: 'Lv.42' },
+}
+
+// 같은 스토리 패밀리라도 버전마다 트레이너 파티가 다르므로, 원작 트레이너 데이터와 다른 레벨·타입만 버전별로 덮어씁니다.
+const bossPatches: Partial<Record<GameConfig['id'], Record<string, BossPatch>>> = {
+  yellow: {
+    brock: { level: 'Lv.10–12' }, surge: { level: 'Lv.28' }, erika: { level: 'Lv.30–32' },
+    koga: { level: 'Lv.44–50', types: ['bug', 'poison'] }, sabrina: { level: 'Lv.50' },
+    blaine: { level: 'Lv.48–54' }, giovanni: { level: 'Lv.50–55' },
+  },
+  firered: frlgBossPatches,
+  leafgreen: frlgBossPatches,
+  heartgold: hgssBossPatches,
+  soulsilver: hgssBossPatches,
+  ruby: rubySapphireBossPatches,
+  sapphire: rubySapphireBossPatches,
+}
+
 export function getBosses(game: GameConfig): PlannerBoss[] {
   if (
     game.id === 'sword'
@@ -293,7 +327,10 @@ export function getBosses(game: GameConfig): PlannerBoss[] {
   ) {
     return getModernBosses(game.id).filter((entry) => !entry.gameIds || entry.gameIds.includes(game.id))
   }
-  const base = getFamily(game).bosses
+  const patches = bossPatches[game.id]
+  const base = patches
+    ? getFamily(game).bosses.map((entry) => patches[entry.id] ? { ...entry, ...patches[entry.id] } : entry)
+    : getFamily(game).bosses
   if (game.id === 'diamond' || game.id === 'pearl') return diamondPearlBosses
   if (game.id === 'emerald') {
     return base.map((entry) => {
