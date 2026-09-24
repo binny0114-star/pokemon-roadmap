@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import './App.css'
 import { guides } from './data'
 import { getPlan as getCuratedPlan } from './data/integrity'
@@ -28,7 +28,6 @@ import { families, games, getBosses, getFamily, getGame } from './planner/games'
 import {
   getModernBosses,
   getModernGame,
-  modernEncounterChapter,
   modernFamilies,
   modernGames,
   modernStoryProvenance,
@@ -134,74 +133,6 @@ const mechanicsFamilyKo = {
   'lets-go': '레츠고 전용',
   legends: 'LEGENDS 전용',
 } as const
-const modernMethodKo: Record<string, string> = {
-  walk: '일반 조우',
-  grass: '풀숲',
-  surf: '파도타기',
-  'old-rod': '낡은낚싯대',
-  'good-rod': '좋은낚싯대',
-  'super-rod': '대단한낚싯대',
-  'rock-smash': '바위깨기',
-  horde: '무리배틀',
-  'friend-safari': '프렌드사파리',
-  'wild-unspecified': '일반 야생(세부 방식 미분리)',
-  sos: '난입배틀(SOS)',
-  overworld: '오버월드',
-  hidden: '숨은 조우',
-  fishing: '낚시',
-  raid: '레이드',
-  static: '고정 심볼',
-  gift: '선물',
-  egg: '알',
-  fossil: '화석 복원',
-  trade: '게임 내 교환',
-  'honey-tree': '꿀나무',
-  'grand-underground': '지하대동굴 심볼 조우',
-}
-const modernConditionKo: Record<string, string> = {
-  'max-raid': '맥스 레이드',
-  'water-bike': '수상 자전거',
-  postgame: '엔딩 후',
-  'form-region-dependent': '지역에 따라 폼 결정',
-  'form-random': '폼 무작위',
-  'time-morning': '아침',
-  'time-day': '낮',
-  'time-evening': '저녁',
-  'time-night': '밤',
-  'weather-normal': '맑음',
-  'weather-overcast': '흐림',
-  'weather-rain': '비',
-  'weather-thunderstorm': '뇌우',
-  'weather-intense-sun': '강한 햇빛',
-  'weather-snow': '눈',
-  'weather-snowstorm': '눈보라',
-  'weather-sandstorm': '모래바람',
-  'weather-heavy-fog': '짙은 안개',
-  'weather-mist': '안개',
-  'grand-underground': '지하대동굴',
-  'explorer-kit': '탐험세트',
-  'defog': '안개제거',
-  'strength': '괴력',
-  'icicle-badge': '글레이셔배지',
-  'waterfall': '폭포오르기',
-  'national-dex': '전국도감 이후',
-  'elite-four-defeated': '사천왕 격파 이후',
-  'daily-swarm': '오늘의 대량발생',
-  'poke-radar': '포켓트레',
-  'daily-trophy-garden': '자랑의 뒤뜰 일일 풀',
-  'daily-great-marsh-binoculars': '대습초원 망원경 일일 풀',
-  'friday-only': '금요일 한정',
-  'night-only': '밤 한정',
-}
-
-function modernConditionLabel(condition: string): string {
-  const badge = /^badge-count-(\d+)$/.exec(condition)
-  if (badge) return `배지 ${badge[1]}개`
-  const stars = /^raid-stars-(\d+)-(\d+)$/.exec(condition)
-  if (stars) return `레이드 ${stars[1]}–${stars[2]}성`
-  return modernConditionKo[condition] ?? condition
-}
-
 function loadCurrentPlanProgress(gameId: PlannerGameId, plan: GeneratedPlan): Set<string> {
   const saved = loadPlanProgressWithLegacy(gameId, plan.id, plan.legacyId)
   const actionIds = composeRoadmap(getGame(gameId), plan)
@@ -287,38 +218,9 @@ function App() {
   const previewStorySource = modernStoryProvenance.sources.find((source) =>
     source.games.some((gameId) => gameId === previewGameId),
   )
-  const encounterPreviewGameIds = useMemo<Set<string>>(() => new Set(
-    catalogReady
-      ? modernGames
-          .filter((entry) => speciesCatalog.some((species) =>
-            species.encounters[String(entry.catalog.versionId)]?.some((encounter) => encounter.source === 'pkhex'),
-          ))
-          .map((entry) => entry.id)
-      : [],
-  ), [catalogReady])
-  const previewHasEncounterSnapshot = encounterPreviewGameIds.has(previewGameId)
   const previewAccuracyGates = previewGame.catalog.plannerSupport.status === 'catalog-only'
     ? previewGame.catalog.plannerSupport.accuracyGates
     : undefined
-  const previewEncounters = useMemo(() => {
-    if (!catalogReady) return []
-    return speciesCatalog.flatMap((species) =>
-      (species.encounters[String(previewGame.catalog.versionId)] ?? [])
-        .filter((encounter) =>
-          encounter.source === 'pkhex'
-          && modernEncounterChapter(
-            previewGame.familyId,
-            encounter.location,
-            encounter.conditions,
-            encounter.method,
-            encounter.minLevel,
-          ) === previewChapter)
-        .map((encounter) => ({ species, encounter })))
-      .sort((left, right) =>
-        left.encounter.location.localeCompare(right.encounter.location)
-        || left.species.dex - right.species.dex
-        || (left.encounter.form ?? 0) - (right.encounter.form ?? 0))
-  }, [catalogReady, previewChapter, previewGame])
 
   useEffect(() => {
     saveBuilderState(builder)
@@ -937,7 +839,6 @@ function App() {
                   ? entry.plannerSupport.accuracyGates
                   : undefined
                 const storyPreviewAvailable = modernPreviewGameIds.has(entry.id)
-                const encounterPreviewAvailable = encounterPreviewGameIds.has(entry.id)
                 return (
                   <article key={entry.id}>
                     <span>{entry.generation}세대 · {entry.region} · {mechanicsFamilyKo[entry.mechanicsFamily]}</span>
@@ -948,15 +849,7 @@ function App() {
                     <p>{full
                       ? '버전별 입수·기술·보스 데이터를 사용해 전체 로드맵을 생성합니다.'
                       : entry.plannerSupport.status === 'catalog-only' && entry.plannerSupport.reason}</p>
-                    {!full && <small>{
-                      !storyPreviewAvailable
-                        ? '전용 진행 모델 미지원'
-                        : !catalogReady
-                          ? '스토리 미리보기 · 입수 데이터 확인 중'
-                          : encounterPreviewAvailable
-                            ? '스토리·입수 미리보기 제공'
-                            : '스토리·보스 미리보기 제공 · 정확한 입수 스냅샷 없음'
-                    }</small>}
+                    {!full && <small>{storyPreviewAvailable ? '스토리·보스 미리보기 제공' : '전용 진행 모델 미지원'}</small>}
                     {accuracyGates && (
                       <small>
                         정확성 게이트 {Object.values(accuracyGates).filter((gate) => gate.complete).length}/
@@ -973,7 +866,7 @@ function App() {
         <section className="builder-section modern-preview">
           <div className="builder-step">
             <span className="step-number">◎</span>
-            <div><small>REVIEWED PREVIEW</small><h2>6–9세대 스토리·입수 미리보기</h2></div>
+            <div><small>REVIEWED PREVIEW</small><h2>6–9세대 스토리 미리보기</h2></div>
           </div>
           <div className="modern-preview-controls">
             <label>
@@ -991,11 +884,6 @@ function App() {
             <div>
               <div className="preview-capabilities" aria-label="미리보기 지원 범위">
                 <span className="available">{mechanicsFamilyKo[previewGame.catalog.mechanicsFamily]}</span>
-                <span className={previewHasEncounterSnapshot ? 'available' : 'unavailable'}>
-                  {previewHasEncounterSnapshot
-                    ? previewGame.catalog.plannerSupport.status === 'full' ? '완전 입수 스냅샷' : '부분 입수 스냅샷'
-                    : '정확한 입수 스냅샷 없음'}
-                </span>
                 <span className={previewGame.catalog.plannerSupport.status === 'full' ? 'available' : 'unavailable'}>
                   {previewGame.catalog.plannerSupport.status === 'full' ? '파티 로드맵 완전 지원' : '파티 로드맵 생성 미지원'}
                 </span>
@@ -1085,30 +973,6 @@ function App() {
                 <span key={entry.id}><strong>{entry.name}</strong><small>{entry.title} · {entry.level}</small></span>
               ))}
             </div>
-          )}
-          <div className="preview-encounter-heading">
-            <h3>이 장의 출현·입수 데이터</h3>
-            <span>{previewEncounters.length}건</span>
-          </div>
-          {previewEncounters.length > 0 ? (
-            <>
-              <div className="preview-encounters">
-                {previewEncounters.slice(0, 60).map(({ species, encounter }, index) => (
-                  <article key={`${species.dex}:${encounter.form ?? 0}:${encounter.location}:${encounter.area}:${encounter.method}:${index}`}>
-                    <strong>#{species.dex} {species.name}{encounter.form ? ` · 폼 ${encounter.form}` : ''}</strong>
-                    <span>{encounter.location}{encounter.area !== encounter.location ? ` / ${encounter.area}` : ''}</span>
-                    <small>
-                      {modernMethodKo[encounter.method] ?? encounter.method} · Lv.{encounter.minLevel}
-                      {encounter.maxLevel !== encounter.minLevel ? `–${encounter.maxLevel}` : ''}
-                      {encounter.conditions.length ? ` · ${encounter.conditions.map(modernConditionLabel).join(' · ')}` : ''}
-                    </small>
-                  </article>
-                ))}
-              </div>
-              {previewEncounters.length > 60 && <p className="data-note">ⓘ 화면에는 첫 60건을 표시합니다. 정적 스냅샷에는 이 장의 {previewEncounters.length}건이 모두 보존됩니다.</p>}
-            </>
-          ) : (
-            <p className="data-note">ⓘ 이 버전·구간은 현재 고정 리비전에서 정확한 로컬 입수 데이터를 제공하지 않으므로 임의로 채우지 않았습니다.</p>
           )}
         </section>
 
@@ -1422,7 +1286,7 @@ function App() {
           <summary>데이터 및 추천 방법론 <span>DATA / METHODOLOGY</span></summary>
           <div>
             <section><h3>정적 데이터 출처</h3><p>{catalogSource}. {learnsetSource()}. 전국도감 #001–{catalogCoverage?.nationalDex.max ?? 1025}의 종·진화와 조우 장소·세부 구역·방식·조건, 버전별 자력기·TM/HM·기술가르침 호환 데이터를 빌드 전에 정규화했습니다. 브라우저는 외부 API를 호출하지 않습니다.</p></section>
-            <section><h3>현대 미리보기 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료와 버전별 공개 워크스루를 사용합니다. 카탈로그 전용 게임의 미리보기는 출처가 확보된 범위만 표시합니다.</p></section>
+            <section><h3>현대 미리보기 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료를 소드·실드·BDSP 플래너에, 버전별 공개 워크스루를 스토리 미리보기에 사용합니다. 카탈로그 전용 게임은 입수 데이터를 표시하지 않습니다.</p></section>
             <section><h3>결정론 점수</h3><p>스토리 합류 시점, 남은 관장·사천왕 상성, 새 공격 타입, 종족값·역할, 공통 약점 감점, 버전별 필드기 기여를 합산합니다. 단일 타입 모드는 해당 타입을 공유하는 진화 계열 안에서만 같은 점수를 적용합니다.</p></section>
             <section><h3>한계와 품질 표시</h3><p>낚싯대·파도타기·바위깨기·박치기와 엔딩 후 조건은 실제 조우 방식의 해금 시점보다 앞당기지 않습니다. 시간대·계절·대량발생·포켓트레·라디오 같은 조건도 입수 안내에 표시합니다. 특수 심볼의 세부 이벤트나 일반 TM·기술가르침의 지도상 획득 시점을 완전히 확정할 수 없는 경우에는 “시점 추론”으로 구분합니다.</p></section>
           </div>

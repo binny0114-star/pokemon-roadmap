@@ -510,15 +510,13 @@ footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-t
   margin: 0.25rem 0;
 }
 
-.preview-bosses,
-.preview-encounters {
+.preview-bosses {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   gap: 0.65rem;
 }
 
-.preview-bosses span,
-.preview-encounters article {
+.preview-bosses span {
   display: grid;
   gap: 0.25rem;
   padding: 0.75rem;
@@ -527,20 +525,8 @@ footer { min-height: 140px; border-top: 1px solid #d7ddd8; display: grid; grid-t
   background: var(--paper);
 }
 
-.preview-bosses small,
-.preview-encounters small,
-.preview-encounters span {
+.preview-bosses small {
   color: var(--muted);
-}
-
-.preview-encounter-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.preview-encounter-heading h3 {
-  margin: 0;
 }
 
 @media (max-width: 720px) {
