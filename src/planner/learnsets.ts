@@ -128,8 +128,21 @@ export function learnsetSource(): string {
   return snapshot?.source ?? '기술 데이터 로딩 중'
 }
 
-export function getLegalMoves(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): LegalMove[] {
+const legalMovesCache = new Map<string, readonly LegalMove[]>()
+
+export function getLegalMoves(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): readonly LegalMove[] {
   if (!snapshot || species.generation > game.generation) return []
+  // 불변 스냅샷에서 같은 버전 그룹·폼의 기술표를 반복 생성하지 않도록 읽기 전용으로 캐시합니다.
+  const cacheKey = `${game.versionGroupId}:${game.generation}:${species.dex}:${formIdentifier ?? ''}`
+  const cached = legalMovesCache.get(cacheKey)
+  if (cached) return cached
+  const moves = Object.freeze(readLegalMoves(species, game, formIdentifier))
+  legalMovesCache.set(cacheKey, moves)
+  return moves
+}
+
+function readLegalMoves(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): LegalMove[] {
+  if (!snapshot) return []
   const useGen8Legality = gen8VersionGroups.has(game.versionGroupId)
   const identifier = formIdentifier
     ? getGen8FormProfileByIdentifier(formIdentifier)?.pokemonIdentifier ?? formIdentifier

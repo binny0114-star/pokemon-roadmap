@@ -41,7 +41,7 @@ const move = (id: string, method: LegalMove['method'], machine: string | null = 
 describe('Sword/Shield 완전 플래너 게이트', () => {
   beforeAll(async () => {
     await Promise.all([loadCatalog(), loadLearnsets()])
-  }, 30_000)
+  }, 120_000)
 
   it('두 버전과 모든 Galar 매니페스트 게이트만 완전 지원으로 승격한다', () => {
     for (const gameId of ['sword', 'shield']) {

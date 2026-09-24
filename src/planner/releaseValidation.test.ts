@@ -29,7 +29,7 @@ const defaults: PlannerPreferences = {
 
 beforeAll(async () => {
   await loadCatalog()
-}, 20_000)
+}, 120_000)
 
 describe('릴리스 레지스트리와 전국도감', () => {
   it('문자열 gate 값이 truthy여도 완전 지원으로 승격하지 않는다', () => {

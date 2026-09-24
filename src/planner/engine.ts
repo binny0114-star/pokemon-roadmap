@@ -645,7 +645,31 @@ function isEligibleCandidate(
   return !challengeType || speciesTypes(species, game.generation, game).includes(challengeType)
 }
 
+const challengeCandidateCountCache = new Map<string, number>()
+
 export function challengeCandidateCount(
+  game: GameConfig,
+  preferences: PlannerPreferences,
+  challengeType: string,
+  challengeStarterDex?: number,
+): number {
+  // 화면이 다시 그려질 때마다 타입별로 전국도감 전체를 훑지 않도록, 결과에 영향을 주는 입력만 키로 캐시합니다.
+  const cacheKey = [
+    game.id,
+    challengeType,
+    challengeStarterDex ?? '',
+    preferences.noTrade ? 'n' : 't',
+    preferences.allowPostgame ? 'p' : '-',
+    preferences.allowLegendary ? 'l' : '-',
+  ].join(':')
+  const cached = challengeCandidateCountCache.get(cacheKey)
+  if (cached !== undefined) return cached
+  const count = computeChallengeCandidateCount(game, preferences, challengeType, challengeStarterDex)
+  if (speciesCatalog.length) challengeCandidateCountCache.set(cacheKey, count)
+  return count
+}
+
+function computeChallengeCandidateCount(
   game: GameConfig,
   preferences: PlannerPreferences,
   challengeType: string,
@@ -671,6 +695,27 @@ function satisfiesStarterDependency(species: CatalogSpecies, selected: CatalogSp
   return Boolean(selectedStarter) && selectedStarter!.chainId === speciesByDex.get(requiredDex)?.chainId
 }
 
+function fitsSelection(
+  species: CatalogSpecies,
+  selected: CatalogSpecies[],
+  game: GameConfig,
+  challengeStarterDex: number | null,
+): boolean {
+  if (selected.some((member) => member.dex === species.dex || member.chainId === species.chainId)) return false
+  const group = getAvailability(species, game).mutuallyExclusiveGroup
+  if (group && challengeStarterDex && group === 'starter') return false
+  if (group && selected.some((member) => getAvailability(member, game).mutuallyExclusiveGroup === group)) return false
+  return satisfiesStarterDependency(species, selected, game)
+}
+
+export function replacementAlternatives(game: GameConfig, plan: GeneratedPlan, targetDex: number): GeneratedMember[] {
+  const kept = plan.members
+    .filter((member) => member.species.dex !== targetDex)
+    .map((member) => member.species)
+  return plan.alternatives.filter((alternative) =>
+    fitsSelection(alternative.species, kept, game, plan.challengeStarterDex))
+}
+
 export function generateParty(game: GameConfig, preferences: PlannerPreferences, options: GenerateOptions): GeneratedPlan {
   const challengeType = options.challengeType ?? null
   const challengeStarterDex = challengeType ? options.requiredDexes[0] ?? null : null
@@ -679,11 +724,14 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
   if (validation.errors.length) throw new Error(validation.errors.join('\n'))
   const locked = new Set(options.lockedDexes ?? [])
   const required = new Set(options.requiredDexes)
-  const retainedDexes = [...new Set([
-    ...options.requiredDexes,
-    ...(options.previousMembers ?? []).filter((dex) => locked.has(dex)),
-  ])]
-  const selected = retainedDexes.map((dex) => speciesByDex.get(dex)).filter((entry): entry is CatalogSpecies => Boolean(entry))
+  const selected = [...new Set(options.requiredDexes)]
+    .map((dex) => speciesByDex.get(dex))
+    .filter((entry): entry is CatalogSpecies => Boolean(entry))
+  // 잠금 멤버는 필수 멤버 뒤에 유지하되, 같은 진화 계열이나 스타터·화석처럼 함께 입수할 수 없는 조합은 들이지 않습니다.
+  for (const dex of options.previousMembers ?? []) {
+    const species = locked.has(dex) ? speciesByDex.get(dex) : undefined
+    if (species && selected.length < 6 && fitsSelection(species, selected, game, challengeStarterDex)) selected.push(species)
+  }
   for (const species of selected) {
     const choices = getAvailability(species, game).formChoices
     if (!choices?.length) continue
@@ -695,30 +743,15 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
       throw new Error(`${species.name}: 사용할 폼을 선택하세요.`)
     }
   }
-  const eligible = speciesCatalog.filter((species) => {
-    if (selected.some((member) => member.dex === species.dex)) return false
-    if (selected.some((member) => member.chainId === species.chainId)) return false
-    if (!isEligibleCandidate(species, game, preferences, challengeType)) return false
-    const availability = getAvailability(species, game)
-    if (challengeStarterDex && availability.mutuallyExclusiveGroup === 'starter') return false
-    if (availability.mutuallyExclusiveGroup && selected.some((member) =>
-      getAvailability(member, game).mutuallyExclusiveGroup === availability.mutuallyExclusiveGroup
-    )) return false
-    if (!satisfiesStarterDependency(species, selected, game)) return false
-    return true
-  })
+  const eligible = speciesCatalog.filter((species) =>
+    fitsSelection(species, selected, game, challengeStarterDex)
+    && isEligibleCandidate(species, game, preferences, challengeType))
 
   const variant = Math.max(0, options.variant ?? 0)
   const alternativesPool: { species: CatalogSpecies; score: number; reason: string }[] = []
   while (selected.length < 6) {
     const ranked = eligible
-      .filter((species) => !selected.some((member) => member.dex === species.dex))
-      .filter((species) => !selected.some((member) => member.chainId === species.chainId))
-      .filter((species) => {
-        const group = getAvailability(species, game).mutuallyExclusiveGroup
-        return !group || !selected.some((member) => getAvailability(member, game).mutuallyExclusiveGroup === group)
-      })
-      .filter((species) => satisfiesStarterDependency(species, selected, game))
+      .filter((species) => fitsSelection(species, selected, game, challengeStarterDex))
       .map((species) => ({ species, ...scoreCandidate(species, game, selected, preferences, formSelections) }))
       .sort((a, b) => b.score - a.score || a.species.dex - b.species.dex)
     if (!ranked.length) break

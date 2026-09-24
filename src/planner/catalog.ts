@@ -273,10 +273,10 @@ const methodUnlocks: Record<string, Partial<Record<string, number>>> = {
   kanto3: { 'old-rod': 3, 'good-rod': 5, 'super-rod': 5, surf: 5, 'rock-smash': 7 },
   sinnoh4: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 9, surf: 5, 'rock-smash': 1 },
   johto4: {
-    'old-rod': 2, 'good-rod': 5, 'super-rod': 9, surf: 4, 'rock-smash': 1,
+    'old-rod': 2, 'good-rod': 5, 'super-rod': 9, surf: 4, 'rock-smash': 3,
     headbutt: 2, 'headbutt-low': 2, 'headbutt-normal': 2, 'headbutt-high': 2,
   },
-  unova5: { 'super-rod': 9, 'super-rod-spots': 9, surf: 5, 'surf-spots': 5, 'bubbling-spots': 5 },
+  unova5: { 'super-rod': 9, 'super-rod-spots': 9, surf: 6, 'surf-spots': 6, 'bubbling-spots': 6 },
   'unova5-2': { 'super-rod': 9, 'super-rod-spots': 9, surf: 4, 'surf-spots': 4, 'bubbling-spots': 4 },
 }
 

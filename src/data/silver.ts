@@ -216,7 +216,7 @@ export const silverGuide: GameGuide = {
       subtitle: '공중날기와 괴력',
       level: '권장 Lv.28–32',
       objectives: [
-        { id: 'silver-05-a', text: '약을 구해 담청 등대의 암페어 치료' },
+        { id: 'silver-05-a', text: '약을 구해 담청 등대의 빛나리 치료' },
         { id: 'silver-05-b', text: '사도와 규리 격파' },
       ],
       actions: ['진청체육관 밖에서 HM02 공중날기를 받습니다.', '담청식당에서 HM04 괴력을 받습니다.'],
