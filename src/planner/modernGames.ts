@@ -154,7 +154,8 @@ const alolaChapters = [
 
 const alolaBosses = [
   boss('ilima-trial', '주인 형사구스/레트라', '일리마의 시련', 1, ['normal'], 'Lv.12'),
-  boss('hala', '할라', '멜레멜레 큰 시련', 1, ['fighting'], 'Lv.14–16'),
+  // 멜레멜레 큰 시련: 망키 14, 마크탕 14, 오기지게 15
+  boss('hala', '할라', '멜레멜레 큰 시련', 1, ['fighting'], 'Lv.14–15'),
   boss('lana-trial', '주인 약어리', '수련의 시련', 2, ['water'], 'Lv.20'),
   boss('kiawe-trial', '주인 염뉴트', '키아웨의 시련', 2, ['fire', 'poison'], 'Lv.22'),
   boss('mallow-trial', '주인 라란티스', '마오의 시련', 2, ['grass'], 'Lv.24'),
@@ -165,12 +166,14 @@ const alolaBosses = [
   boss('lusamine-sm', '루자미네', '에테르대표', 5, ['fairy', 'normal', 'fighting', 'grass', 'water', 'ghost'], 'Lv.41'),
   boss('hapu', '하푸', '포니 큰 시련', 6, ['ground'], 'Lv.47–48'),
   boss('kommo-o-trial', '주인 짜랑고우거', '포니대협곡 시련', 6, ['dragon', 'fighting'], 'Lv.45'),
-  boss('lusamine-ultra-space-sm', '루자미네', '울트라스페이스 최종전', 7, ['fairy', 'water'], 'Lv.50'),
+  // 픽시·드레디어·무우마직·밀로틱·이븐곰 모두 Lv.50
+  boss('lusamine-ultra-space-sm', '루자미네', '울트라스페이스 최종전', 7, ['fairy', 'grass', 'ghost', 'water', 'normal', 'fighting'], 'Lv.50'),
   boss('hala-e4', '할라', '사천왕', 8, ['fighting'], 'Lv.54–55'),
   boss('olivia-e4', '라이치', '사천왕', 8, ['rock'], 'Lv.54–55'),
   boss('acerola-e4', '아세로라', '사천왕', 8, ['ghost'], 'Lv.54–55'),
   boss('kahili', '카일리', '사천왕', 8, ['flying'], 'Lv.54–55'),
-  boss('kukui', '쿠쿠이박사', '챔피언 결정전', 8, ['normal'], 'Lv.57–58'),
+  // 루가루암 57, 나인테일(알로라) 56, 워글 56, 자포코일 56, 잠만보 56, 고른 스타터의 약점 스타터 58
+  boss('kukui', '쿠쿠이박사', '챔피언 결정전', 8, ['rock', 'ice', 'fairy', 'normal', 'flying', 'electric', 'steel'], 'Lv.56–58'),
 ]
 
 const ultraChapters = [
@@ -204,7 +207,8 @@ const ultraBosses = [
   boss('olivia-e4-usum', '라이치', '사천왕', 8, ['rock'], 'Lv.56–57'),
   boss('acerola-e4-usum', '아세로라', '사천왕', 8, ['ghost'], 'Lv.56–57'),
   boss('kahili-usum', '카일리', '사천왕', 8, ['flying'], 'Lv.56–57'),
-  boss('hau', '하우', '챔피언 결정전', 8, ['electric'], 'Lv.59–60'),
+  // 라이츄(알로라) 59, 이브이 진화형 58, 켄타로스 58, 음번 58, 모단단게 59, 스타터 60
+  boss('hau', '하우', '챔피언 결정전', 8, ['electric', 'psychic', 'normal', 'flying', 'dragon', 'fighting', 'ice'], 'Lv.58–60'),
 ]
 
 const letsGoChapters = [
@@ -461,8 +465,9 @@ const orasFields: FieldMove[] = [
 export const modernFamilies: Record<ModernFamilyId, ModernFamilyConfig> = {
   kalos6: { id: 'kalos6', generation: 6, region: '칼로스', chapters: kalosChapters, bosses: kalosBosses, fieldMoves: gen6Fields, moveReminder: { chapter: 7, location: '버들비마을', cost: '하트비늘 1개' }, postgame: ['기남시티 배틀하우스', '메가링 강화와 메가스톤', '핸섬 에피소드'] },
   hoenn6: { id: 'hoenn6', generation: 6, region: '호연', chapters: orasChapters, bosses: orasBosses, fieldMoves: orasFields, moveReminder: { chapter: 4, location: '단풍마을', cost: '하트비늘 1개' }, postgame: ['에피소드 델타와 레쿠쟈·테오키스', '배틀리조트', '환상의 장소와 전설 포켓몬'] },
-  alola7: { id: 'alola7', generation: 7, region: '알로라', chapters: alolaChapters, bosses: alolaBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['울트라비스트 포획 임무', '배틀트리', '수호신과 네크로즈마'] },
-  'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
+  // 썬·문의 기술 떠올리기는 울라울라섬 재활용 공장 앞, 울트라썬·울트라문은 라나키라마운틴 포켓몬센터에 있습니다.
+  alola7: { id: 'alola7', generation: 7, region: '알로라', chapters: alolaChapters, bosses: alolaBosses, fieldMoves: [], moveReminder: { chapter: 4, location: '울라울라섬 재활용 공장 앞', cost: '하트비늘 1개' }, postgame: ['울트라비스트 포획 임무', '배틀트리', '수호신과 네크로즈마'] },
+  'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '하트비늘 1개' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
   letsgo7: { id: 'letsgo7', generation: 7, region: '관동', chapters: letsGoChapters, bosses: letsGoBosses, fieldMoves: [], postgame: ['블루와 체육관 관장 재대결', '블루시티동굴의 뮤츠', '마스터 트레이너와 레드'] },
   galar8: { id: 'galar8', generation: 8, region: '가라르', chapters: galarChapters, bosses: galarBosses, fieldMoves: [], moveReminder: { chapter: 1, location: '모든 포켓몬센터', cost: '무료' }, mainStoryChapterCount: 10, postgame: ['소드·실드 전설 에피소드', '배틀타워', '갑옷섬 마스터 도장', '왕관설원 전설의 메모'] },
   sinnoh8: {
@@ -616,6 +621,8 @@ const alolaLocationChapterOverrides = {
   'route-16': 4,
   'route-17': 4,
   'ruins-of-abundance': 4,
+  // 8번도로 서쪽 바다를 라프라스로 건너 도착합니다.
+  'secluded-shore': 3,
   'thrifty-megamart': 4,
   'ulaula-beach': 4,
   'ulaula-meadow': 4,
@@ -763,6 +770,9 @@ export function modernEncounterChapter(
   const methodUnlocks: Partial<Record<ModernFamilyId, Record<string, number>>> = {
     kalos6: { 'old-rod': 2, 'good-rod': 4, 'super-rod': 7, surf: 3, 'rock-smash': 2, 'friend-safari': 10 },
     hoenn6: { 'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 5, 'rock-smash': 3, seaweed: 8 },
+    // 라프라스 스윔과 낚싯대는 아칼라섬 수련의 시련에서 받습니다.
+    alola7: { fishing: 2, 'fishing-bubbling': 2, surf: 2 },
+    'alola7-ultra': { fishing: 2, 'fishing-bubbling': 2, surf: 2 },
     letsgo7: {},
     galar8: { surf: 7 },
     sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 11, surf: 5, 'rock-smash': 1 },
@@ -772,6 +782,13 @@ export function modernEncounterChapter(
   if (familyId === 'kalos6' && conditions.includes('rock-smash')) {
     // 기술머신94 바위깨기는 Ambrette Town에서 받습니다.
     prerequisiteChapter = Math.max(prerequisiteChapter, 2)
+  }
+  if (familyId === 'alola7' || familyId === 'alola7-ultra') {
+    // 방식을 확인하지 못한 PKHeX 행은 라프라스·낚싯대가 필요할 수 있어 2장 이후로 둡니다.
+    if (conditions.includes('method-unresolved') || conditions.includes('fishing')) prerequisiteChapter = Math.max(prerequisiteChapter, 2)
+    // 괴력몬 푸시는 포니섬 태고의 포니길에서 받습니다.
+    if (conditions.includes('machamp-shove')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)
+    if (conditions.includes('story-climax')) prerequisiteChapter = Math.max(prerequisiteChapter, 7)
   }
   const gatedMethod = gatedAreaMethods[familyId]?.[`${location}:${method}`]
   if (gatedMethod) prerequisiteChapter = Math.max(prerequisiteChapter, gatedMethod)

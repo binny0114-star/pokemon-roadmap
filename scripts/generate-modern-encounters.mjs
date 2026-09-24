@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { fetchCsv, revision as pokeapiRevision } from './pokeapi-source.mjs'
 
 const pkhexRevision = '77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5'
 const pkhexCodeRoot = `https://raw.githubusercontent.com/kwsch/PKHeX/${pkhexRevision}/PKHeX.Core`
@@ -1047,6 +1048,130 @@ function parseGen7(buffer, locationNames, transferLocationNames) {
   })
 }
 
+// 7세대는 PKHeX 조우표가 방식 정보를 합쳐 두므로, 방식은 고정 PokéAPI 행에서 가져오고
+// PokéAPI에 없는 PKHeX 종·폼만 '방식 미확인' 행으로 보탭니다.
+const gen7PokeApiMethods = {
+  walk: 'walk',
+  surf: 'surf',
+  'super-rod': 'fishing',
+  'bubbling-spots': 'fishing-bubbling',
+  sos: 'sos',
+  'sos-from-bubbling-spot': 'sos',
+  'berry-trees': 'berry-pile',
+  'island-scan': 'island-scan',
+  static: 'static',
+  gift: 'gift',
+  'npc-trade': 'npc-trade',
+}
+const alolaStarters = new Set([722, 725, 728])
+// 썬·문 야생 울트라비스트와 네크로즈마는 엔딩 후 국제경찰 임무 뒤에만 나옵니다.
+const alolaPostgameWildSpecies = new Set([793, 794, 795, 796, 797, 798, 799, 800, 803, 804, 805, 806])
+
+function gen7AreaConditions(game, species, location, area, minLevel) {
+  const result = []
+  if (alolaPostgameWildSpecies.has(species)) result.push('postgame', 'ultra-beast-quest')
+  // 울트라썬·울트라문 밀림 동쪽 동굴(Lv.41–44)은 괴력몬 푸시로 엽니다.
+  if (['ultra-sun', 'ultra-moon'].includes(game) && location === 'lush-jungle' && (area.includes('east-cave') || minLevel >= 40)) {
+    result.push('machamp-shove')
+  }
+  return result
+}
+
+function gen7SpecialConditions(game, species, form, method, area) {
+  if (method === 'gift' && alolaStarters.has(species)) return ['choice-group-alola-starter']
+  if (method === 'gift' && species === 133) return ['gift-egg']
+  // 썬·문은 스토리 중 태양의 제단/달의 제단에서 솔가레오·루나아라를 잡습니다.
+  if (method === 'static' && ((game === 'sun' && species === 791) || (game === 'moon' && species === 792))) {
+    return ['story-climax']
+  }
+  if (method === 'island-scan') return ['island-scan-qr']
+  if (method === 'sos' && area.includes('bubbling')) return ['fishing']
+  if (['static', 'gift', 'npc-trade'].includes(method)) return ['special-prerequisite-unresolved']
+  return []
+}
+
+function gen7Rows(game, api, pkhexBuffer, locationNames, transferLocationNames) {
+  const rows = api.map((row) => encounter(
+    row.species,
+    row.form,
+    row.location,
+    row.area,
+    row.minLevel,
+    row.maxLevel,
+    row.method,
+    [
+      ...row.conditions,
+      ...gen7SpecialConditions(game, row.species, row.form, row.method, row.area),
+      ...gen7AreaConditions(game, row.species, row.location, row.area, row.minLevel),
+    ],
+    row.slot,
+  ))
+  const known = new Set(rows.map((row) => `${row.location}:${row.species}:${row.form}`))
+  for (const row of parseGen7(pkhexBuffer, locationNames, transferLocationNames)) {
+    if (known.has(`${row.location}:${row.species}:${row.form}`)) continue
+    rows.push({
+      ...row,
+      method: row.method === 'sos' ? 'sos' : 'wild-unspecified',
+      conditions: [...new Set([
+        ...row.conditions,
+        ...(row.method === 'sos' ? [] : ['method-unresolved']),
+        ...gen7AreaConditions(game, row.species, row.location, row.area, row.minLevel),
+      ])].sort(),
+    })
+  }
+  return rows
+}
+
+async function loadGen7PokeApiRows() {
+  const [encounterRows, versionRows, slotRows, methodRows, areaRows, locationRows, pokemonRows, conditionMapRows, conditionValueRows] = await Promise.all([
+    'encounters', 'versions', 'encounter_slots', 'encounter_methods', 'location_areas', 'locations',
+    'pokemon', 'encounter_condition_value_map', 'encounter_condition_values',
+  ].map(fetchCsv))
+  const profiles = Object.values(JSON.parse(await readFile(new URL('../src/generated/gen8-form-profiles.json', import.meta.url), 'utf8')).pokemonForms)
+  const formByPokemon = new Map()
+  for (const profile of profiles) {
+    const current = formByPokemon.get(profile.pokemonIdentifier)
+    if (!current || profile.formIndex < current.formIndex) formByPokemon.set(profile.pokemonIdentifier, profile)
+  }
+  const versionId = new Map(versionRows.map((row) => [row.identifier, row.id]))
+  const slots = new Map(slotRows.map((row) => [row.id, row]))
+  const methods = new Map(methodRows.map((row) => [row.id, row.identifier]))
+  const areas = new Map(areaRows.map((row) => [row.id, row]))
+  const locations = new Map(locationRows.map((row) => [row.id, row.identifier]))
+  const pokemon = new Map(pokemonRows.map((row) => [row.id, row.identifier]))
+  const conditionValues = new Map(conditionValueRows.map((row) => [row.id, row.identifier]))
+  const conditions = new Map()
+  for (const row of conditionMapRows) {
+    conditions.set(row.encounter_id, [...(conditions.get(row.encounter_id) ?? []), conditionValues.get(row.encounter_condition_value_id)])
+  }
+  const result = {}
+  for (const game of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
+    result[game] = encounterRows
+      .filter((row) => row.version_id === versionId.get(game))
+      .flatMap((row) => {
+        const slot = slots.get(row.encounter_slot_id)
+        const method = gen7PokeApiMethods[methods.get(slot.encounter_method_id)]
+        if (!method) throw new Error(`Unmapped Gen 7 PokéAPI method: ${methods.get(slot.encounter_method_id)}`)
+        const profile = formByPokemon.get(pokemon.get(row.pokemon_id))
+        if (!profile) throw new Error(`Missing form profile for PokéAPI pokemon ${pokemon.get(row.pokemon_id)}`)
+        const area = areas.get(row.location_area_id)
+        const location = locations.get(area.location_id).replace(/^alola-/, '')
+        return [{
+          species: profile.speciesId,
+          form: profile.formIndex,
+          location,
+          area: area.identifier ? `${location}-${area.identifier}` : location,
+          minLevel: Number(row.min_level),
+          maxLevel: Number(row.max_level),
+          method,
+          slot: Number(slot.slot) || null,
+          conditions: (conditions.get(row.id) ?? []).filter(Boolean),
+        }]
+      })
+  }
+  return result
+}
+
 function parsePaldea(buffer, locationNames) {
   return unpack(buffer).flatMap((area) => {
     const locationId = area[2] || area[0]
@@ -1147,9 +1272,10 @@ for (const game of ['x', 'y', 'omega-ruby', 'alpha-sapphire']) {
         : [...orasSpecial.shared, ...orasSpecial.alpha]
   rowsByGame[game] = deduplicate([...parseGen6(wild, gen6Names, game === 'x' || game === 'y' ? 'xy' : 'oras'), ...special])
 }
+const gen7PokeApi = await loadGen7PokeApiRows()
 for (const game of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
   const [wild] = await Promise.all(sources[game].map(fetchBytes))
-  rowsByGame[game] = deduplicate(parseGen7(wild, gen7Names, gen7TransferNames))
+  rowsByGame[game] = deduplicate(gen7Rows(game, gen7PokeApi[game], wild, gen7Names, gen7TransferNames))
 }
 for (const game of ['sword', 'shield']) {
   const [hidden, symbol, raids] = await Promise.all(sources[game].map(fetchBytes))
@@ -1239,11 +1365,12 @@ await writeFile(
         ],
       },
       notes: [
-        'X/Y and Omega Ruby/Alpha Sapphire slots preserve form, source-area, slot and disjoint level ranges from separate version resources; PKHeX Standard slots are retained as wild-unspecified because the resource does not distinguish grass, cave, surf and fishing methods.',
+        'X/Y and Omega Ruby/Alpha Sapphire slots preserve form, source-area, slot and disjoint level ranges from separate version resources; Standard areas keep the ROM table order, so methods are decoded with the pk3DS XYWE/RSWE slot layouts (X/Y reproduces 563/566 pinned PokéAPI wild triples, ORAS 78/78 outside Mirage spots).',
+        'ORAS walk slots on water routes 107, 124, 126, 128, 129 and 130 are underwater seaweed encounters; Meteor Falls tables after the first are behind Waterfall; Mirage spots follow the Eon Flute after the primal battle.',
         'X/Y code-defined static, gift, fossil, in-game trade and Friend Safari tables are normalized from the pinned PKHeX source; unresolved fossil origin and calendar or postgame prerequisites remain explicit conditions.',
         'ORAS code-defined static, gift, egg, fossil, in-game trade, Cosplay Pikachu and version-exclusive tables are normalized from the pinned PKHeX source; unresolved Mirage, party, time and event prerequisites remain explicit conditions.',
-        'Sun/Moon and Ultra Sun/Ultra Moon preserve separate version resources, forms, level ranges and SOS identity; ordinary Gen 7 slots are labeled wild-unspecified because the resource does not encode grass, cave, surf or fishing as distinct methods.',
-        'Gen 7 code-defined static, gift, fossil, in-game trade, Island Scan/QR and Ultra Space tables are not included until their story prerequisites can be normalized without inference.',
+        `Sun/Moon and Ultra Sun/Ultra Moon methods come from pinned PokéAPI CSV @ ${pokeapiRevision} with pokemon identifiers mapped to PKHeX form indexes; PKHeX species/forms missing from PokéAPI at a location are added as method-unresolved (Standard) or SOS rows.`,
+        'Gen 7 statics, gifts, trades, Island Scan and Poké Pelago rows without verified prerequisites carry special-prerequisite-unresolved or island-scan-qr and are excluded from planner recommendations; Alola starters, the Paniola Ranch Eevee egg and the Sun/Moon story Solgaleo/Lunala are modelled.',
         'Sword/Shield weather, method and level ranges are decoded from separate version resources.',
         'Sword/Shield base-game, Isle of Armor and Crown Tundra raid dens preserve den subarea, star rank, badge gate and level range.',
         'Sword/Shield code-defined static, gift, fossil and in-game trade tables are normalized from the pinned PKHeX source with explicit base-game, Isle of Armor 1.2.0 and Crown Tundra 1.3.0 scope.',

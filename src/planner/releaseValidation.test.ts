@@ -94,20 +94,18 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(() => validateGen8CompletenessManifest(swappedFamilyGame)).toThrow('패밀리 게임 계약')
   })
 
-  it('Gen 7 입수 게이트를 조우율이 아니라 방식·도달 시점 근거로 차단한다', () => {
+  it('Gen 7 입수 게이트를 조우율이 아니라 방식·도달 시점 근거로 판단한다', () => {
     for (const familyId of ['alola7', 'alola7-ultra'] as const) {
       const requirement = gen67Completeness.families[familyId].gates.availability.requirements
         .find((entry) => entry.id === 'wild-sos-slots')!
-      expect(requirement.status).toBe('blocked')
+      expect(requirement.status).toBe('complete')
       expect(requirement.evidence).toContain('Missing encounter rates alone do not block promotion')
-      expect(requirement.missingFields).toContain('ordinary-encounter-method')
-      expect(requirement.missingFields).toContain('encounter-table-identity')
-      expect(requirement.missingFields).not.toContain('encounter-rate')
+      expect(requirement.evidence).toContain('method-unresolved')
     }
     for (const gameId of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
       const game = gameCatalog.find((entry) => entry.id === gameId)!
-      expect(game.plannerSupport.accuracyGates?.availability.complete).toBe(false)
-      expect(game.plannerSupport.accuracyGates?.availability.evidence).toContain('플래너 방식 식별자')
+      expect(game.plannerSupport.accuracyGates?.availability.complete).toBe(true)
+      expect(game.plannerSupport.accuracyGates?.availability.evidence).toContain('방식 미확인')
     }
   })
 
@@ -213,8 +211,8 @@ describe('릴리스 레지스트리와 전국도감', () => {
   it('39개 스토리 게임과 지원 경계를 고유하고 상호 참조 가능하게 유지한다', () => {
     expect(gameCatalog).toHaveLength(39)
     expect(new Set(gameCatalog.map((game) => game.id)).size).toBe(39)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(29)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(10)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(33)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(6)
     expect(gameCatalog.some((game) => game.id === ('champions' as string))).toBe(false)
 
     const byId = new Map(gameCatalog.map((game) => [game.id, game]))
@@ -247,7 +245,7 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(duplicateVersionIds).toEqual([[2, ['blue', 'green']]])
     expect(modernGames.every((game) => gameCatalog.some((entry) => entry.id === game.id))).toBe(true)
     expect(modernGames.filter((game) => game.catalog.plannerSupport.status === 'full').map((game) => game.id).sort())
-      .toEqual(['alpha-sapphire', 'brilliant-diamond', 'omega-ruby', 'shield', 'shining-pearl', 'sword', 'x', 'y'])
+      .toEqual(['alpha-sapphire', 'brilliant-diamond', 'moon', 'omega-ruby', 'shield', 'shining-pearl', 'sun', 'sword', 'ultra-moon', 'ultra-sun', 'x', 'y'])
   })
 
   it('전국도감 #001–1025를 누락과 중복 없이 유지한다', () => {

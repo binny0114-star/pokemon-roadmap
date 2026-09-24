@@ -274,6 +274,11 @@ const methodKo: Record<string, string> = {
   ambush: '매복 조우',
   'friend-safari': '프렌드사파리',
   dexnav: '도감내비 전용',
+  'fishing-bubbling': '낚시(물거품 포인트)',
+  sos: 'SOS 호출',
+  'berry-pile': '나무열매 더미',
+  'island-scan': '아일랜드 스캔',
+  'wild-unspecified': '야생(방식 미확인)',
 }
 
 export const supportedEncounterMethods = new Set(Object.keys(methodKo))
@@ -327,6 +332,8 @@ const unavailableConditions = [
   // ORAS 전설 고정 심볼 중 파티·환상의 장소 전제를 검증하지 못한 경로와 배포 무한의티켓 경로
   'special-prerequisite-unresolved',
   'event-item-eon-ticket',
+  // 알로라 아일랜드 스캔은 실제 QR 코드를 스캔해 모은 포인트가 필요합니다.
+  'island-scan-qr',
   'other-event-arceus-in-party',
   'other-virtual-console',
   'other-regirock-regice-registeel-in-party',
@@ -361,6 +368,11 @@ const conditionKo: Record<string, string> = {
   'story-progress-eon-gift': '남쪽 외딴섬 이벤트',
   'delta-episode': '델타 에피소드',
   'delta-episode-complete': '델타 에피소드 완료 후',
+  'method-unresolved': '원본에서 조우 방식 미확인',
+  'machamp-shove': '괴력몬 푸시 필요',
+  fishing: '낚싯대 필요',
+  'story-climax': '스토리 결전',
+  'ultra-beast-quest': '울트라비스트 포획 임무',
   'time-morning': '아침',
   'time-day': '낮',
   'time-night': '밤',
@@ -429,6 +441,7 @@ const conditionUnlockChapters: Record<string, number> = {
 }
 
 const conditionalMethods = new Set([
+  'sos', 'berry-pile',
   'headbutt', 'headbutt-low', 'headbutt-normal', 'headbutt-high', 'honey-tree',
   'grass-spots', 'cave-spots', 'bridge-spots', 'surf-spots', 'super-rod-spots',
   'bubbling-spots', 'hidden-grotto', 'feebas-tile-fishing',
@@ -575,7 +588,16 @@ export function evolutionForGame(
       Number(b.versionGroupId === game.versionGroupId) - Number(a.versionGroupId === game.versionGroupId)
       || Number(b.default) - Number(a.default)
       || (b.versionGroupId ?? 0) - (a.versionGroupId ?? 0))
-  return candidates[0] ?? (basePokemonId ? null : species.evolution)
+  if (candidates[0]) return candidates[0]
+  if (basePokemonId) {
+    // 알로라 모래두지·식스테일처럼 PokéAPI가 지역 폼 진화를 이후 버전 그룹에만 기록한 경우,
+    // 같은 기본 폼의 가장 이른 행을 씁니다(지역 폼이 처음 나온 세대부터 같은 조건입니다).
+    const regional = species.evolutionMethods
+      .filter((method) => method.baseFormId === basePokemonId)
+      .sort((a, b) => (a.versionGroupId ?? 0) - (b.versionGroupId ?? 0))[0]
+    return regional ?? null
+  }
+  return species.evolution
 }
 
 function locationMatchesToken(location: string, token: string): boolean {
@@ -613,7 +635,7 @@ function isPostgameEncounter(game: GameConfig, encounter: CatalogEncounter): boo
 function encounterChapter(game: GameConfig, encounter: CatalogEncounter): Pick<RankedEncounter, 'chapter' | 'storyOrder' | 'quality'> {
   const family = getFamily(game)
   const mainStoryChapterCount = getMainStoryChapterCount(game)
-  if (['kalos6', 'hoenn6', 'galar8', 'sinnoh8', 'letsgo7', 'hisui8'].includes(game.familyId)) {
+  if (['kalos6', 'hoenn6', 'alola7', 'alola7-ultra', 'galar8', 'sinnoh8', 'letsgo7', 'hisui8'].includes(game.familyId)) {
     const chapter = modernEncounterChapter(
       game.familyId as ModernFamilyId,
       encounter.location,
@@ -776,7 +798,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
           const levelChapter = level ? Math.ceil(level / (60 / mainStoryChapterCount)) : 1
           const requirementChapter = crossVersionEvolutionReason(entry, game)
             ? 1
-            : evolutionRequirementChapter(entry, game)
+            : evolutionRequirementChapter(entry, game, pathMethods[index])
           return Math.max(levelChapter, requirementChapter)
         }),
       )
@@ -786,7 +808,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         'surf-spots', 'super-rod-spots', 'dark-grass', 'grass-spots', 'cave-spots',
         'bridge-spots', 'feebas-tile-fishing', 'bubbling-spots',
         'yellow-flowers', 'purple-flowers', 'red-flowers', 'flowers', 'rough-terrain', 'tall-grass',
-        'horde', 'ambush',
+        'horde', 'ambush', 'fishing', 'fishing-bubbling', 'sos', 'berry-pile',
       ].includes(encounter.method)
       const conditional = conditions.length > 0 || conditionalMethods.has(encounter.method)
       return {
@@ -932,7 +954,8 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
           })
       : undefined
   const externalEvolution = evolutionLine.find((entry) => crossVersionEvolutionReason(entry, game))
-  const evolutionTimingInferred = evolutionLine.some((entry) => !evolutionTimingVerified(entry, game))
+  const evolutionTimingInferred = evolutionLine.some((entry, index) =>
+    !evolutionTimingVerified(entry, game, selectedEvolutionMethods[index]))
   const tradeRequired = source.dex !== species.dex && (
     selectedEvolutionMethods.some((method) => method?.trigger === 'trade')
     || Boolean(externalEvolution)
@@ -1102,12 +1125,25 @@ const evolutionItemUnlocks: Record<string, Partial<Record<string, number>>> = {
     'fire-stone': 4, 'moon-stone': 4, 'dawn-stone': 5, 'leaf-stone': 6, 'shiny-stone': 7,
     'dusk-stone': 7, 'sun-stone': 8, 'water-stone': 8, 'thunder-stone': 9,
   },
+  // 코니코니시티 보석 가게(불꽃·천둥·물·리프·얼음), 말리시티 태양의돌, 13번도로 달의돌, 포니 황야 어둠의돌.
+  // 각성의돌은 엔딩 후 구즈마 재대결 보상으로 확인되어 본편에서는 쓰지 않습니다.
+  alola7: {
+    'fire-stone': 3, 'thunder-stone': 3, 'water-stone': 3, 'leaf-stone': 3, 'ice-stone': 3,
+    'sun-stone': 4, 'moon-stone': 4, 'dusk-stone': 6, 'dawn-stone': 9,
+  },
+  'alola7-ultra': {
+    'fire-stone': 3, 'thunder-stone': 3, 'water-stone': 3, 'leaf-stone': 3, 'ice-stone': 3,
+    'sun-stone': 4, 'moon-stone': 4, 'dusk-stone': 6, 'dawn-stone': 9,
+  },
 }
 
 
-export function evolutionTimingVerified(species: CatalogSpecies, game: GameConfig): boolean {
+export function evolutionTimingVerified(
+  species: CatalogSpecies,
+  game: GameConfig,
+  evolution: CatalogEvolution | CatalogEvolutionMethod | null = evolutionForGame(species, game),
+): boolean {
   if (!modernClassicFamilies.has(game.familyId)) return true
-  const evolution = evolutionForGame(species, game)
   if (!evolution || evolution.trigger === 'trade') return true
   if (evolution.item) return evolutionItemUnlocks[game.familyId]?.[evolution.item] !== undefined
   return !evolution.heldItemId
@@ -1156,9 +1192,12 @@ const galarEvolutionItemDlc: Record<string, {
   },
 }
 
-export function evolutionRequirementChapter(species: CatalogSpecies, game: GameConfig): number {
+export function evolutionRequirementChapter(
+  species: CatalogSpecies,
+  game: GameConfig,
+  evolution: CatalogEvolution | CatalogEvolutionMethod | null = evolutionForGame(species, game),
+): number {
   const mainStoryChapterCount = getMainStoryChapterCount(game)
-  const evolution = evolutionForGame(species, game)
   if (!evolution) return 1
   if (game.familyId === 'galar8') {
     if (evolution.item) return galarEvolutionItemUnlocks[evolution.item] ?? 1
@@ -1199,6 +1238,12 @@ export function evolutionRequirementChapter(species: CatalogSpecies, game: GameC
     if (species.dex === 471) return 7
     if (species.dex === 470) return 9
     if (species.dex === 706) return 6
+  }
+  if (game.familyId === 'alola7' || game.familyId === 'alola7-ultra') {
+    // 담청산 자기장(투구뿌논 포함), 밀림 이끼 낀 바위, 라나키라마운틴 얼음 바위(모단단게 포함)
+    if ([462, 476, 738].includes(species.dex)) return 4
+    if (species.dex === 470) return 2
+    if (species.dex === 471 || species.dex === 740) return 7
   }
   if (game.familyId === 'hoenn6') {
     // 뉴보라 자기장, 등화숲 이끼 낀 바위, 여울의 동굴 얼음 바위, 잿빛시티에서 받는 포켓몬스넥 키트
@@ -1265,6 +1310,7 @@ const heldItemKo: Record<number, string> = {
 }
 
 const moveEvolutionKo: Record<number, string> = {
+  763: '짓밟기',
   122: '흉내내기',
   185: '흉내내기',
   424: '더블어택',
@@ -1283,6 +1329,11 @@ const genderEvolutionKo: Record<number, string> = {
 }
 
 function areaEvolutionText(species: CatalogSpecies, game?: GameConfig): string | null {
+  if (game && (game.familyId === 'alola7' || game.familyId === 'alola7-ultra')) {
+    if ([462, 476, 738].includes(species.dex)) return '담청산 또는 포니대협곡에서 레벨업'
+    if (species.dex === 470) return '밀림 이끼 낀 바위 근처에서 레벨업'
+    if (species.dex === 471 || species.dex === 740) return '라나키라마운틴에서 레벨업'
+  }
   if (![462, 470, 471, 476].includes(species.dex)) return null
   if (!game) return '특정 장소에서 레벨업'
   if (game.familyId === 'hoenn6') {
@@ -1317,7 +1368,12 @@ export function evolutionText(species: CatalogSpecies, game?: GameConfig, formId
     if (choice?.evolutionTrigger === 'tower-of-darkness') return `악의 탑 정상에서 ${species.name} 진화`
     if (choice?.evolutionTrigger === 'tower-of-waters') return `물의 탑 정상에서 ${species.name} 진화`
   }
-  const evolution = game ? evolutionForGame(species, game) : species.evolution
+  // 알로라 모습처럼 진화 결과 폼이 정해져 있으면 그 폼으로 끝나는 진화 행을 씁니다.
+  const evolvedPokemonId = formIdentifier ? getGen8FormProfileByIdentifier(formIdentifier)?.pokemonId : undefined
+  const formEvolution = game && evolvedPokemonId && game.generation >= 6
+    ? species.evolutionMethods.find((method) => method.evolvedFormId === evolvedPokemonId)
+    : undefined
+  const evolution = formEvolution ?? (game ? evolutionForGame(species, game) : species.evolution)
   if (!evolution) return '진화 없음 또는 기본 형태'
   if (evolution.trigger === 'three-critical-hits') return `한 전투에서 급소를 3번 맞힌 뒤 ${species.name} 진화`
   if (evolution.trigger === 'take-damage') return `한 번에 49 이상 피해를 받은 뒤 모래먼지구덩이 돌 아치 아래를 지나 ${species.name} 진화`

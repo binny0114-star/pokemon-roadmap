@@ -48,7 +48,7 @@ describe('6–9세대 스토리 패밀리', () => {
       'x', 'y', 'omega-ruby', 'alpha-sapphire',
       'sun', 'moon', 'ultra-sun', 'ultra-moon',
     ]
-    const promotedIds = new Set<ModernPlannerGameId>(['x', 'y', 'omega-ruby', 'alpha-sapphire'])
+    const promotedIds = new Set<ModernPlannerGameId>(['x', 'y', 'omega-ruby', 'alpha-sapphire', 'sun', 'moon', 'ultra-sun', 'ultra-moon'])
     for (const gameId of targetIds) {
       const support = modernGames.find((game) => game.id === gameId)!.catalog.plannerSupport
       const promoted = promotedIds.has(gameId)
@@ -340,19 +340,17 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(species('ultra-sun').has(691)).toBe(false)
   })
 
-  it('Gen 7의 분리된 레벨 구간을 연속 범위로 합치지 않는다', () => {
+  it('Gen 7의 분리된 레벨 구간을 방식별로 나누고 연속 범위로 합치지 않는다', () => {
     for (const gameId of ['sun', 'moon']) {
       const wingull = encounterGames[gameId].filter((row) =>
         row.species === 278
-        && row.location === 'route-1'
-        && row.method === 'wild-unspecified',
+        && row.location === 'route-1',
       )
-      expect(wingull.map((row) => [row.minLevel, row.maxLevel]), gameId).toEqual([
-        [5, 7],
-        [15, 18],
+      expect(wingull.map((row) => [row.method, row.minLevel, row.maxLevel]).sort(), gameId).toEqual([
+        ['surf', 15, 18],
+        ['walk', 5, 7],
       ])
       expect(wingull.some((row) => row.minLevel <= 8 && row.maxLevel >= 14), gameId).toBe(false)
-      expect(new Set(wingull.map((row) => row.slot)).size, gameId).toBe(2)
     }
   })
 
@@ -587,6 +585,8 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     const unmapped = new Set<string>()
     for (const [gameId, rows] of Object.entries(encounterGames)) {
       for (const row of rows) {
+        // 전제 조건을 확인하지 못해 추천에서 빼는 특수 입수는 장을 정하지 않습니다.
+        if (row.conditions.includes('special-prerequisite-unresolved')) continue
         const chapter = modernEncounterChapter(
           familyByGame[gameId],
           row.location,
