@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { encounterMethodUnlockChapter } from './catalog'
-import { getBosses, getFamily, getGame } from './games'
+import { games, getBosses, getFamily, getGame } from './games'
+import { getModernBosses, modernFamilies } from './modernGames'
 
 const bossLevel = (gameId: string, bossId: string) =>
   getBosses(getGame(gameId)).find((entry) => entry.id === bossId)?.level
@@ -76,5 +77,60 @@ describe('원작 필드기 입수 시점', () => {
 
   it('피카츄 버전도 달맞이산 화석을 하나만 선택한다', () => {
     expect(getGame('yellow').fossils).toEqual([[138, 140]])
+  })
+})
+
+describe('버전에서 실제로 할 수 있는 스토리 목표', () => {
+  it('피카츄 버전은 스타터를 고르지 않고 오박사에게 피카츄를 받는다', () => {
+    expect(getFamily(getGame('yellow')).chapters[0].objectives).toContain('오박사에게 피카츄 받기')
+    expect(getFamily(getGame('yellow')).chapters[0].objectives).not.toContain('스타터 선택')
+    expect(getFamily(getGame('red')).chapters[0].objectives).toContain('스타터 선택')
+  })
+
+  it('1–5세대 장의 해금 표시는 그 버전의 필드기 입수 장과 같다', () => {
+    for (const game of games.filter((entry) => entry.generation <= 5)) {
+      const family = getFamily(game)
+      family.chapters.forEach((chapter, index) => {
+        expect(chapter.unlocks, `${game.id} ${chapter.id}`).toEqual(
+          family.fieldMoves.filter((move) => move.unlockChapter === index + 1).map((move) => move.name),
+        )
+      })
+    }
+    expect(getFamily(getGame('heartgold')).chapters[4].unlocks).not.toContain('괴력')
+    expect(getFamily(getGame('heartgold')).chapters[5].unlocks).toContain('괴력')
+  })
+
+  // pokediamond trdata.json에는 봉신마을 태홍 전투가 없고, BDSP 봉신마을 유적 앞 상대는 갤럭시단 조무래기(뷰티플라이 25·삐딱구리 27)입니다.
+  it('BDSP 봉신마을에서는 태홍이 아니라 갤럭시단 조무래기와 싸운다', () => {
+    const celestic = getModernBosses('brilliant-diamond').find((entry) => entry.id === 'cyrus-celestic')
+    expect(celestic).toMatchObject({ name: '갤럭시단 조무래기', level: 'Lv.25–27' })
+    expect(modernFamilies.sinnoh8.chapters[4].objectives.join(' ')).not.toContain('태홍')
+  })
+
+  it('XY의 관동 스타터는 미르시티에서 받는다', () => {
+    expect(modernFamilies.kalos6.chapters[0].objectives.join(' ')).not.toContain('관동 스타터')
+    expect(modernFamilies.kalos6.chapters[1].objectives).toContain('미르시티에서 관동 스타터 받기')
+  })
+
+  it('보스 타입은 실제 파티에 있는 타입만 쓴다', () => {
+    const sword = getModernBosses('sword')
+    expect(sword.find((entry) => entry.id === 'oleana')?.types).not.toContain('steel')
+    expect(sword.find((entry) => entry.id === 'bede-stow')?.types).toEqual(['psychic'])
+    expect(getModernBosses('sun').find((entry) => entry.id === 'lusamine-sm')?.types).not.toContain('ice')
+  })
+
+  it('소드·실드와 BDSP의 확인된 트레이너 레벨을 유지한다', () => {
+    const sword = getModernBosses('sword')
+    const level = (id: string) => sword.find((entry) => entry.id === id)?.level
+    expect(level('hop-route-2')).toBe('Lv.5–8')
+    expect(level('hop-circhester')).toBe('Lv.39–41')
+    expect(level('hop-cup')).toBe('Lv.47–49')
+    expect(level('hop-final')).toBe('Lv.68–70')
+    const bdsp = getModernBosses('shining-pearl')
+    const bdspLevel = (id: string) => bdsp.find((entry) => entry.id === id)?.level
+    expect(bdspLevel('saturn-lake-valor')).toBe('Lv.35–37')
+    expect(bdspLevel('mars-lake-verity')).toBe('Lv.37–39')
+    expect(bdspLevel('barry-canalave')).toBe('Lv.30–35')
+    expect(bdspLevel('barry-league')).toBe('Lv.48–53')
   })
 })
