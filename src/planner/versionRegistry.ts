@@ -65,6 +65,8 @@ export interface VersionRegistrySource {
   name: string
   repository: string
   revision: string
+  /** 고정한 PokéAPI 커밋의 날짜(YYYY-MM-DD) */
+  revisionDate: string
 }
 
 export interface LegacyPlannerSnapshot {
@@ -456,7 +458,11 @@ export function validateRegistry(value: unknown): {
   }
   const source = candidate.source as VersionRegistrySource
   const legacyPlannerSnapshot = candidate.legacyPlannerSnapshot as LegacyPlannerSnapshot
-  if (!source?.repository || !/^[a-f0-9]{40}$/.test(source.revision)) {
+  if (
+    !source?.repository
+    || !/^[a-f0-9]{40}$/.test(source.revision)
+    || !/^\d{4}-\d{2}-\d{2}$/.test(source.revisionDate ?? '')
+  ) {
     throw new Error('버전 레지스트리 출처 리비전이 올바르지 않습니다.')
   }
   if (

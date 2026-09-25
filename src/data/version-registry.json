@@ -3,7 +3,8 @@
   "source": {
     "name": "PokéAPI CSV",
     "repository": "https://github.com/PokeAPI/pokeapi",
-    "revision": "ca0a21b3587af20b52c8a00d33812c47b75fe341"
+    "revision": "ca0a21b3587af20b52c8a00d33812c47b75fe341",
+    "revisionDate": "2026-09-25"
   },
   "legacyPlannerSnapshot": {
     "repository": "https://github.com/binny0114-star/pokemon-roadmap",
