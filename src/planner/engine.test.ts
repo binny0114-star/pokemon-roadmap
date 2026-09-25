@@ -54,10 +54,11 @@ describe('지원 버전과 정적 카탈로그', () => {
   }, 20_000)
 
   it('기존 플래너 버전에 Sword/Shield와 BDSP를 추가하고 ID를 고유하게 유지한다', () => {
-    expect(games).toHaveLength(25)
-    expect(new Set(games.map((game) => game.id)).size).toBe(25)
-    expect(Object.keys(families)).toHaveLength(10)
-    for (const game of games) expect(getFamily(game).chapters.length).toBeGreaterThanOrEqual(8)
+    expect(games).toHaveLength(38)
+    expect(new Set(games.map((game) => game.id)).size).toBe(38)
+    expect(Object.keys(families)).toHaveLength(17)
+    // LEGENDS 아르세우스는 다섯 지역과 세 호수·신오신전으로 7개 장입니다.
+    for (const game of games) expect(getFamily(game).chapters.length).toBeGreaterThanOrEqual(game.id === 'legends-arceus' ? 7 : 8)
   })
 
   it('전국도감 1–1025가 완전하고 참조가 유효하다', () => {
@@ -73,8 +74,8 @@ describe('지원 버전과 정적 카탈로그', () => {
 
   it('39개 본가 버전과 현대 메커니즘 패밀리를 명시적으로 분류한다', () => {
     expect(gameCatalog).toHaveLength(39)
-    expect(plannerGameCatalog).toHaveLength(25)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(14)
+    expect(plannerGameCatalog).toHaveLength(38)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(1)
     expect(gameCatalog.find((game) => game.id === 'lets-go-pikachu')?.mechanicsFamily).toBe('lets-go')
     expect(gameCatalog.find((game) => game.id === 'sword')?.mechanicsFamily).toBe('galar-wild-area')
     expect(gameCatalog.find((game) => game.id === 'legends-arceus')?.mechanicsFamily).toBe('legends')
@@ -90,7 +91,8 @@ describe('지원 버전과 정적 카탈로그', () => {
       versionId: 40,
       versionGroupId: 25,
       dataVersionGroupIds: [25, 26, 27],
-      plannerSupport: { status: 'catalog-only' },
+      plannerSupport: { status: 'full' },
+      plannerFamilyId: 'paldea9',
     })
   })
 

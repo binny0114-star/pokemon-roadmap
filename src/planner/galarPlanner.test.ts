@@ -139,7 +139,7 @@ describe('Sword/Shield 완전 플래너 게이트', () => {
     expect(getAvailability(speciesByDex.get(888)!, sword)).toMatchObject({
       formIdentifier: 'zacian-crowned',
       formTypes: ['fairy', 'steel'],
-      location: '타워 정상',
+      location: '타워톱',
       postgameOnly: true,
     })
     expect(getAvailability(speciesByDex.get(894)!, sword).mutuallyExclusiveGroup)

@@ -1,6 +1,6 @@
 import type { FamilyConfig, FieldMove, GameConfig, PlannerBoss, StoryChapter } from './types'
 import { getPlannerCatalogGame } from './versionRegistry'
-import { getModernBosses, modernFamilies } from './modernGames'
+import { getModernBosses, modernFamilies, type ModernPlannerGameId } from './modernGames'
 
 const chapter = (
   id: string,
@@ -228,8 +228,15 @@ export const families: Record<string, FamilyConfig> = {
   johto4: { id: 'johto4', generation: 4, region: '성도·관동', chapters: withFieldMoveUnlocks(johtoChapters, fields.hgss), bosses: johtoBosses, fieldMoves: fields.hgss, moveReminder: { chapter: 7, location: '검은먹시티', cost: '하트비늘 1개' }, postgame: ['관동 8개 배지', '은빛산 레드', '배틀프런티어'] },
   unova5: { id: 'unova5', generation: 5, region: '하나', chapters: withFieldMoveUnlocks(unovaChapters, fields.unova), bosses: unovaBosses, fieldMoves: fields.unova, moveReminder: { chapter: 5, location: '궐수시티', cost: '하트비늘 1개' }, postgame: ['쌍용시티 동쪽 11–15번도로와 산로마을', '챔피언 노간주', '블랙시티/화이트포리스트'] },
   'unova5-2': { id: 'unova5-2', generation: 5, region: '하나', chapters: withFieldMoveUnlocks(unova2Chapters, fields.unova2), bosses: unova2Bosses, fieldMoves: fields.unova2, moveReminder: { chapter: 4, location: '포켓몬 월드 토너먼트', cost: '하트비늘 1개' }, postgame: ['포켓몬 월드 토너먼트', '검은마천루/하얀수동', 'N·아크로마 재대결'] },
+  kalos6: { ...modernFamilies.kalos6, id: 'kalos6' },
+  hoenn6: { ...modernFamilies.hoenn6, id: 'hoenn6' },
+  alola7: { ...modernFamilies.alola7, id: 'alola7' },
+  'alola7-ultra': { ...modernFamilies['alola7-ultra'], id: 'alola7-ultra' },
+  letsgo7: { ...modernFamilies.letsgo7, id: 'letsgo7' },
   galar8: { ...modernFamilies.galar8, id: 'galar8' },
   sinnoh8: { ...modernFamilies.sinnoh8, id: 'sinnoh8' },
+  hisui8: { ...modernFamilies.hisui8, id: 'hisui8' },
+  paldea9: { ...modernFamilies.paldea9, id: 'paldea9' },
 }
 
 const game = (
@@ -276,10 +283,23 @@ export const games: GameConfig[] = [
   game('white', 'N·게치스', '#9ca5a9', [495, 498, 501], [[564, 566]]),
   game('black-2', '챔피언 아이리스', '#343a3d', [495, 498, 501], [[564, 566]]),
   game('white-2', '챔피언 아이리스', '#9ca5a9', [495, 498, 501], [[564, 566]]),
+  game('x', '챔피언 카르네', '#4267b2', [650, 653, 656], [[696, 698]], { familyId: 'kalos6', notes: ['미르시티에서 받는 관동 스타터와 빛나는동굴 화석은 각각 하나만 고를 수 있습니다.', '기술머신은 재사용할 수 있지만 입수 장소는 시점 추론으로 표시합니다.'] }),
+  game('y', '챔피언 카르네', '#b3313c', [650, 653, 656], [[696, 698]], { familyId: 'kalos6', notes: ['미르시티에서 받는 관동 스타터와 빛나는동굴 화석은 각각 하나만 고를 수 있습니다.', '기술머신은 재사용할 수 있지만 입수 장소는 시점 추론으로 표시합니다.'] }),
+  game('omega-ruby', '챔피언 성호', '#c53b48', [252, 255, 258], [[345, 347]], { familyId: 'hoenn6', notes: ['마그마단·원시 그란돈 경로를 따르며 뿌리·발톱화석은 하나만 고를 수 있습니다.', '도감내비 전용 칸은 전국도감 이후, 환상의 장소는 원시회귀 사건 이후로 분리합니다.'] }),
+  game('alpha-sapphire', '챔피언 성호', '#345fbd', [252, 255, 258], [[345, 347]], { familyId: 'hoenn6', notes: ['아쿠아단·원시 가이오가 경로를 따르며 뿌리·발톱화석은 하나만 고를 수 있습니다.', '도감내비 전용 칸은 전국도감 이후, 환상의 장소는 원시회귀 사건 이후로 분리합니다.'] }),
+  game('sun', '챔피언 결정전 쿠쿠이', '#df7126', [722, 725, 728], [], { familyId: 'alola7', notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.', '아일랜드 스캔·포켓리조트 방문·조건 미확인 고정 심볼과 교환은 추천하지 않습니다.'] }),
+  game('moon', '챔피언 결정전 쿠쿠이', '#4e5da8', [722, 725, 728], [], { familyId: 'alola7', notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.', '아일랜드 스캔·포켓리조트 방문·조건 미확인 고정 심볼과 교환은 추천하지 않습니다.'] }),
+  game('ultra-sun', '챔피언 결정전 하우', '#e6792b', [722, 725, 728], [], { familyId: 'alola7-ultra', notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.', '아일랜드 스캔·포켓리조트 방문·조건 미확인 고정 심볼과 교환은 추천하지 않습니다.'] }),
+  game('ultra-moon', '챔피언 결정전 하우', '#5964b7', [722, 725, 728], [], { familyId: 'alola7-ultra', notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.', '아일랜드 스캔·포켓리조트 방문·조건 미확인 고정 심볼과 교환은 추천하지 않습니다.'] }),
+  game('lets-go-pikachu', '챔피언 결정전 라이벌', '#f4c430', [25], [[138, 140]], { familyId: 'letsgo7', notes: ['파트너 피카츄의 비전기술이 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다. 파트너는 진화하지 않습니다.', '하늘 출현(리자몽·망나뇽·전설의 새)은 챔피언 이후에만 쓰고, 희귀 출현은 조건부 경로로 표시합니다.', '기술머신은 재사용할 수 있지만 입수 장소는 시점 추론으로 표시합니다.'] }),
+  game('lets-go-eevee', '챔피언 결정전 라이벌', '#9b6b43', [133], [[138, 140]], { familyId: 'letsgo7', notes: ['파트너 이브이의 비전기술이 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다. 파트너는 진화하지 않습니다.', '하늘 출현(리자몽·망나뇽·전설의 새)은 챔피언 이후에만 쓰고, 희귀 출현은 조건부 경로로 표시합니다.', '기술머신은 재사용할 수 있지만 입수 장소는 시점 추론으로 표시합니다.'] }),
   game('sword', '챔피언 단델', '#39a7d7', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
   game('shield', '챔피언 단델', '#d84b89', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
   game('brilliant-diamond', '챔피언 난천', '#5c8eba', [387, 390, 393], [[408]], { familyId: 'sinnoh8', notes: ['포켓치 비전기술은 파티 기술칸을 차지하지 않으며 지하대동굴 풀은 진행 플래그에 따라 확장됩니다.'] }),
   game('shining-pearl', '챔피언 난천', '#c9799d', [387, 390, 393], [[410]], { familyId: 'sinnoh8', notes: ['포켓치 비전기술은 파티 기술칸을 차지하지 않으며 지하대동굴 풀은 진행 플래그에 따라 확장됩니다.'] }),
+  game('legends-arceus', '신오신전 오리진폼 결전', '#547b73', [722, 155, 501], [], { familyId: 'hisui8', notes: ['조사 지역·라이드·왕/여왕 진정 순서를 장으로 쓰며, 야생 포켓몬은 조사단 랭크에 따른 말 듣는 레벨을 넘지 않는 장부터 추천합니다.', '시공의 뒤틀림·대량발생·의뢰 보상은 추천하지 않고 우두머리는 조건부 경로로 표시합니다.', '통신교환 진화는 연결의끈, 금속코트 등은 도구 사용으로 진화하지만 입수 시점은 시점 추론으로 표시합니다.'] }),
+  game('scarlet', '낙원방어프로토콜', '#c9483d', [906, 909, 912], [], { familyId: 'paldea9', notes: ['오픈월드라 권장 레벨 순서(체육관·주인·스타단)를 장으로 쓰며, 야생 포켓몬은 배지에 따른 말 듣는 레벨을 넘지 않는 장부터 추천합니다.', '테라레이드·DLC 지역·조건 미확인 선물과 교환은 추천하지 않습니다.', '기술머신은 재료로 만들 수 있지만 입수 시점은 시점 추론으로 표시합니다.'] }),
+  game('violet', '낙원방어프로토콜', '#7657ad', [906, 909, 912], [], { familyId: 'paldea9', notes: ['오픈월드라 권장 레벨 순서(체육관·주인·스타단)를 장으로 쓰며, 야생 포켓몬은 배지에 따른 말 듣는 레벨을 넘지 않는 장부터 추천합니다.', '테라레이드·DLC 지역·조건 미확인 선물과 교환은 추천하지 않습니다.', '기술머신은 재료로 만들 수 있지만 입수 시점은 시점 추론으로 표시합니다.'] }),
 ]
 
 export function getGame(id: string): GameConfig {
@@ -313,6 +333,13 @@ export function getMainStoryChapterCount(game: GameConfig): number {
 
 type BossPatch = Partial<Pick<PlannerBoss, 'level' | 'types'>>
 
+// 6세대 이후 버전은 modernGames.ts의 버전별 보스표를 그대로 씁니다.
+const modernPlannerGameIds = new Set<GameConfig['id']>([
+  'x', 'y', 'omega-ruby', 'alpha-sapphire', 'sun', 'moon', 'ultra-sun', 'ultra-moon',
+  'lets-go-pikachu', 'lets-go-eevee', 'sword', 'shield', 'brilliant-diamond', 'shining-pearl',
+  'legends-arceus', 'scarlet', 'violet',
+])
+
 const frlgBossPatches: Record<string, BossPatch> = {
   lorelei: { level: 'Lv.51–54' }, 'bruno-k': { level: 'Lv.51–56' }, agatha: { level: 'Lv.53–58' },
   'lance-k': { level: 'Lv.54–60' }, 'champion-k': { level: 'Lv.57–63' },
@@ -342,13 +369,8 @@ const bossPatches: Partial<Record<GameConfig['id'], Record<string, BossPatch>>> 
 }
 
 export function getBosses(game: GameConfig): PlannerBoss[] {
-  if (
-    game.id === 'sword'
-    || game.id === 'shield'
-    || game.id === 'brilliant-diamond'
-    || game.id === 'shining-pearl'
-  ) {
-    return getModernBosses(game.id).filter((entry) => !entry.gameIds || entry.gameIds.includes(game.id))
+  if (modernPlannerGameIds.has(game.id)) {
+    return getModernBosses(game.id as ModernPlannerGameId).filter((entry) => !entry.gameIds || entry.gameIds.includes(game.id))
   }
   const patches = bossPatches[game.id]
   const base = patches

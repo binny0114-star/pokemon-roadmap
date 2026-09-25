@@ -48,15 +48,16 @@ describe('6–9세대 스토리 패밀리', () => {
       'x', 'y', 'omega-ruby', 'alpha-sapphire',
       'sun', 'moon', 'ultra-sun', 'ultra-moon',
     ]
+    const promotedIds = new Set<ModernPlannerGameId>(['x', 'y', 'omega-ruby', 'alpha-sapphire', 'sun', 'moon', 'ultra-sun', 'ultra-moon'])
     for (const gameId of targetIds) {
       const support = modernGames.find((game) => game.id === gameId)!.catalog.plannerSupport
-      expect(support.status, gameId).toBe('catalog-only')
-      if (support.status !== 'catalog-only') throw new Error(`${gameId} 지원 게이트를 읽을 수 없습니다.`)
+      const promoted = promotedIds.has(gameId)
+      expect(support.status, gameId).toBe(promoted ? 'full' : 'catalog-only')
       expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
         'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
       ])
       expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.evidence.trim()), gameId).toBe(true)
-      expect(Object.values(support.accuracyGates ?? {}).some((gate) => !gate.complete), gameId).toBe(true)
+      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.complete), gameId).toBe(promoted)
     }
   })
 
@@ -70,14 +71,12 @@ describe('6–9세대 스토리 패밀리', () => {
     for (const gameId of targetIds) {
       const game = modernGames.find((entry) => entry.id === gameId)!
       const support = game.catalog.plannerSupport
-      const promoted = ['sword', 'shield', 'brilliant-diamond', 'shining-pearl'].includes(gameId)
-      expect(support.status, gameId).toBe(promoted ? 'full' : 'catalog-only')
-      expect(game.catalog.supportReview, gameId).toBe('2026-09-12')
+      expect(support.status, gameId).toBe('full')
+      expect(game.catalog.supportReview, gameId).toBe(['lets-go-pikachu', 'lets-go-eevee', 'legends-arceus'].includes(gameId) ? '2026-09-25' : '2026-09-12')
       expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
         'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
       ])
-      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.complete), gameId).toBe(promoted)
-      expect(support.accuracyGates?.mechanics.complete, gameId).toBe(true)
+      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.complete), gameId).toBe(true)
     }
     expect(modernGames.find((game) => game.id === 'lets-go-pikachu')?.catalog.mechanicsFamily).toBe('lets-go')
     expect(modernGames.find((game) => game.id === 'sword')?.catalog.mechanicsFamily).toBe('galar-wild-area')
@@ -264,6 +263,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'legality/wild/Gen7/encounter_mn.pkl',
       'legality/wild/Gen7/encounter_us.pkl',
       'legality/wild/Gen7/encounter_um.pkl',
+      'legality/wild/Gen7/encounter_gp.pkl',
+      'legality/wild/Gen7/encounter_ge.pkl',
+      'Legality/Encounters/Data/Gen7/Encounters7GG.cs',
       'Legality/Encounters/Data/Gen8/Encounters8.cs',
       'Legality/Encounters/Data/Gen6/Encounters6XY.cs',
       'Legality/Encounters/Data/Gen6/Encounters6AO.cs',
@@ -274,6 +276,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(Object.keys(encounterGames).sort()).toEqual([
       'alpha-sapphire',
       'brilliant-diamond',
+      'legends-arceus',
+      'lets-go-eevee',
+      'lets-go-pikachu',
       'moon',
       'omega-ruby',
       'scarlet',
@@ -303,6 +308,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(modernGames.filter((game) => encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
       'alpha-sapphire',
       'brilliant-diamond',
+      'legends-arceus',
+      'lets-go-eevee',
+      'lets-go-pikachu',
       'moon',
       'omega-ruby',
       'scarlet',
@@ -316,9 +324,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'x',
       'y',
     ])
-    expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
-      'legends-arceus', 'lets-go-eevee', 'lets-go-pikachu',
-    ])
+    expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([])
   })
 
   it('Gen 7 버전별 야생·SOS 자원과 폼을 보존한다', () => {
@@ -339,19 +345,17 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(species('ultra-sun').has(691)).toBe(false)
   })
 
-  it('Gen 7의 분리된 레벨 구간을 연속 범위로 합치지 않는다', () => {
+  it('Gen 7의 분리된 레벨 구간을 방식별로 나누고 연속 범위로 합치지 않는다', () => {
     for (const gameId of ['sun', 'moon']) {
       const wingull = encounterGames[gameId].filter((row) =>
         row.species === 278
-        && row.location === 'route-1'
-        && row.method === 'wild-unspecified',
+        && row.location === 'route-1',
       )
-      expect(wingull.map((row) => [row.minLevel, row.maxLevel]), gameId).toEqual([
-        [5, 7],
-        [15, 18],
+      expect(wingull.map((row) => [row.method, row.minLevel, row.maxLevel]).sort(), gameId).toEqual([
+        ['surf', 15, 18],
+        ['walk', 5, 7],
       ])
       expect(wingull.some((row) => row.minLevel <= 8 && row.maxLevel >= 14), gameId).toBe(false)
-      expect(new Set(wingull.map((row) => row.slot)).size, gameId).toBe(2)
     }
   })
 
@@ -365,7 +369,12 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     for (const gameId of ['x', 'y']) {
       const rows = encounterGames[gameId]
       expect(rows).toHaveLength(1_576)
-      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(995)
+      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(0)
+      // pk3DS XYWE 칸 순서로 Standard 표를 풀숲·꽃밭·거친 지형·파도타기·바위깨기·낚싯대로 나눕니다.
+      expect(rows.filter((row) => row.method === 'walk')).toHaveLength(324)
+      expect(rows.filter((row) => row.method === 'surf')).toHaveLength(100)
+      expect(rows.filter((row) => ['old-rod', 'good-rod', 'super-rod'].includes(row.method))).toHaveLength(198)
+      expect(rows.filter((row) => row.method === 'horde')).toHaveLength(315)
       expect(rows.filter((row) => row.method === 'friend-safari')).toHaveLength(196)
       expect(rows.filter((row) => row.method === 'fossil')).toHaveLength(9)
       expect(rows.filter((row) => row.method === 'npc-trade')).toHaveLength(9)
@@ -377,7 +386,8 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       expect(rows.some((row) =>
         row.species === 710
         && row.form === 3
-        && row.method === 'wild-unspecified'
+        && row.location === 'route-16'
+        && row.method === 'rough-terrain'
         && row.slot !== null,
       )).toBe(true)
     }
@@ -393,7 +403,15 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     for (const gameId of ['omega-ruby', 'alpha-sapphire']) {
       const rows = encounterGames[gameId]
       expect(rows).toHaveLength(2_819)
-      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(2_092)
+      expect(rows.filter((row) => row.method === 'wild-unspecified')).toHaveLength(0)
+      // pk3DS RSWE 칸 순서: 풀숲·긴 풀숲·도감내비 전용 3칸·파도타기·낡은/좋은/대단한낚싯대
+      // 물길 도로의 풀숲 칸 72개는 다이빙으로 들어가는 해초 조우입니다.
+      expect(rows.filter((row) => ['walk', 'tall-grass'].includes(row.method))).toHaveLength(1_044)
+      expect(rows.filter((row) => row.method === 'seaweed')).toHaveLength(72)
+      expect(rows.filter((row) => row.method === 'surf')).toHaveLength(295)
+      expect(rows.filter((row) => row.method === 'dexnav')).toHaveLength(150)
+      expect(rows.filter((row) => row.method === 'dexnav').every((row) =>
+        row.conditions.includes('postgame') && row.conditions.includes('national-dex'))).toBe(true)
       expect(rows.filter((row) => row.method === 'egg')).toHaveLength(2)
       expect(rows.filter((row) => row.method === 'fossil')).toHaveLength(6)
       expect(rows.filter((row) => row.method === 'npc-trade')).toHaveLength(3)
@@ -461,7 +479,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
           ? 900
           : ['ultra-sun', 'ultra-moon'].includes(gameId)
             ? 1_000
-        : ['brilliant-diamond', 'shining-pearl'].includes(gameId)
+        : ['brilliant-diamond', 'shining-pearl', 'lets-go-pikachu', 'lets-go-eevee'].includes(gameId)
           ? 500
           : 800
       expect(rows.length, gameId).toBeGreaterThan(minimumRows)
@@ -562,6 +580,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       moon: 'alola7',
       'ultra-sun': 'alola7-ultra',
       'ultra-moon': 'alola7-ultra',
+      'lets-go-pikachu': 'letsgo7',
+      'lets-go-eevee': 'letsgo7',
+      'legends-arceus': 'hisui8',
       sword: 'galar8',
       shield: 'galar8',
       'brilliant-diamond': 'sinnoh8',
@@ -572,6 +593,8 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     const unmapped = new Set<string>()
     for (const [gameId, rows] of Object.entries(encounterGames)) {
       for (const row of rows) {
+        // 전제 조건을 확인하지 못해 추천에서 빼는 특수 입수는 장을 정하지 않습니다.
+        if (row.conditions.includes('special-prerequisite-unresolved')) continue
         const chapter = modernEncounterChapter(
           familyByGame[gameId],
           row.location,

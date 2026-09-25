@@ -8,6 +8,7 @@ import {
 } from './gen8Forms'
 import { loadLearnsets } from './learnsets'
 import { modernEncounterChapter, type ModernFamilyId } from './modernGames'
+import { modernClassicFamilies } from './modernPolicy'
 import type { Availability, CatalogEncounter, CatalogEvolution, CatalogEvolutionMethod, CatalogSpecies, GameConfig } from './types'
 import { getCatalogGame } from './versionRegistry'
 
@@ -65,6 +66,7 @@ interface ModernEncounterSnapshot {
     files: string[]
     notes: string[]
   }
+  locationNames: Record<string, Record<string, string>>
   games: Record<string, ({
     species: number
     form: number
@@ -77,6 +79,7 @@ export let catalogCoverage: Snapshot['coverage'] | null = null
 export let modernEncounterProvenance: ModernEncounterSnapshot['provenance'] | null = null
 export const speciesCatalog: CatalogSpecies[] = []
 export const speciesByDex = new Map<number, CatalogSpecies>()
+let modernLocationNames: ModernEncounterSnapshot['locationNames'] = {}
 let catalogPromise: Promise<void> | null = null
 
 function readSnapshot(value: unknown): Snapshot {
@@ -126,6 +129,7 @@ export function loadCatalog(): Promise<void> {
       speciesCatalog.push(...data.species)
       for (const species of data.species) speciesByDex.set(species.dex, species)
       modernEncounterProvenance = modern.provenance
+      modernLocationNames = modern.locationNames ?? {}
       for (const [gameId, rows] of Object.entries(modern.games)) {
         const game = getCatalogGame(gameId)
         if (!game) throw new Error(`레지스트리에 없는 현대 조우 게임입니다: ${gameId}`)
@@ -171,6 +175,11 @@ const locationKo: Record<string, string> = {
   'granite-cave': '바위동굴',
   'fiery-path': '불꽃샛길',
   'new-mauville': '뉴보라',
+  'petalburg-woods': '등화숲',
+  'meteor-falls': '유성폭포',
+  'shoal-cave': '여울의 동굴',
+  'mt-pyre': '송화산',
+  'sea-mauville': '해상보라',
   'safari-zone': '사파리존',
   'twinleaf-town': '떡잎마을',
   'oreburgh-city': '무쇠시티',
@@ -202,6 +211,8 @@ const postgameMarkers: Record<string, string[]> = {
   johto4: ['kanto', 'mt-silver'],
   unova5: ['route-11', 'route-12', 'route-13', 'route-14', 'route-15', 'undella', 'giant-chasm', 'abundant-shrine'],
   'unova5-2': ['nature-preserve'],
+  kalos6: ['kiloude-city', 'friend-safari', 'unknown-dungeon', 'sea-spirits-den'],
+  hoenn6: ['battle-resort', 'sky-pillar'],
 }
 
 const gamePostgameMarkers: Partial<Record<GameConfig['id'], string[]>> = {
@@ -256,6 +267,24 @@ const methodKo: Record<string, string> = {
   'dynamax-adventure': '다이맥스 어드벤처',
   fossil: '화석 복원',
   egg: '알',
+  'yellow-flowers': '노란 꽃밭',
+  'purple-flowers': '보라 꽃밭',
+  'red-flowers': '빨간 꽃밭',
+  flowers: '꽃밭',
+  'rough-terrain': '거친 지형',
+  'tall-grass': '긴 풀숲',
+  horde: '무리 배틀',
+  ambush: '매복 조우',
+  'friend-safari': '프렌드사파리',
+  dexnav: '도감내비 전용',
+  'fishing-bubbling': '낚시(물거품 포인트)',
+  sos: 'SOS 호출',
+  'berry-pile': '나무열매 더미',
+  'island-scan': '아일랜드 스캔',
+  'wild-unspecified': '야생(방식 미확인)',
+  'sea-skim': '물결타기 수면',
+  sky: '하늘 비행',
+  landmark: '흔들리는 나무·광석',
 }
 
 export const supportedEncounterMethods = new Set(Object.keys(methodKo))
@@ -306,10 +335,18 @@ const postgameConditions = [
 ]
 
 const unavailableConditions = [
+  // ORAS 전설 고정 심볼 중 파티·환상의 장소 전제를 검증하지 못한 경로와 배포 무한의티켓 경로
+  'special-prerequisite-unresolved',
+  'event-item-eon-ticket',
+  // 알로라 아일랜드 스캔은 실제 QR 코드를 스캔해 모은 포인트가 필요합니다.
+  'island-scan-qr',
   'other-event-arceus-in-party',
   'other-virtual-console',
   'other-regirock-regice-registeel-in-party',
 ]
+
+// 비용만 드는 입수 경로는 조건부 경로로 낮추지 않습니다.
+const informationalConditions = new Set(['magikarp-salesman'])
 
 const eventOnlyLocations = [
   'birth-island',
@@ -324,9 +361,31 @@ const eventOnlyLocations = [
 ]
 
 const conditionKo: Record<string, string> = {
+  'rock-smash': '바위깨기 필요',
+  'calendar-trash-can': '날짜별 쓰레기통 조사',
+  'daily-roaming-trader': '날마다 위치가 바뀌는 교환 NPC',
+  'trade-any': '아무 포켓몬과 교환',
+  'friend-code-dependent': '친구 코드에 따라 달라짐',
+  'form-region-dependent': '본체 지역 설정에 따른 폼',
+  'roaming-found-11-times': '배회 포켓몬을 11번 조우한 뒤',
+  'version-exclusive-fossil': '버전 전용 화석',
+  'devon-scope': '데봉스코프 필요',
+  'mirage-spot': '날짜마다 바뀌는 환상의 장소',
+  soaring: '무한의 피리로 하늘 날기',
+  'story-progress-primal-defeated': '원시 그란돈·가이오가 사건 이후',
+  'story-progress-go-goggles': 'Go고글 입수 후',
+  'story-progress-eon-gift': '남쪽 외딴섬 이벤트',
+  'delta-episode': '델타 에피소드',
+  'delta-episode-complete': '델타 에피소드 완료 후',
+  'method-unresolved': '원본에서 조우 방식 미확인',
+  'machamp-shove': '괴력몬 푸시 필요',
+  fishing: '낚싯대 필요',
+  'story-climax': '스토리 결전',
+  'ultra-beast-quest': '울트라비스트 포획 임무',
   'time-morning': '아침',
   'time-day': '낮',
   'time-night': '밤',
+  'time-evening': '저녁',
   'swarm-yes': '대량발생',
   'radar-on': '포켓트레',
   'radio-hoenn': '호연 사운드',
@@ -367,6 +426,21 @@ const conditionKo: Record<string, string> = {
   'dlc-milestone-crown-calyrex-complete': '풍요의 왕 단서 완료',
   'dlc-milestone-crown-legendary-clues': '왕관설원 전설 단서 진행',
   'dlc-milestone-crown-ultra-beasts': '울트라비스트 단서 해금',
+  'rare-spawn': '희귀 출현 · 포획 콤보·향로로 확률 상승',
+  'catch-count-30': '누적 포획 30마리 이상',
+  'catch-count-50': '누적 포획 50마리 이상',
+  'catch-count-60': '누적 포획 60마리 이상',
+  'catch-five-growlithe': '가디 5마리 포획 후',
+  'catch-five-meowth': '나옹 5마리 포획 후',
+  'magikarp-salesman': '잉어킹 판매원에게 500원에 구입',
+  'other-caught-articuno': '프리저 포획 후',
+  'other-caught-zapdos': '썬더 포획 후',
+  'other-caught-moltres': '파이어 포획 후',
+  'gimmighoul-chest': '보물상자 속 모으령',
+  alpha: '우두머리 개체',
+  'basculegion-ride': '대쓰여너 라이드 필요',
+  'ruinous-stakes': '재앙의 말뚝을 모두 뽑은 뒤',
+  'mutually-exclusive-starter': '스타터 중 하나만 선택',
 }
 
 const galarDlcMilestoneChapters: Record<string, number> = {
@@ -392,6 +466,7 @@ const conditionUnlockChapters: Record<string, number> = {
 }
 
 const conditionalMethods = new Set([
+  'sos', 'berry-pile',
   'headbutt', 'headbutt-low', 'headbutt-normal', 'headbutt-high', 'honey-tree',
   'grass-spots', 'cave-spots', 'bridge-spots', 'surf-spots', 'super-rod-spots',
   'bubbling-spots', 'hidden-grotto', 'feebas-tile-fishing',
@@ -439,6 +514,11 @@ function conditionLabel(condition: string): string {
   if (condition === 'crown-tundra') return '왕관설원 DLC'
   if (condition.startsWith('content-update-')) return `콘텐츠 업데이트 ${condition.replace('content-update-', '')}`
   if (condition.startsWith('requested-species-')) return `게임 내 교환 요구: ${condition.replace('requested-species-', '')}`
+  if (condition.startsWith('trade-for-')) {
+    const requested = condition.slice('trade-for-'.length)
+    return `게임 내 교환 요구: ${speciesCatalog.find((species) => species.id === requested)?.name ?? requested}`
+  }
+  if (condition.startsWith('choice-group-')) return '여러 후보 중 하나만 선택'
   if (condition === 'gigantamax-capable') return '거다이맥스 가능 개체'
   if (condition === 'multiplayer-opposite-version-host') return '반대 버전 호스트의 멀티플레이 경로 필요'
   if (condition === 'one-catch-per-legendary') return '전설별 저장 데이터당 1회 포획'
@@ -469,7 +549,10 @@ function conditionLabel(condition: string): string {
   return '특수 조건'
 }
 
-function humanizeLocation(location: string): string {
+function humanizeLocation(location: string, game?: GameConfig): string {
+  // 6세대 이후 버전은 PKHeX 공식 한국어 장소명을 먼저 씁니다.
+  const official = game ? modernLocationNames[game.id]?.[location] : undefined
+  if (official) return official
   const translated = Object.entries(locationKo).find(([key]) => location.includes(key))
   if (translated) return translated[1]
   const route = location.match(/(?:^|-)(?:sea-)?route-(\d+)(?:-|$)/)
@@ -477,6 +560,13 @@ function humanizeLocation(location: string): string {
   return location
     .replaceAll('-', ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function shedEvolutionLevel(species: CatalogSpecies): number {
+  return speciesCatalog.find((candidate) =>
+    candidate.evolvesFrom === species.evolvesFrom
+    && candidate.dex !== species.dex
+    && candidate.evolution?.trigger === 'level-up')?.evolution?.minLevel ?? 0
 }
 
 function ancestors(species: CatalogSpecies): CatalogSpecies[] {
@@ -491,15 +581,77 @@ function ancestors(species: CatalogSpecies): CatalogSpecies[] {
   return result
 }
 
-export function generationLineage(species: CatalogSpecies, generation: number): CatalogSpecies[] {
-  return [...ancestors(species), species].filter((entry) => entry.generation <= generation)
+export function generationLineage(species: CatalogSpecies, generation: number, familyId?: string): CatalogSpecies[] {
+  return [...ancestors(species), species].filter((entry) => entry.generation <= generation
+    // 레츠고에는 관동 151종만 나오므로 피츄 같은 이후 세대 진화 전 형태를 계열에서 뺍니다.
+    && (familyId !== 'letsgo7' || entry.dex <= 151))
 }
 
 function chainRoot(species: CatalogSpecies): CatalogSpecies {
   return ancestors(species)[0] ?? species
 }
 
+const regionalEvolutionFamilies: Record<string, string[]> = {
+  alola: ['alola7', 'alola7-ultra'],
+  galar: ['galar8'],
+  hisui: ['hisui8'],
+  paldea: ['paldea9'],
+}
+
+function regionalFormRegion(pokemonId: number | null | undefined): string | null {
+  const identifier = pokemonId ? getGen8FormProfileByPokemonId(pokemonId)?.identifier : undefined
+  return identifier ? /-(alola|galar|hisui|paldea)(?:-|$)/.exec(identifier)?.[1] ?? null : null
+}
+
+function isAlolanForm(pokemonId: number | null | undefined): boolean {
+  return Boolean(pokemonId && getGen8FormProfileByPokemonId(pokemonId)?.identifier.endsWith('-alola'))
+}
+
+// PKHeX evos_gg 기준으로 레츠고에는 시간대 조건이 없고, 알로라 나옹은 친밀도가 아닌 Lv.28에 진화합니다.
+function letsGoEvolution(method: CatalogEvolutionMethod): CatalogEvolutionMethod {
+  if (method.minHappiness && method.baseFormId === 10107) return { ...method, minHappiness: null, minLevel: 28, time: null }
+  return method.time ? { ...method, time: null } : method
+}
+
+const heldItemIdentifiers: Record<number, string> = {
+  110: 'oval-stone', 198: 'kings-rock', 203: 'deep-sea-tooth', 204: 'deep-sea-scale', 210: 'metal-coat',
+  212: 'dragon-scale', 229: 'up-grade', 298: 'protector', 299: 'electirizer', 300: 'magmarizer',
+  301: 'dubious-disc', 302: 'reaper-cloth', 303: 'razor-claw', 304: 'razor-fang',
+}
+// PKHeX evos_la 기준으로 LEGENDS 아르세우스는 통신교환 진화를 연결의끈으로, 도구를 지니고 하던 진화를 도구 사용으로 바꾸고,
+// 자기장·이끼 낀 바위·얼음 바위 진화도 천둥·리프·얼음의돌로 할 수 있습니다.
+const hisuiStoneEvolutions: Record<number, string> = { 462: 'thunder-stone', 476: 'thunder-stone', 470: 'leaf-stone', 471: 'ice-stone' }
+
+function hisuiEvolution(
+  species: CatalogSpecies,
+  method: CatalogEvolution | CatalogEvolutionMethod,
+): CatalogEvolution | CatalogEvolutionMethod {
+  const stone = hisuiStoneEvolutions[species.dex]
+  if (stone) return { ...method, trigger: 'use-item', item: stone, minLevel: null, heldItemId: null }
+  if (method.trigger === 'trade' && !method.tradeSpeciesId) {
+    const item = method.heldItemId ? heldItemIdentifiers[method.heldItemId] : 'linking-cord'
+    return item ? { ...method, trigger: 'use-item', item, heldItemId: null } : method
+  }
+  if (method.heldItemId && heldItemIdentifiers[method.heldItemId]) {
+    return { ...method, trigger: 'use-item', item: heldItemIdentifiers[method.heldItemId], heldItemId: null, minLevel: null }
+  }
+  return method
+}
+
 export function evolutionForGame(
+  species: CatalogSpecies,
+  game: GameConfig,
+  basePokemonId?: number,
+  baseFormIndex?: number,
+): CatalogEvolution | CatalogEvolutionMethod | null {
+  // 레츠고에는 #152 이후 진화 전 포켓몬(피츄·흉내내 등)이 없어 피카츄·마임맨 등은 진화로 얻지 않습니다.
+  if (game.familyId === 'letsgo7' && species.evolvesFrom && species.evolvesFrom > 151) return null
+  const result = evolutionMethodForGame(species, game, basePokemonId, baseFormIndex)
+  if (game.familyId === 'hisui8' && result) return hisuiEvolution(species, result)
+  return game.familyId === 'letsgo7' && result && 'versionGroupId' in result ? letsGoEvolution(result) : result
+}
+
+function evolutionMethodForGame(
   species: CatalogSpecies,
   game: GameConfig,
   basePokemonId?: number,
@@ -522,11 +674,38 @@ export function evolutionForGame(
     .filter((method) => !method.baseFormId || !basePokemonId || method.baseFormId === basePokemonId)
     .filter((method) => species.dex !== 855 || game.familyId !== 'galar8' || baseFormIndex === undefined
       || method.item === (baseFormIndex === 1 ? 'chipped-pot' : 'cracked-pot'))
+    // 레츠고에는 알로라 지역 진화가 없어 관동 모습은 관동 모습으로만 진화하고,
+    // 교환으로 받은 알로라 모습만 같은 알로라 모습으로 진화합니다.
+    // 스칼렛·바이올렛 본편에는 LEGENDS 아르세우스 전용 진화(흑요석·이탄블록·스타일 기술 등)가 없습니다.
+    .filter((method) => game.familyId !== 'paldea9' || method.versionGroupId !== 24)
+    // 알로라·가라르·히스이 땅에서만 일어나는 지역 폼 진화(피카츄 → 알로라 라이츄, 갈모매 → 히스이 워글 등)는
+    // 그 지역 게임에서만 쓰고, 지역 폼끼리의 진화(히스이 가디 → 히스이 윈디)는 어느 게임에서나 씁니다.
+    .filter((method) => {
+      const region = regionalFormRegion(method.evolvedFormId)
+      if (!region || regionalFormRegion(method.baseFormId) === region) return true
+      return regionalEvolutionFamilies[region].includes(game.familyId)
+    })
+    .filter((method) => {
+      if (game.familyId !== 'letsgo7') return true
+      const alolanBase = isAlolanForm(method.baseFormId)
+      if (method.versionGroupId && [17, 18].includes(method.versionGroupId) && !alolanBase) return false
+      return !alolanBase || method.baseFormId === basePokemonId
+    })
     .sort((a, b) =>
       Number(b.versionGroupId === game.versionGroupId) - Number(a.versionGroupId === game.versionGroupId)
       || Number(b.default) - Number(a.default)
       || (b.versionGroupId ?? 0) - (a.versionGroupId ?? 0))
-  return candidates[0] ?? (basePokemonId ? null : species.evolution)
+  if (candidates[0]) return candidates[0]
+  if (basePokemonId) {
+    // 알로라 모래두지·식스테일처럼 PokéAPI가 지역 폼 진화를 이후 버전 그룹에만 기록한 경우,
+    // 같은 기본 폼의 가장 이른 행을 씁니다(지역 폼이 처음 나온 세대부터 같은 조건입니다).
+    const regional = species.evolutionMethods
+      .filter((method) => method.baseFormId === basePokemonId)
+      .filter((method) => game.familyId !== 'paldea9' || method.versionGroupId !== 24)
+      .sort((a, b) => (a.versionGroupId ?? 0) - (b.versionGroupId ?? 0))[0]
+    return regional ?? null
+  }
+  return game.familyId === 'paldea9' ? null : species.evolution
 }
 
 function locationMatchesToken(location: string, token: string): boolean {
@@ -545,6 +724,7 @@ interface RankedEncounter {
   readyChapter: number
   evolutionSteps: number
   conditional: boolean
+  rareSpawn: boolean
   parallelDlc: boolean
   methodLabel: string
   unavailableReason?: string
@@ -564,7 +744,7 @@ function isPostgameEncounter(game: GameConfig, encounter: CatalogEncounter): boo
 function encounterChapter(game: GameConfig, encounter: CatalogEncounter): Pick<RankedEncounter, 'chapter' | 'storyOrder' | 'quality'> {
   const family = getFamily(game)
   const mainStoryChapterCount = getMainStoryChapterCount(game)
-  if (['galar8', 'sinnoh8', 'letsgo7', 'hisui8'].includes(game.familyId)) {
+  if (['kalos6', 'hoenn6', 'alola7', 'alola7-ultra', 'galar8', 'sinnoh8', 'letsgo7', 'hisui8', 'paldea9'].includes(game.familyId)) {
     const chapter = modernEncounterChapter(
       game.familyId as ModernFamilyId,
       encounter.location,
@@ -639,20 +819,40 @@ function hasEncounter(species: CatalogSpecies, versionId: number, form?: number)
 function isVersionExclusive(species: CatalogSpecies, game: GameConfig, form?: number): boolean {
   const siblings = games.filter((candidate) => candidate.familyId === game.familyId && candidate.id !== game.id)
   if (siblings.length === 0) return false
-  const line = generationLineage(species, game.generation)
+  const line = generationLineage(species, game.generation, game.familyId)
   return line.some((entry) => hasEncounter(entry, game.versionId, form))
     && siblings.every((sibling) => line.every((entry) => !hasEncounter(entry, sibling.versionId, form)))
 }
 
 const availabilityCache = new Map<string, Availability>()
+const availabilityInProgress = new Set<string>()
+
+// 레츠고 파트너 피카츄·이브이는 전용 폼 선물이며 진화·교환할 수 없습니다.
+function isLetsGoPartner(encounter: CatalogEncounter, source: CatalogSpecies): boolean {
+  return encounter.method === 'gift'
+    && Boolean(getGen8FormProfile(source.dex, encounter.form ?? 0)?.identifier.endsWith('-starter'))
+}
+
+function requestedTradeAvailability(encounter: CatalogEncounter, game: GameConfig): Availability | null {
+  if (!modernClassicFamilies.has(game.familyId)) return null
+  const requestedId = encounter.conditions.find((condition) => condition.startsWith('trade-for-'))?.slice('trade-for-'.length)
+  const requested = requestedId ? speciesCatalog.find((species) => species.id === requestedId) : undefined
+  if (!requested || availabilityInProgress.has(`${game.id}:${requested.dex}:*`)) return null
+  return getAvailability(requested, game)
+}
 
 export function getAvailability(species: CatalogSpecies, game: GameConfig, desiredSourceFormIndex?: number): Availability {
   const key = `${game.id}:${species.dex}:${desiredSourceFormIndex ?? '*'}`
   const cached = availabilityCache.get(key)
   if (cached) return cached
-  const availability = computeAvailability(species, game, desiredSourceFormIndex)
-  availabilityCache.set(key, availability)
-  return availability
+  availabilityInProgress.add(key)
+  try {
+    const availability = computeAvailability(species, game, desiredSourceFormIndex)
+    availabilityCache.set(key, availability)
+    return availability
+  } finally {
+    availabilityInProgress.delete(key)
+  }
 }
 
 function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredSourceFormIndex?: number): Availability {
@@ -663,6 +863,18 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
       storyOrder: 99_000,
       tradeRequired: false, postgameOnly: false, versionExclusive: false, sourceKind: 'unknown',
       reason: '브릴리언트 다이아몬드·샤이닝 펄의 게임 내 도감은 #001–493만 지원합니다.',
+      quality: 'verified',
+    }
+  }
+  if (game.familyId === 'letsgo7' && species.dex > 151) {
+    return {
+      obtainable: false, preChampion: false, chapter: 99, location: '-', level: '-',
+      finalChapter: 99,
+      storyOrder: 99_000,
+      tradeRequired: false, postgameOnly: false, versionExclusive: false, sourceKind: 'unknown',
+      reason: species.dex === 808 || species.dex === 809
+        ? '멜탄·멜메탈은 포켓몬 GO 연동(GO파크·수수께끼의 박스)이 필요합니다.'
+        : '레츠고 피카츄·이브이에는 #001–151과 멜탄·멜메탈만 등장합니다.',
       quality: 'verified',
     }
   }
@@ -677,7 +889,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
   }
 
   const mainStoryChapterCount = getMainStoryChapterCount(game)
-  const line = generationLineage(species, game.generation)
+  const line = generationLineage(species, game.generation, game.familyId)
   const root = line[0] ?? chainRoot(species)
   const ranked: RankedEncounter[] = line.flatMap((source) => {
     const evolutionLine = line.slice(line.indexOf(source) + 1)
@@ -698,16 +910,23 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         pathMethods[index]?.trigger === 'trade' || Boolean(crossVersionEvolutionReason(entry, game)),
       )
       const conditions = activeConditions(encounter)
-      const timing = encounterChapter(game, encounter)
+      const encounterTiming = encounterChapter(game, encounter)
+      const requestedTrade = requestedTradeAvailability(encounter, game)
+      // 게임 내 교환은 요구 포켓몬(진화형이면 진화까지)을 처음 준비할 수 있는 장보다 앞설 수 없습니다.
+      const requestedChapter = requestedTrade?.obtainable ? Math.max(requestedTrade.chapter, requestedTrade.finalChapter) : 0
+      const timing = requestedChapter > encounterTiming.chapter
+        ? { ...encounterTiming, chapter: requestedChapter, storyOrder: requestedChapter * 1_000 + 800 + encounter.minLevel / 100 }
+        : encounterTiming
       const readyChapter = Math.max(
         timing.chapter,
         ...evolutionLine.map((entry, index) => {
           const evolution = pathMethods[index]
-          const level = evolution?.minLevel ?? 0
+          // 껍질몬은 토중몬이 아이스크(Lv.20)로 진화할 때 함께 생깁니다.
+          const level = evolution?.minLevel ?? (evolution?.trigger === 'shed' ? shedEvolutionLevel(entry) : 0)
           const levelChapter = level ? Math.ceil(level / (60 / mainStoryChapterCount)) : 1
           const requirementChapter = crossVersionEvolutionReason(entry, game)
             ? 1
-            : evolutionRequirementChapter(entry, game)
+            : evolutionRequirementChapter(entry, game, pathMethods[index])
           return Math.max(levelChapter, requirementChapter)
         }),
       )
@@ -716,8 +935,12 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         'headbutt', 'headbutt-low', 'headbutt-normal', 'headbutt-high', 'seaweed',
         'surf-spots', 'super-rod-spots', 'dark-grass', 'grass-spots', 'cave-spots',
         'bridge-spots', 'feebas-tile-fishing', 'bubbling-spots',
+        'yellow-flowers', 'purple-flowers', 'red-flowers', 'flowers', 'rough-terrain', 'tall-grass',
+        'horde', 'ambush', 'fishing', 'fishing-bubbling', 'sos', 'berry-pile',
       ].includes(encounter.method)
-      const conditional = conditions.length > 0 || conditionalMethods.has(encounter.method)
+        || (['letsgo7', 'paldea9', 'hisui8'].includes(game.familyId) && ['overworld', 'sea-skim', 'landmark'].includes(encounter.method))
+      const conditional = conditions.some((condition) => !informationalConditions.has(condition))
+        || conditionalMethods.has(encounter.method)
       return {
         encounter,
         source,
@@ -726,6 +949,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         readyChapter,
         evolutionSteps: evolutionLine.length,
         conditional,
+        rareSpawn: conditions.includes('rare-spawn'),
         parallelDlc,
         methodLabel: [
           methodKo[encounter.method] ?? encounter.method,
@@ -733,11 +957,17 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         ].join(' · '),
         unavailableReason: invalidFormEvolution
           ? '이 폼은 목표 진화형으로 진화할 수 없습니다.'
+          : evolutionLine.length > 0 && isLetsGoPartner(encounter, source)
+            ? '파트너 피카츄·이브이는 진화할 수 없습니다.'
+          : requestedTrade && !requestedTrade.obtainable
+            ? '교환에 필요한 포켓몬을 이 버전에서 잡을 수 없습니다.'
           : encounter.conditions.some((condition) => unavailableConditions.includes(condition))
           ? '이벤트 또는 별도 배포 조건이 필요한 입수 경로입니다.'
           : encounter.conditions.some((condition) => condition.startsWith('johto-safari-blocks-'))
             ? '사파리존 블록 배치와 대기 일수의 정확한 해금 시점이 모델링되지 않았습니다.'
           : eventOnlyLocations.some((location) => locationMatchesToken(encounter.location, location))
+            // ORAS 남쪽 외딴섬의 라티오스/라티아스 선물은 본편 스토리 이벤트입니다.
+            && !encounter.conditions.includes('story-progress-eon-gift')
             ? '배포 아이템 또는 이벤트가 필요한 입수 경로입니다.'
           : (game.id === 'black-2' && encounter.conditions.includes('item-ice-key'))
             || (game.id === 'white-2' && encounter.conditions.includes('item-iron-key'))
@@ -782,6 +1012,9 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
     || Number(a.encounter.conditions.some((condition) => condition.startsWith('dlc-milestone-')))
       - Number(b.encounter.conditions.some((condition) => condition.startsWith('dlc-milestone-')))
     || Number(a.conditional) - Number(b.conditional)
+    // 확률이 낮은 희귀 출현보다 조건만 채우면 확실한 선물을 먼저 씁니다.
+    || Number(a.rareSpawn) - Number(b.rareSpawn)
+    || Number(isLetsGoPartner(b.encounter, b.source)) - Number(isLetsGoPartner(a.encounter, a.source))
     || effectiveReadyChapter(a) - effectiveReadyChapter(b)
     || a.storyOrder - b.storyOrder
     || a.evolutionSteps - b.evolutionSteps
@@ -792,7 +1025,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
   const first = pool[0]
   const source = first.source
   const sourceFormIndex = first.encounter.form ?? 0
-  const sourceForm = game.generation >= 7
+  const sourceForm = game.generation >= 6
     ? getGen8FormProfile(source.dex, sourceFormIndex)
     : undefined
   const evolutionLine = line.slice(line.indexOf(source) + 1)
@@ -801,7 +1034,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
   for (const evolvedSpecies of evolutionLine) {
     const method = evolutionForGame(evolvedSpecies, game, evolvedForm?.pokemonId, evolvedForm?.formIndex)
     selectedEvolutionMethods.push(method)
-    if (game.generation >= 7) {
+    if (game.generation >= 6) {
       const evolvedFormId = method && 'evolvedFormId' in method ? method.evolvedFormId : null
       evolvedForm = evolvedFormId
         ? getGen8FormProfileByPokemonId(evolvedFormId)
@@ -818,7 +1051,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
           ? `${species.id}-crowned`
           : evolvedForm?.identifier ?? species.id,
       ) ?? evolvedForm
-    : evolvedForm ?? (game.generation >= 7 ? getGen8DefaultFormProfile(species.dex) : undefined)
+    : evolvedForm ?? (game.generation >= 6 ? getGen8DefaultFormProfile(species.dex) : undefined)
   const formChoices = game.familyId === 'galar8' && species.dex === 892
     ? [
         { profile: getGen8FormProfile(892, 0), trigger: 'tower-of-darkness' },
@@ -857,6 +1090,8 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
           })
       : undefined
   const externalEvolution = evolutionLine.find((entry) => crossVersionEvolutionReason(entry, game))
+  const evolutionTimingInferred = evolutionLine.some((entry, index) =>
+    !evolutionTimingVerified(entry, game, selectedEvolutionMethods[index]))
   const tradeRequired = source.dex !== species.dex && (
     selectedEvolutionMethods.some((method) => method?.trigger === 'trade')
     || Boolean(externalEvolution)
@@ -911,7 +1146,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
     chapter: captureChapter,
     finalChapter: evolutionChapter,
     storyOrder: capturePostgame ? (mainStoryChapterCount + 1) * 1_000 : first.storyOrder,
-    location: humanizeLocation(first.encounter.location),
+    location: humanizeLocation(first.encounter.location, game),
     level: `Lv.${first.encounter.minLevel}${first.encounter.maxLevel !== first.encounter.minLevel ? `–${first.encounter.maxLevel}` : ''}`,
     method: first.methodLabel,
     methodId: first.encounter.method,
@@ -947,7 +1182,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         : postgameOnly && evolutionChapter > captureChapter
           ? '최종 진화 장소 또는 도구가 엔딩 후에 열립니다.'
           : undefined,
-    quality: starter || fossil ? 'verified' : first.quality,
+    quality: evolutionTimingInferred ? 'inferred' : starter || fossil ? 'verified' : first.quality,
   }
 }
 
@@ -978,6 +1213,23 @@ const evolutionItemKo: Record<string, string> = {
   'chipped-pot': '이빠진포트',
   'galarica-cuff': '가라두구팔찌',
   'galarica-wreath': '가라두구머리장식',
+  'auspicious-armor': '축복받은갑옷',
+  'malicious-armor': '저주받은갑옷',
+  'linking-cord': '연결의끈',
+  'black-augurite': '검은휘석',
+  'peat-block': '피트블록',
+  'metal-coat': '금속코트',
+  electirizer: '에레키부스터',
+  magmarizer: '마그마부스터',
+  protector: '프로텍터',
+  'reaper-cloth': '영계의천',
+  'up-grade': '업그레이드',
+  'dubious-disc': '괴상한패치',
+  'razor-claw': '예리한손톱',
+  'razor-fang': '예리한이빨',
+  'oval-stone': '동글동글돌',
+  'kings-rock': '왕의징표석',
+  'dragon-scale': '용의비늘',
 }
 
 const evolutionItemUnlocks: Record<string, Partial<Record<string, number>>> = {
@@ -1014,6 +1266,67 @@ const evolutionItemUnlocks: Record<string, Partial<Record<string, number>>> = {
     'fire-stone': 2, 'leaf-stone': 2, 'moon-stone': 2, 'sun-stone': 2, 'thunder-stone': 2,
     'water-stone': 2, 'dawn-stone': 2, 'dusk-stone': 2, 'shiny-stone': 2,
   },
+  // 8번도로 리프의돌, 10·11번도로 천둥의돌, Reflection Cave 달의돌, 파도타기로 가는 3번도로 각성의돌,
+  // 12번도로 물의돌·빛의돌, 미르시티 Stone Emporium 불꽃의돌, 끝의 동굴 어둠의돌
+  kalos6: {
+    'leaf-stone': 2, 'thunder-stone': 3, 'moon-stone': 3, 'dawn-stone': 3,
+    'water-stone': 4, 'shiny-stone': 4, 'fire-stone': 5, 'dusk-stone': 9,
+  },
+  // 불꽃샛길(괴력) 불꽃의돌, 유성폭포 달의돌, 해상보라 각성의돌, 119번도로 리프의돌, 121번도로 빛의돌,
+  // 송화산 어둠의돌, 이끼시티 우주센터 태양의돌, 124번도로 보물사냥꾼 물의돌, 뉴보라 천둥의돌
+  hoenn6: {
+    'fire-stone': 4, 'moon-stone': 4, 'dawn-stone': 5, 'leaf-stone': 6, 'shiny-stone': 7,
+    'dusk-stone': 7, 'sun-stone': 8, 'water-stone': 8, 'thunder-stone': 9,
+  },
+  // 코니코니시티 보석 가게(불꽃·천둥·물·리프·얼음), 말리시티 태양의돌, 13번도로 달의돌, 포니 황야 어둠의돌.
+  // 각성의돌은 엔딩 후 구즈마 재대결 보상으로 확인되어 본편에서는 쓰지 않습니다.
+  alola7: {
+    'fire-stone': 3, 'thunder-stone': 3, 'water-stone': 3, 'leaf-stone': 3, 'ice-stone': 3,
+    'sun-stone': 4, 'moon-stone': 4, 'dusk-stone': 6, 'dawn-stone': 9,
+  },
+  'alola7-ultra': {
+    'fire-stone': 3, 'thunder-stone': 3, 'water-stone': 3, 'leaf-stone': 3, 'ice-stone': 3,
+    'sun-stone': 4, 'moon-stone': 4, 'dusk-stone': 6, 'dawn-stone': 9,
+  },
+  // 달맞이산 B2F 달의돌, 무지개시티 백화점 4층(불꽃·천둥·물·리프·얼음의돌 각 5000원)과 포켓몬타워 5층 얼음의돌
+  letsgo7: {
+    'moon-stone': 2, 'fire-stone': 4, 'thunder-stone': 4, 'water-stone': 4, 'leaf-stone': 4, 'ice-stone': 4,
+  },
+  // 남쪽 3구역 달의돌, 보울체육관 테스트 보상 태양의돌, 배지 3개 이후 프렌들리숍의 불꽃·천둥·물·리프의돌,
+  // 동쪽 3구역 각성의돌, 나페산 얼음의돌과 프리지체육관 뒤 어둠의돌. 빛의돌은 고정 입수처를 확인하지 못했습니다.
+  paldea9: {
+    'moon-stone': 2, 'sun-stone': 3, 'fire-stone': 4, 'thunder-stone': 4, 'water-stone': 4, 'leaf-stone': 4,
+    'dawn-stone': 5, 'ice-stone': 7, 'dusk-stone': 7,
+  },
+}
+
+
+// 스칼렛·바이올렛에서 기술을 배운 뒤 진화하는 포켓몬: 키링키 트윈빔 Lv.32, 노고치 하이퍼드릴 Lv.32, 성원숭 분노의주먹 Lv.35
+const paldeaMoveEvolutionLevels: Record<number, number> = { 887: 32, 888: 32, 889: 35 }
+const paldeaEvolutionMoveKo: Record<number, string> = { 887: '하이퍼드릴', 888: '트윈빔', 889: '분노의주먹' }
+// 동전 999개 모으기와 대장의징표 절각참 3마리 쓰러뜨리기는 시점을 확인하지 못해 마지막 장 추론으로 둡니다.
+const unresolvedPaldeaTriggers = new Set([
+  'gimmighoul-coins', 'three-defeated-bisharp',
+  // LEGENDS 아르세우스: 속공·강공 스타일 기술 20회, 반동 피해 294, 보름달 피트블록
+  'agile-style-move', 'strong-style-move', 'recoil-damage',
+])
+
+function chapterForStoryLevel(level: number, game: GameConfig): number {
+  const index = getFamily(game).chapters.findIndex((chapter) =>
+    Math.max(...(chapter.level.match(/\d+/g) ?? ['0']).map(Number)) >= level)
+  return index >= 0 ? Math.min(index + 1, getMainStoryChapterCount(game)) : getMainStoryChapterCount(game)
+}
+
+export function evolutionTimingVerified(
+  species: CatalogSpecies,
+  game: GameConfig,
+  evolution: CatalogEvolution | CatalogEvolutionMethod | null = evolutionForGame(species, game),
+): boolean {
+  if (!modernClassicFamilies.has(game.familyId)) return true
+  if (evolution && unresolvedPaldeaTriggers.has(evolution.trigger)) return false
+  if (!evolution || evolution.trigger === 'trade') return true
+  if (evolution.item) return evolutionItemUnlocks[game.familyId]?.[evolution.item] !== undefined
+  return !evolution.heldItemId
 }
 
 const crystalEvolutionItemUnlocks: Partial<Record<string, number>> = {
@@ -1059,9 +1372,12 @@ const galarEvolutionItemDlc: Record<string, {
   },
 }
 
-export function evolutionRequirementChapter(species: CatalogSpecies, game: GameConfig): number {
+export function evolutionRequirementChapter(
+  species: CatalogSpecies,
+  game: GameConfig,
+  evolution: CatalogEvolution | CatalogEvolutionMethod | null = evolutionForGame(species, game),
+): number {
   const mainStoryChapterCount = getMainStoryChapterCount(game)
-  const evolution = evolutionForGame(species, game)
   if (!evolution) return 1
   if (game.familyId === 'galar8') {
     if (evolution.item) return galarEvolutionItemUnlocks[evolution.item] ?? 1
@@ -1070,6 +1386,16 @@ export function evolutionRequirementChapter(species: CatalogSpecies, game: GameC
     return 1
   }
   if (game.familyId === 'sinnoh8' && species.dex === 350) return 3
+  if (game.familyId === 'hisui8' && unresolvedPaldeaTriggers.has(evolution.trigger)) return mainStoryChapterCount
+  if (game.familyId === 'paldea9') {
+    const method: Partial<CatalogEvolutionMethod> = evolution
+    if (unresolvedPaldeaTriggers.has(evolution.trigger)) return mainStoryChapterCount
+    const moveLevel = paldeaMoveEvolutionLevels[method.knownMoveId ?? method.usedMoveId ?? 0]
+    if (moveLevel) return chapterForStoryLevel(moveLevel, game)
+  }
+  if (modernClassicFamilies.has(game.familyId) && evolution.trigger !== 'trade' && evolution.heldItemId) {
+    return mainStoryChapterCount
+  }
   if (game.familyId === 'sinnoh8' && evolution.heldItemId) {
     const heldItemChapter: Record<number, number> = {
       110: 3,
@@ -1092,6 +1418,26 @@ export function evolutionRequirementChapter(species: CatalogSpecies, game: GameC
   if (evolution.item) {
     const crystalOverride = game.id === 'crystal' ? crystalEvolutionItemUnlocks[evolution.item] : undefined
     return crystalOverride ?? evolutionItemUnlocks[game.familyId]?.[evolution.item] ?? mainStoryChapterCount
+  }
+  if (game.familyId === 'kalos6') {
+    // 13번도로 자기장, 프로스트케이브 얼음 바위, 20번도로 이끼 낀 바위, 비가 잦은 14번도로
+    if (species.dex === 462 || species.dex === 476) return 5
+    if (species.dex === 471) return 7
+    if (species.dex === 470) return 9
+    if (species.dex === 706) return 6
+  }
+  if (game.familyId === 'alola7' || game.familyId === 'alola7-ultra') {
+    // 담청산 자기장(투구뿌논 포함), 밀림 이끼 낀 바위, 라나키라마운틴 얼음 바위(모단단게 포함)
+    if ([462, 476, 738].includes(species.dex)) return 4
+    if (species.dex === 470) return 2
+    if (species.dex === 471 || species.dex === 740) return 7
+  }
+  if (game.familyId === 'hoenn6') {
+    // 뉴보라 자기장, 등화숲 이끼 낀 바위, 여울의 동굴 얼음 바위, 잿빛시티에서 받는 포켓몬스넥 키트
+    if (species.dex === 462 || species.dex === 476) return 9
+    if (species.dex === 470) return 1
+    if (species.dex === 471) return 8
+    if (species.dex === 350) return 2
   }
   if (species.dex === 462 || species.dex === 476) {
     if (game.familyId === 'sinnoh4' || game.familyId === 'sinnoh8') return 3
@@ -1130,6 +1476,15 @@ function crossVersionEvolutionReason(species: CatalogSpecies, game: GameConfig):
   if (game.familyId === 'galar8' && species.dex === 842 && game.id === 'sword') {
     return '달콤한사과는 실드 버전 전용이므로 실드에서 진화 후 교환해야 합니다.'
   }
+  if (game.id === 'violet' && species.dex === 936) {
+    return '축복받은갑옷은 스칼렛 전용 보상이므로 스칼렛에서 진화 후 교환해야 합니다.'
+  }
+  if (game.id === 'scarlet' && species.dex === 937) {
+    return '저주받은갑옷은 바이올렛 전용 보상이므로 바이올렛에서 진화 후 교환해야 합니다.'
+  }
+  if (game.familyId === 'paldea9' && species.dex === 964) {
+    return '돌핀맨은 유니온서클에서 다른 플레이어와 함께 있을 때만 진화하므로 무교환 단독 진행에서는 쓸 수 없습니다.'
+  }
   return null
 }
 
@@ -1151,6 +1506,7 @@ const heldItemKo: Record<number, string> = {
 }
 
 const moveEvolutionKo: Record<number, string> = {
+  763: '짓밟기',
   122: '흉내내기',
   185: '흉내내기',
   424: '더블어택',
@@ -1169,8 +1525,23 @@ const genderEvolutionKo: Record<number, string> = {
 }
 
 function areaEvolutionText(species: CatalogSpecies, game?: GameConfig): string | null {
+  if (game && (game.familyId === 'alola7' || game.familyId === 'alola7-ultra')) {
+    if ([462, 476, 738].includes(species.dex)) return '담청산 또는 포니대협곡에서 레벨업'
+    if (species.dex === 470) return '밀림 이끼 낀 바위 근처에서 레벨업'
+    if (species.dex === 471 || species.dex === 740) return '라나키라마운틴에서 레벨업'
+  }
   if (![462, 470, 471, 476].includes(species.dex)) return null
   if (!game) return '특정 장소에서 레벨업'
+  if (game.familyId === 'hoenn6') {
+    if (species.dex === 470) return '등화숲 이끼 낀 바위 근처에서 레벨업'
+    if (species.dex === 471) return '여울의 동굴 얼음 바위 근처에서 레벨업'
+    return '뉴보라에서 레벨업'
+  }
+  if (game.familyId === 'kalos6') {
+    if (species.dex === 470) return '20번도로 이끼 낀 바위 근처에서 레벨업'
+    if (species.dex === 471) return '프로스트케이브 얼음 바위 근처에서 레벨업'
+    return '13번도로 자기장 구역에서 레벨업'
+  }
   if ([462, 476].includes(species.dex)) {
     if (game.familyId === 'sinnoh4' || game.familyId === 'sinnoh8') return '천관산 자기장 구역에서 레벨업'
     if (game.familyId.startsWith('unova5')) return '전기돌동굴에서 레벨업'
@@ -1193,13 +1564,34 @@ export function evolutionText(species: CatalogSpecies, game?: GameConfig, formId
     if (choice?.evolutionTrigger === 'tower-of-darkness') return `악의 탑 정상에서 ${species.name} 진화`
     if (choice?.evolutionTrigger === 'tower-of-waters') return `물의 탑 정상에서 ${species.name} 진화`
   }
-  const evolution = game ? evolutionForGame(species, game) : species.evolution
+  // 알로라 모습처럼 진화 결과 폼이 정해져 있으면 그 폼으로 끝나는 진화 행을 씁니다.
+  const evolvedPokemonId = formIdentifier ? getGen8FormProfileByIdentifier(formIdentifier)?.pokemonId : undefined
+  const formEvolution = game && evolvedPokemonId && game.generation >= 6
+    ? species.evolutionMethods.find((method) => method.evolvedFormId === evolvedPokemonId)
+    : undefined
+  const evolution = formEvolution
+    ? game?.familyId === 'letsgo7' ? letsGoEvolution(formEvolution) : formEvolution
+    : game ? evolutionForGame(species, game) : species.evolution
   if (!evolution) return '진화 없음 또는 기본 형태'
   if (evolution.trigger === 'three-critical-hits') return `한 전투에서 급소를 3번 맞힌 뒤 ${species.name} 진화`
   if (evolution.trigger === 'take-damage') return `한 번에 49 이상 피해를 받은 뒤 모래먼지구덩이 돌 아치 아래를 지나 ${species.name} 진화`
   if (evolution.trigger === 'spin') return `마빌크에게 사탕공예를 지니게 하고 회전해 ${species.name} 진화`
   if (evolution.trigger === 'tower-of-darkness') return `갑옷섬 악의 탑 정상에서 ${species.name} 진화`
   if (evolution.trigger === 'tower-of-waters') return `갑옷섬 물의 탑 정상에서 ${species.name} 진화`
+  const paldeaMethod: Partial<CatalogEvolutionMethod> = evolution
+  if (evolution.trigger === 'agile-style-move') return `배리어러시를 속공으로 20번 쓴 뒤 레벨업으로 ${species.name} 진화`
+  if (evolution.trigger === 'strong-style-move') return `독침천발을 강공으로 20번 쓴 뒤 레벨업으로 ${species.name} 진화`
+  if (evolution.trigger === 'recoil-damage') return `기절하지 않고 반동 피해를 294 이상 받은 뒤 레벨업으로 ${species.name} 진화`
+  if (evolution.trigger === 'gimmighoul-coins') return `모으령의코인 999개를 모은 뒤 레벨업으로 ${species.name} 진화`
+  if (evolution.trigger === 'three-defeated-bisharp') return `대장의징표를 지닌 절각참 3마리를 쓰러뜨린 뒤 레벨업으로 ${species.name} 진화`
+  if (evolution.trigger === 'use-move' && paldeaMethod.usedMoveId) {
+    return `${paldeaEvolutionMoveKo[paldeaMethod.usedMoveId] ?? '특정 기술'}을 ${paldeaMethod.minMoveCount ?? 1}번 사용한 뒤 레벨업으로 ${species.name} 진화`
+  }
+  if (paldeaMethod.needsMultiplayer) return `유니온서클에서 다른 플레이어와 함께 Lv.${evolution.minLevel ?? 1} 이상 레벨업으로 ${species.name} 진화`
+  if (paldeaMethod.minSteps) return `레츠고로 ${paldeaMethod.minSteps}걸음 걸은 뒤 레벨업으로 ${species.name} 진화`
+  if (paldeaMethod.knownMoveId && paldeaEvolutionMoveKo[paldeaMethod.knownMoveId]) {
+    return `${paldeaEvolutionMoveKo[paldeaMethod.knownMoveId]}을 배운 상태로 레벨업해 ${species.name} 진화`
+  }
   if (evolution.trigger === 'trade') {
     const condition = evolution.tradeSpeciesId
       ? `도감 #${evolution.tradeSpeciesId}와 서로 교환`
@@ -1213,7 +1605,9 @@ export function evolutionText(species: CatalogSpecies, game?: GameConfig, formId
     const stochastic = game?.familyId === 'galar8' && evolution.item === 'chipped-pot'
       ? ' (래터럴마을 오늘의 특가에서 날짜별 확률 판매)'
       : ''
-    return `${gender ? `${gender}에게 ` : ''}${evolutionItemKo[evolution.item] ?? evolution.item} 사용으로 ${species.name} 진화${stochastic}`
+    const itemTimeKo: Record<string, string> = { day: '낮에 ', night: '밤에 ', 'full-moon': '보름달 밤에 ' }
+    const itemTime = evolution.time ? itemTimeKo[evolution.time] ?? '' : ''
+    return `${gender ? `${gender}에게 ` : ''}${itemTime}${evolutionItemKo[evolution.item] ?? evolution.item} 사용으로 ${species.name} 진화${stochastic}`
   }
   if (species.dex === 292) return '토중몬이 Lv.20에 진화할 때 파티 빈칸과 몬스터볼이 있으면 함께 출현'
   if (species.dex === 350) {
@@ -1222,6 +1616,19 @@ export function evolutionText(species: CatalogSpecies, game?: GameConfig, formId
       : '빈티나의 아름다움 수치 170 이상에서 레벨업'
   }
   if (species.dex === 226) return '파티에 총어를 둔 채 타만타 레벨업'
+  const method: Partial<CatalogEvolutionMethod> = evolution
+  if (!evolution.item && !evolution.heldItemId) {
+    const timeKo: Record<string, string> = { day: '낮', night: '밤', dusk: '황혼' }
+    if (method.minAffection && method.knownMoveTypeId === 18) {
+      return `페어리 타입 기술을 배운 상태에서 포켓파를레 애정 ${method.minAffection}단계 이상으로 레벨업`
+    }
+    if (evolution.minLevel && method.turnUpsideDown) return `게임기를 거꾸로 든 채 Lv.${evolution.minLevel} 이상에서 레벨업`
+    if (evolution.minLevel && method.needsOverworldRain) return `필드에 비가 내릴 때 Lv.${evolution.minLevel} 이상에서 레벨업`
+    if (evolution.minLevel && method.partyTypeId === 17) return `파티에 악 타입 포켓몬이 있을 때 Lv.${evolution.minLevel} 이상에서 레벨업`
+    if (evolution.minLevel && evolution.time) {
+      return `${timeKo[evolution.time] ?? evolution.time}에 Lv.${evolution.minLevel} 이상에서 ${species.name} 진화`
+    }
+  }
   const areaText = areaEvolutionText(species, game)
   if (areaText) return areaText
   if (moveEvolutionKo[species.dex]) return `${moveEvolutionKo[species.dex]}를 배운 상태로 레벨업`

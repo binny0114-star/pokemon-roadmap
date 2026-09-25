@@ -1,5 +1,8 @@
+import { getFamily } from './games'
+import { modernClassicFamilies } from './modernPolicy'
 import type { GameConfig } from './types'
 import type { LegalMove } from './learnsets'
+
 
 export interface MoveAcquisition {
   chapter: number
@@ -163,6 +166,17 @@ export const bdspMoveResourceProvenance = {
 }
 
 export function getMoveAcquisition(game: GameConfig, move: LegalMove): MoveAcquisition | undefined {
+  if (modernClassicFamilies.has(game.familyId)) {
+    if (move.method !== 'machine') return undefined
+    const fieldMove = getFamily(game).fieldMoves.find((entry) => entry.id === move.id)
+    if (!fieldMove) return undefined
+    return {
+      chapter: fieldMove.unlockChapter,
+      source: `${move.machine ?? '기술머신'} · ${fieldMove.unlockChapter}장에서 입수`,
+      reusable: true,
+      repeatable: true,
+    }
+  }
   const isBdsp = game.id === 'brilliant-diamond' || game.id === 'shining-pearl'
   if (game.id !== 'sword' && game.id !== 'shield' && !isBdsp) return undefined
   if (isBdsp) {

@@ -6,7 +6,7 @@ import type { DynamicRoadmapChapter, GameConfig, GeneratedMember, GeneratedPlan 
 
 function stageAtChapter(member: GeneratedMember, game: GameConfig, chapter: number): GeneratedMember['species'] | null {
   if (member.challengeStarter) return chapter >= 1 ? member.species : null
-  const stages = generationLineage(member.species, game.generation).filter((species) => getAvailability(species, game).obtainable)
+  const stages = generationLineage(member.species, game.generation, game.familyId).filter((species) => getAvailability(species, game).obtainable)
   const available = stages.filter((species) => effectiveChapter(species, game) <= chapter)
   return available.at(-1) ?? null
 }
@@ -79,7 +79,10 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
         })
       }
       if (member.availability.sourceSpeciesName) {
-        for (const stage of generationLineage(member.species, game.generation).slice(1)) {
+        // 포획한 단계 이후의 진화만 안내합니다(예: 단데기를 잡으면 캐터피 → 단데기 진화는 없음).
+        const lineage = generationLineage(member.species, game.generation, game.familyId)
+        const sourceIndex = lineage.findIndex((stage) => stage.dex === member.availability.sourceSpeciesDex)
+        for (const stage of lineage.slice(Math.max(1, sourceIndex + 1))) {
           const evolutionAt = member.availability.evolutionDlcFinalChapter
             ?? member.availability.dlcFinalChapter
             ?? (member.availability.dlcChapter ? Math.max(member.availability.dlcChapter, effectiveChapter(stage, game)) : effectiveChapter(stage, game))

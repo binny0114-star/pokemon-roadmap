@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { fetchCsv, revision as pokeapiRevision } from './pokeapi-source.mjs'
 
 const pkhexRevision = '77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5'
 const pkhexCodeRoot = `https://raw.githubusercontent.com/kwsch/PKHeX/${pkhexRevision}/PKHeX.Core`
@@ -13,6 +14,8 @@ const sources = {
   moon: ['legality/wild/Gen7/encounter_mn.pkl'],
   'ultra-sun': ['legality/wild/Gen7/encounter_us.pkl'],
   'ultra-moon': ['legality/wild/Gen7/encounter_um.pkl'],
+  'lets-go-pikachu': ['legality/wild/Gen7/encounter_gp.pkl'],
+  'lets-go-eevee': ['legality/wild/Gen7/encounter_ge.pkl'],
   sword: [
     'legality/wild/Gen8/encounter_sw_hidden.pkl',
     'legality/wild/Gen8/encounter_sw_symbol.pkl',
@@ -32,6 +35,7 @@ const sources = {
     'legality/wild/Gen8/encounter_sp_underground.pkl',
   ],
   paldea: ['legality/wild/Gen9/encounter_wild_paldea.pkl'],
+  'legends-arceus': ['legality/wild/Gen8/encounter_la.pkl'],
 }
 const inputFiles = [
   ...Object.values(sources).flat(),
@@ -39,15 +43,27 @@ const inputFiles = [
   'text/locations/gen6/text_xy_00000_en.txt',
   'text/locations/gen7/text_sm_00000_en.txt',
   'text/locations/gen7/text_sm_30000_en.txt',
+  'text/locations/gen7/text_gg_00000_en.txt',
   'text/locations/gen8/text_swsh_00000_en.txt',
   'text/locations/gen8b/text_bdsp_00000_en.txt',
   'text/locations/gen9/text_sv_00000_en.txt',
+  'text/locations/gen8a/text_la_00000_en.txt',
+  'text/locations/gen8a/text_la_00000_ko.txt',
+  'text/locations/gen6/text_xy_00000_ko.txt',
+  'text/locations/gen7/text_sm_00000_ko.txt',
+  'text/locations/gen7/text_sm_30000_ko.txt',
+  'text/locations/gen7/text_gg_00000_ko.txt',
+  'text/locations/gen8/text_swsh_00000_ko.txt',
+  'text/locations/gen8b/text_bdsp_00000_ko.txt',
+  'text/locations/gen9/text_sv_00000_ko.txt',
   'Legality/Encounters/Data/Gen6/Encounters6XY.cs',
   'Legality/Encounters/Data/Gen6/Encounters6AO.cs',
   'Legality/Encounters/Templates/Gen6/EncounterArea6XY.cs',
+  'Legality/Encounters/Data/Gen7/Encounters7GG.cs',
   'Legality/Encounters/Data/Gen8/Encounters8.cs',
   'Legality/Encounters/Data/Gen8/Encounters8Nest.cs',
   'Legality/Encounters/Data/Gen8/Encounters8b.cs',
+  'Legality/Encounters/Data/Gen8/Encounters8a.cs',
   'Legality/Encounters/Data/Gen9/Encounters9.cs',
 ]
 
@@ -363,7 +379,16 @@ function orasStaticConditions(row) {
     ]
   }
   if ([384, 386].includes(row.species)) return ['postgame', 'delta-episode']
+  // 데봉스코프 켈리몬: 레슨마을은 원시 그란돈·가이오가 이후, 이끼시티는 델타 에피소드 중에만 나옵니다.
+  if (row.species === 352 && row.locationId === 176) return ['devon-scope', 'story-progress-primal-defeated']
+  if (row.species === 352) return ['devon-scope', 'postgame', 'delta-episode']
+  // 해상보라 화강돌은 입수 조건을 확인하지 못했습니다.
+  if (row.species === 442) return ['special-prerequisite-unresolved']
   if ([382, 383].includes(row.species)) return []
+  // 하늘을 나는 중 만나는 고정 심볼은 원시회귀 뒤 무한의 피리를 받아야 합니다.
+  if (row.locationId === 348 && ![249, 250, 380, 381, 483, 484, 487, 641, 642, 645].includes(row.species)) {
+    return ['soaring', 'story-progress-primal-defeated']
+  }
   if ([243, 244, 245, 249, 250, 377, 378, 379, 380, 381, 480, 481, 482, 483, 484, 485, 486, 487, 488, 638, 639, 640, 641, 642, 643, 644, 645, 646].includes(row.species)) {
     return ['special-prerequisite-unresolved']
   }
@@ -932,26 +957,75 @@ function parseBdsp(buffer, locationNames, underground) {
   })
 }
 
-function parseGen6(buffer, locationNames) {
-  const typeNames = ['wild-unspecified', 'grass', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash', 'horde', 'friend-safari']
+// PKHeX keeps the ROM table order (including empty slots) for Standard areas. The table order
+// follows pk3DS XYWE/RSWE; the X/Y decode reproduces every PokéAPI X/Y method row exactly.
+const gen6StandardLayouts = {
+  xy: [
+    ['walk', 12], ['yellow-flowers', 12], ['purple-flowers', 12], ['red-flowers', 12],
+    ['rough-terrain', 12], ['surf', 5], ['rock-smash', 5], ['old-rod', 3], ['good-rod', 3], ['super-rod', 3],
+  ],
+  // ORAS areas list Rock Smash separately, so the Standard table omits its five slots.
+  oras: [
+    ['walk', 12], ['tall-grass', 12], ['dexnav', 3], ['surf', 5],
+    ['old-rod', 3], ['good-rod', 3], ['super-rod', 3],
+  ],
+}
+
+function gen6StandardMethod(layout, slot) {
+  let remaining = slot
+  for (const [method, count] of layout) {
+    if (remaining < count) return method
+    remaining -= count
+  }
+  // X/Y Route 4 and Route 7 append Flabébé flower-color variants after the fixed table.
+  return 'flowers'
+}
+
+// ORAS 물길 도로의 Standard 풀숲 칸은 다이빙으로 들어가는 해저 해초 조우입니다(초라기·진주몽·시라칸 등).
+const orasUnderwaterRoutes = new Set(['Route 107', 'Route 124', 'Route 126', 'Route 128', 'Route 129', 'Route 130'])
+
+function orasAreaConditions(location, areaType, occurrence) {
+  // 유성폭포는 첫 Standard·무리 구역만 입구 쪽이고, 나머지는 폭포 위 안쪽 동굴과 아공이 방입니다.
+  if (location === 'Meteor Falls' && ['standard', 'horde'].includes(areaType) && occurrence > 0) return ['waterfall']
+  if (location.startsWith('Mirage ')) return ['mirage-spot', 'soaring', 'story-progress-primal-defeated']
+  return []
+}
+
+function parseGen6(buffer, locationNames, layoutId) {
+  const layout = gen6StandardLayouts[layoutId]
+  const typeNames = ['standard', 'ambush', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash', 'horde', 'friend-safari']
+  const occurrences = new Map()
   return unpack(buffer).flatMap((area, areaIndex) => {
     const locationId = area.readUInt16LE(0)
     const location = locationNames[locationId] || `gen6-location-${locationId}`
-    const method = typeNames[area[2]] ?? 'unknown'
+    const areaType = typeNames[area[2]] ?? 'unknown'
+    const occurrenceKey = `${location}:${areaType}`
+    const occurrence = occurrences.get(occurrenceKey) ?? 0
+    occurrences.set(occurrenceKey, occurrence + 1)
+    const areaConditions = layoutId === 'oras' ? orasAreaConditions(location, areaType, occurrence) : []
     const result = []
     for (let offset = 4; offset + 3 < area.length; offset += 4) {
       const encoded = area.readUInt16LE(offset)
+      const species = encoded & 0x3ff
+      if (!species) continue
       const decoded = normalizeForm(encoded >> 11)
       const slot = (offset - 4) / 4
+      const standardMethod = areaType === 'standard' ? gen6StandardMethod(layout, slot) : areaType
+      const method = layoutId === 'oras' && standardMethod === 'walk' && orasUnderwaterRoutes.has(location)
+        ? 'seaweed'
+        : standardMethod
+      // ORAS DexNav-only slots hold non-Hoenn species that appear after the National Pokédex.
+      const conditions = [...areaConditions, ...(method === 'dexnav' ? ['postgame', 'national-dex'] : [])]
+      if (decoded.condition) conditions.push(decoded.condition)
       result.push(encounter(
-        encoded & 0x3ff,
+        species,
         decoded.form,
         location,
         `${location}-${locationId}-${method}-${areaIndex}`,
         area[offset + 2],
         area[offset + 3],
         method,
-        decoded.condition ? [decoded.condition] : [],
+        conditions,
         slot,
       ))
     }
@@ -989,6 +1063,288 @@ function parseGen7(buffer, locationNames, transferLocationNames) {
   })
 }
 
+// 7세대는 PKHeX 조우표가 방식 정보를 합쳐 두므로, 방식은 고정 PokéAPI 행에서 가져오고
+// PokéAPI에 없는 PKHeX 종·폼만 '방식 미확인' 행으로 보탭니다.
+const gen7PokeApiMethods = {
+  walk: 'walk',
+  surf: 'surf',
+  'super-rod': 'fishing',
+  'bubbling-spots': 'fishing-bubbling',
+  sos: 'sos',
+  'sos-from-bubbling-spot': 'sos',
+  'berry-trees': 'berry-pile',
+  'island-scan': 'island-scan',
+  static: 'static',
+  gift: 'gift',
+  'npc-trade': 'npc-trade',
+}
+const alolaStarters = new Set([722, 725, 728])
+// 썬·문 야생 울트라비스트와 네크로즈마는 엔딩 후 국제경찰 임무 뒤에만 나옵니다.
+const alolaPostgameWildSpecies = new Set([793, 794, 795, 796, 797, 798, 799, 800, 803, 804, 805, 806])
+
+function gen7AreaConditions(game, species, location, area, minLevel) {
+  const result = []
+  if (alolaPostgameWildSpecies.has(species)) result.push('postgame', 'ultra-beast-quest')
+  // 울트라썬·울트라문 밀림 동쪽 동굴(Lv.41–44)은 괴력몬 푸시로 엽니다.
+  if (['ultra-sun', 'ultra-moon'].includes(game) && location === 'lush-jungle' && (area.includes('east-cave') || minLevel >= 40)) {
+    result.push('machamp-shove')
+  }
+  return result
+}
+
+function gen7SpecialConditions(game, species, form, method, area) {
+  if (method === 'gift' && alolaStarters.has(species)) return ['choice-group-alola-starter']
+  if (method === 'gift' && species === 133) return ['gift-egg']
+  // 썬·문은 스토리 중 태양의 제단/달의 제단에서 솔가레오·루나아라를 잡습니다.
+  if (method === 'static' && ((game === 'sun' && species === 791) || (game === 'moon' && species === 792))) {
+    return ['story-climax']
+  }
+  if (method === 'island-scan') return ['island-scan-qr']
+  if (method === 'sos' && area.includes('bubbling')) return ['fishing']
+  if (['static', 'gift', 'npc-trade'].includes(method)) return ['special-prerequisite-unresolved']
+  return []
+}
+
+function gen7Rows(game, api, pkhexBuffer, locationNames, transferLocationNames) {
+  const rows = api.map((row) => encounter(
+    row.species,
+    row.form,
+    row.location,
+    row.area,
+    row.minLevel,
+    row.maxLevel,
+    row.method,
+    [
+      ...row.conditions,
+      ...gen7SpecialConditions(game, row.species, row.form, row.method, row.area),
+      ...gen7AreaConditions(game, row.species, row.location, row.area, row.minLevel),
+    ],
+    row.slot,
+  ))
+  const known = new Set(rows.map((row) => `${row.location}:${row.species}:${row.form}`))
+  for (const row of parseGen7(pkhexBuffer, locationNames, transferLocationNames)) {
+    if (known.has(`${row.location}:${row.species}:${row.form}`)) continue
+    rows.push({
+      ...row,
+      method: row.method === 'sos' ? 'sos' : 'wild-unspecified',
+      conditions: [...new Set([
+        ...row.conditions,
+        ...(row.method === 'sos' ? [] : ['method-unresolved']),
+        ...gen7AreaConditions(game, row.species, row.location, row.area, row.minLevel),
+      ])].sort(),
+    })
+  }
+  return rows
+}
+
+async function loadFormProfiles() {
+  const profiles = Object.values(JSON.parse(await readFile(new URL('../src/generated/gen8-form-profiles.json', import.meta.url), 'utf8')).pokemonForms)
+  const formByPokemon = new Map()
+  for (const profile of profiles) {
+    const current = formByPokemon.get(profile.pokemonIdentifier)
+    if (!current || profile.formIndex < current.formIndex) formByPokemon.set(profile.pokemonIdentifier, profile)
+  }
+  return formByPokemon
+}
+
+// resolveMethod는 [플래너 방식, 추가 조건]을 돌려주고, null이면 그 방식을 다른 원본에서 채웁니다.
+async function loadPokeApiRows(gameIds, resolveMethod, normalizeLocation) {
+  const [encounterRows, versionRows, slotRows, methodRows, areaRows, locationRows, pokemonRows, conditionMapRows, conditionValueRows] = await Promise.all([
+    'encounters', 'versions', 'encounter_slots', 'encounter_methods', 'location_areas', 'locations',
+    'pokemon', 'encounter_condition_value_map', 'encounter_condition_values',
+  ].map(fetchCsv))
+  const formByPokemon = await loadFormProfiles()
+  const versionId = new Map(versionRows.map((row) => [row.identifier, row.id]))
+  const slots = new Map(slotRows.map((row) => [row.id, row]))
+  const methods = new Map(methodRows.map((row) => [row.id, row.identifier]))
+  const areas = new Map(areaRows.map((row) => [row.id, row]))
+  const locations = new Map(locationRows.map((row) => [row.id, row.identifier]))
+  const pokemon = new Map(pokemonRows.map((row) => [row.id, row.identifier]))
+  const conditionValues = new Map(conditionValueRows.map((row) => [row.id, row.identifier]))
+  const conditions = new Map()
+  for (const row of conditionMapRows) {
+    conditions.set(row.encounter_id, [...(conditions.get(row.encounter_id) ?? []), conditionValues.get(row.encounter_condition_value_id)])
+  }
+  const result = {}
+  for (const game of gameIds) {
+    result[game] = encounterRows
+      .filter((row) => row.version_id === versionId.get(game))
+      .flatMap((row) => {
+        const slot = slots.get(row.encounter_slot_id)
+        const methodId = methods.get(slot.encounter_method_id)
+        const resolved = resolveMethod(methodId)
+        if (resolved === undefined) throw new Error(`Unmapped PokéAPI method for ${game}: ${methodId}`)
+        if (resolved === null) return []
+        const [method, extraConditions] = resolved
+        const profile = formByPokemon.get(pokemon.get(row.pokemon_id))
+        if (!profile) throw new Error(`Missing form profile for PokéAPI pokemon ${pokemon.get(row.pokemon_id)}`)
+        const area = areas.get(row.location_area_id)
+        const location = normalizeLocation(locations.get(area.location_id))
+        return [{
+          species: profile.speciesId,
+          form: profile.formIndex,
+          location,
+          area: area.identifier ? `${location}-${area.identifier}` : location,
+          minLevel: Number(row.min_level),
+          maxLevel: Number(row.max_level),
+          method,
+          slot: Number(slot.slot) || null,
+          conditions: [...(conditions.get(row.id) ?? []).filter(Boolean), ...extraConditions],
+        }]
+      })
+  }
+  return result
+}
+
+function loadGen7PokeApiRows() {
+  return loadPokeApiRows(
+    ['sun', 'moon', 'ultra-sun', 'ultra-moon'],
+    (methodId) => gen7PokeApiMethods[methodId] ? [gen7PokeApiMethods[methodId], []] : undefined,
+    (location) => location.replace(/^alola-/, ''),
+  )
+}
+
+// 레츠고 PokéAPI 버전 31/32 행은 필드 출현·물결타기 수면·하늘·희귀 출현을 구분합니다.
+// 선물과 게임 내 교환은 PKHeX Encounters7GG와 대조한 아래 표에서 채웁니다.
+const letsGoPokeApiMethods = {
+  overworld: ['overworld', []],
+  'overworld-special': ['overworld', ['rare-spawn']],
+  'overworld-water': ['sea-skim', []],
+  'overworld-water-special': ['sea-skim', ['rare-spawn']],
+  // 하늘 출현은 챔피언이 된 뒤 리자몽·프테라·망나뇽을 타고 날 때만 만납니다.
+  'overworld-flying': ['sky', ['postgame']],
+  'overworld-flying-special': ['sky', ['postgame', 'rare-spawn']],
+  static: ['static', []],
+  pokeflute: ['pokeflute', []],
+  gift: null,
+  'npc-trade': null,
+}
+
+function loadLetsGoPokeApiRows() {
+  return loadPokeApiRows(
+    ['lets-go-pikachu', 'lets-go-eevee'],
+    (methodId) => letsGoPokeApiMethods[methodId],
+    (location) => location.replace(/^kanto-/, '').replace(/^victory-road-1$/, 'victory-road'),
+  )
+}
+
+const letsGoBothVersions = ['lets-go-pikachu', 'lets-go-eevee']
+// PKHeX 장소 번호: 6 4번도로, 26 24번도로, 28 태초마을, 31 블루시티, 32 보라타운, 33 갈색시티,
+// 34 무지개시티, 35 연분홍시티, 36 홍련마을, 37 석영고원, 38 노랑시티, 52 실프주식회사
+const letsGoSpecialAcquisitions = [
+  // 파트너 피카츄/이브이는 진화·교환할 수 없고 능력치가 높은 전용 폼입니다.
+  { games: ['lets-go-pikachu'], species: 25, pkhexForm: 8, formIdentifier: 'pikachu-starter', level: 5, pkhexLocation: 28, location: 'pallet-town', area: 'partner-gift', method: 'gift', conditions: [] },
+  { games: ['lets-go-eevee'], species: 133, pkhexForm: 1, formIdentifier: 'eevee-starter', level: 5, pkhexLocation: 28, location: 'pallet-town', area: 'partner-gift', method: 'gift', conditions: [] },
+  { games: letsGoBothVersions, species: 129, level: 5, pkhexLocation: 6, location: 'route-4', area: 'route-4-pokemon-center', method: 'gift', conditions: ['magikarp-salesman'] },
+  // 이상해씨·파이리·꼬부기는 누적 포획 수(같은 종 포함) 조건을 채우면 받습니다.
+  { games: letsGoBothVersions, species: 1, level: 12, pkhexLocation: 31, location: 'cerulean-city', area: 'cerulean-city-house', method: 'gift', conditions: ['catch-count-30'] },
+  { games: letsGoBothVersions, species: 4, level: 14, pkhexLocation: 26, location: 'route-24', area: 'route-24-gift', method: 'gift', conditions: ['catch-count-50'] },
+  { games: letsGoBothVersions, species: 7, level: 16, pkhexLocation: 33, location: 'vermilion-city', area: 'vermilion-city-officer-jenny', method: 'gift', conditions: ['catch-count-60'] },
+  { games: ['lets-go-pikachu'], species: 53, level: 16, pkhexLocation: 33, location: 'vermilion-city', area: 'vermilion-city-bench', method: 'gift', conditions: ['catch-five-growlithe'] },
+  { games: ['lets-go-eevee'], species: 59, level: 16, pkhexLocation: 33, location: 'vermilion-city', area: 'vermilion-city-bench', method: 'gift', conditions: ['catch-five-meowth'] },
+  { games: letsGoBothVersions, species: 106, level: 30, pkhexLocation: 38, location: 'saffron-city', area: 'saffron-city-fighting-dojo', method: 'gift', conditions: ['choice-group-fighting-dojo'] },
+  { games: letsGoBothVersions, species: 107, level: 30, pkhexLocation: 38, location: 'saffron-city', area: 'saffron-city-fighting-dojo', method: 'gift', conditions: ['choice-group-fighting-dojo'] },
+  { games: letsGoBothVersions, species: 131, level: 34, pkhexLocation: 52, location: 'silph-co', area: 'silph-co-employee', method: 'gift', conditions: [] },
+  { games: letsGoBothVersions, species: 137, level: 34, pkhexLocation: 38, location: 'saffron-city', area: 'saffron-city-silph-employee', method: 'gift', conditions: [] },
+  // 달맞이산에서 조개·껍질화석 중 하나를 고르고 회색시티 박물관 비밀의호박과 함께 홍련마을 연구소에서 복원합니다.
+  { games: letsGoBothVersions, species: 138, level: 44, pkhexLocation: 36, location: 'cinnabar-island', area: 'cinnabar-lab', method: 'fossil', conditions: [] },
+  { games: letsGoBothVersions, species: 140, level: 44, pkhexLocation: 36, location: 'cinnabar-island', area: 'cinnabar-lab', method: 'fossil', conditions: [] },
+  { games: letsGoBothVersions, species: 142, level: 44, pkhexLocation: 36, location: 'cinnabar-island', area: 'cinnabar-lab', method: 'fossil', conditions: [] },
+  // 알로라 교환은 같은 종의 관동 모습을 건네면 몇 번이든 받을 수 있습니다.
+  ...[
+    [letsGoBothVersions, 19, 'rattata-alola', 12, 'cerulean-city', 'rattata'],
+    [letsGoBothVersions, 74, 'geodude-alola', 16, 'vermilion-city', 'geodude'],
+    [letsGoBothVersions, 50, 'diglett-alola', 25, 'lavender-town', 'diglett'],
+    [['lets-go-pikachu'], 27, 'sandshrew-alola', 27, 'celadon-city', 'sandshrew'],
+    [['lets-go-eevee'], 37, 'vulpix-alola', 27, 'celadon-city', 'vulpix'],
+    [letsGoBothVersions, 26, 'raichu-alola', 30, 'saffron-city', 'raichu'],
+    [letsGoBothVersions, 105, 'marowak-alola', 38, 'fuchsia-city', 'marowak'],
+    [['lets-go-pikachu'], 88, 'grimer-alola', 44, 'cinnabar-island', 'grimer'],
+    [['lets-go-eevee'], 52, 'meowth-alola', 44, 'cinnabar-island', 'meowth'],
+    [letsGoBothVersions, 103, 'exeggutor-alola', 46, 'indigo-plateau', 'exeggutor'],
+  ].map(([games, species, formIdentifier, level, location, requested]) => ({
+    // PKHeX 게임 내 교환 행에는 장소 번호가 없으므로 종·폼·레벨·버전만 대조합니다.
+    games, species, pkhexForm: 1, formIdentifier, level, pkhexLocation: null, location,
+    area: `${location}-pokemon-center-trade`, method: 'npc-trade', conditions: [`trade-for-${requested}`],
+  })),
+]
+
+function parseLetsGoSpecialSource(source) {
+  const arrays = [
+    ['Encounter_GG', letsGoBothVersions],
+    ['StaticGP', ['lets-go-pikachu']],
+    ['StaticGE', ['lets-go-eevee']],
+    ['TradeGift_GG', letsGoBothVersions],
+    ['TradeGift_GP', ['lets-go-pikachu']],
+    ['TradeGift_GE', ['lets-go-eevee']],
+  ]
+  return arrays.flatMap(([name, games]) => parseStaticSourceArray(source, name, null).map((row) => ({ ...row, games })))
+}
+
+async function letsGoSpecialRows(source) {
+  const formByPokemon = await loadFormProfiles()
+  const pkhexRows = parseLetsGoSpecialSource(source)
+  const rows = { 'lets-go-pikachu': [], 'lets-go-eevee': [], pkhexRows }
+  for (const entry of letsGoSpecialAcquisitions) {
+    const pkhexForm = entry.pkhexForm ?? 0
+    // 원작 데이터(PKHeX)의 종·폼·레벨·장소·버전과 모두 일치할 때만 싣습니다.
+    const matched = pkhexRows.find((row) =>
+      row.species === entry.species
+      && row.form === pkhexForm
+      && row.level === entry.level
+      && (entry.pkhexLocation === null || row.locationId === entry.pkhexLocation)
+      && entry.games.every((game) => row.games.includes(game)))
+    if (!matched) throw new Error(`Let's Go special acquisition is not in PKHeX Encounters7GG: ${entry.species}/${entry.location}`)
+    const profile = entry.formIdentifier ? formByPokemon.get(entry.formIdentifier) : undefined
+    if (entry.formIdentifier && (!profile || profile.speciesId !== entry.species)) {
+      throw new Error(`Missing Let's Go form profile: ${entry.formIdentifier}`)
+    }
+    for (const game of entry.games) {
+      rows[game].push(encounter(
+        entry.species,
+        profile?.formIndex ?? 0,
+        entry.location,
+        entry.area,
+        entry.level,
+        entry.level,
+        entry.method,
+        entry.conditions,
+      ))
+    }
+  }
+  return rows
+}
+
+function letsGoRows(game, api, pkhexBuffer, locationNames, special, pkhexStatics) {
+  const rows = api.filter((row) => {
+    if (!['static', 'pokeflute'].includes(row.method)) return true
+    // PKHeX는 무인발전소 고정 붐볼을 같은 장소 야생 슬롯과 겹치는(collision) 항목으로 주석 처리하므로
+    // 고정 심볼은 PKHeX Encounter_GG에 종·레벨이 있는 행만 씁니다(붐볼은 야생 행으로 남습니다).
+    return pkhexStatics.some((entry) => entry.species === row.species && entry.level === row.minLevel && entry.games.includes(game))
+  }).map((row) => encounter(
+    row.species,
+    row.form,
+    row.location,
+    row.area,
+    row.minLevel,
+    row.maxLevel,
+    row.method,
+    row.conditions,
+    row.slot,
+  ))
+  // PKHeX GP/GE 야생표의 모든 장소·종이 PokéAPI 방식 행에 있어야 합니다.
+  const known = new Set(rows.map((row) => `${row.location.replace(/^sea-/, '')}:${row.species}`))
+  for (const area of unpack(pkhexBuffer)) {
+    const location = slug(locationNames[area[0]])
+    for (let offset = 4; offset + 3 < area.length; offset += 4) {
+      if (!known.has(`${location}:${area[offset]}`)) {
+        throw new Error(`PKHeX ${game} wild slot missing from PokéAPI rows: ${location}/${area[offset]}`)
+      }
+    }
+  }
+  return [...rows, ...special]
+}
+
 function parsePaldea(buffer, locationNames) {
   return unpack(buffer).flatMap((area) => {
     const locationId = area[2] || area[0]
@@ -1002,7 +1358,9 @@ function parsePaldea(buffer, locationNames) {
       const max = area[offset + 5]
       const blockedTimes = area[offset + 6]
       const weather = area[offset + 7]
-      const conditions = weather9.filter(([flag]) => (weather & flag) !== 0).map(([, label]) => label)
+      const weatherConditions = weather9.filter(([flag]) => (weather & flag) !== 0).map(([, label]) => label)
+      // 평상시 날씨(normal)에도 나오면 날씨와 관계없이 만날 수 있으므로 날씨 조건을 남기지 않습니다.
+      const conditions = weatherConditions.includes('weather-normal') ? [] : weatherConditions
       const times = ['time-day', 'time-night', 'time-evening', 'time-morning']
         .filter((_, index) => (blockedTimes & (1 << index)) === 0)
       if (times.length < 4) conditions.push(...times)
@@ -1010,6 +1368,95 @@ function parsePaldea(buffer, locationNames) {
       result.push(encounter(species, decoded.form, location, `${location}-${locationId}`, min, max, 'overworld', conditions))
     }
     return result
+  })
+}
+
+// 스칼렛·바이올렛 본편 고정 심볼 중 입수 조건을 확인한 것만 씁니다: 필드 곳곳의 상자 모습 모으령과
+// 엔딩 후 말뚝을 뽑아 여는 재앙의 보물. DLC 지역(장소 번호 132 이상)과 조건 미확인 선물·교환은 제외합니다.
+function parsePaldeaStatics(source, locationNames) {
+  return parseStaticSourceArray(source, 'Encounter_SV', null)
+    .filter((row) => row.locationId < 132 && (row.species === 999 || (row.species >= 1001 && row.species <= 1004)))
+    .map((row) => {
+      const location = locationNames[row.locationId] || `paldea-location-${row.locationId}`
+      return encounter(
+        row.species,
+        row.form,
+        location,
+        `${slug(location)}-pkhex-static-${row.species}`,
+        row.level,
+        row.level,
+        'static',
+        row.species === 999 ? ['gimmighoul-chest'] : ['postgame', 'ruinous-stakes'],
+      )
+    })
+}
+
+// PKHeX 영어·한국어 장소명 파일은 같은 줄 번호를 쓰므로, 영어 이름 슬러그를 공식 한국어 장소명에 잇습니다.
+function koreanLocationNames(rows, namePairs) {
+  const bySlug = new Map()
+  for (const [english, korean] of namePairs) {
+    english.forEach((name, index) => {
+      const key = name ? slug(name) : ''
+      const value = korean[index]?.trim()
+      if (key && value && !bySlug.has(key)) bySlug.set(key, value)
+    })
+  }
+  return Object.fromEntries([...new Set(rows.map((row) => row.location))].sort().flatMap((location) => {
+    // 레츠고 PokéAPI 장소 'sea-route-19'는 PKHeX 'Route 19'(19번수로)와 같은 곳입니다.
+    const value = bySlug.get(location) ?? bySlug.get(location.replace(/^sea-/, ''))
+    return value ? [[location, value]] : []
+  }))
+}
+
+// LEGENDS 아르세우스는 기본(0)·흔들리는 나무/광석(2) 조우만 쓰고, 무작위로 열리는 시공의 뒤틀림(1)과
+// 대량발생(3·4)은 제외합니다. 우두머리 슬롯은 조건으로 남기고, 물 위로만 갈 수 있는 구역은 대쓰여너 라이드 뒤로 둡니다.
+const hisuiWaterOnlySubareas = new Set([
+  'Ramanas Island', 'Holm of Trials', 'Firespit Island', 'Islespy Shore', 'Seagrass Haven', 'Lunker’s Lair',
+])
+
+function parseHisui(buffer, locationNames) {
+  return unpack(buffer).flatMap((area, areaIndex) => {
+    const locationCount = area[0]
+    const locationIds = [...area.subarray(1, 1 + locationCount)]
+    let align = locationCount + 1
+    align += align & 1
+    const data = area.subarray(align)
+    const type = data[0]
+    const count = data[1]
+    if (type !== 0 && type !== 2) return []
+    const main = locationNames[locationIds[0]]
+    if (!main) throw new Error(`Unknown Hisui location: ${locationIds[0]}`)
+    const subareas = locationIds.slice(1).map((id) => locationNames[id]).filter(Boolean)
+    const waterOnly = subareas.length > 0 && subareas.every((name) => hisuiWaterOnlySubareas.has(name))
+    const result = []
+    for (let index = 0; index < count; index += 1) {
+      const offset = 2 + index * 8
+      const conditions = []
+      if (data[offset + 3]) conditions.push('alpha')
+      if (waterOnly) conditions.push('basculegion-ride')
+      result.push(encounter(
+        data.readUInt16LE(offset),
+        data[offset + 2],
+        main,
+        `${main}-${subareas.join('-')}-${areaIndex}`,
+        data[offset + 4],
+        data[offset + 5],
+        type === 2 ? 'landmark' : 'overworld',
+        conditions,
+      ))
+    }
+    return result
+  })
+}
+
+// 스타터 세 마리는 PKHeX StaticLA의 축복마을(6) 선물과 대조합니다. 다른 고정 심볼·선물은 의뢰·전제를 확인하지 않아 제외합니다.
+function hisuiStarterRows(source, locationNames) {
+  const statics = [...source.matchAll(/new\((\d+),\s*(\d+),\s*(\d+)[^)]*\)\s*\{\s*Location\s*=\s*0*(\d+)/g)]
+    .map((match) => ({ species: Number(match[1]), form: Number(match[2]), level: Number(match[3]), locationId: Number(match[4]) }))
+  return [722, 155, 501].map((species) => {
+    const row = statics.find((entry) => entry.species === species && entry.locationId === 6 && entry.level === 5)
+    if (!row) throw new Error(`Hisui starter not found in PKHeX StaticLA: ${species}`)
+    return encounter(species, row.form, locationNames[6], 'starter-gift', 5, 5, 'gift', ['mutually-exclusive-starter'])
   })
 }
 
@@ -1042,26 +1489,52 @@ const [
   gen6Names,
   gen7Names,
   gen7TransferNames,
+  letsGoNames,
   galarNames,
   sinnohNames,
   paldeaNames,
+  hisuiNames,
+  hisuiKoreanNames,
+  gen6KoreanNames,
+  gen7KoreanNames,
+  gen7TransferKoreanNames,
+  letsGoKoreanNames,
+  galarKoreanNames,
+  sinnohKoreanNames,
+  paldeaKoreanNames,
   nestSource,
   xyStaticSource,
   orasStaticSource,
   xyAreaSource,
   swshStaticSource,
+  letsGoStaticSource,
+  paldeaStaticSource,
+  hisuiStaticSource,
 ] = await Promise.all([
   fetchText('text/locations/gen6/text_xy_00000_en.txt').then(names),
   fetchText('text/locations/gen7/text_sm_00000_en.txt').then(names),
   fetchText('text/locations/gen7/text_sm_30000_en.txt').then(names),
+  fetchText('text/locations/gen7/text_gg_00000_en.txt').then(names),
   fetchText('text/locations/gen8/text_swsh_00000_en.txt').then(names),
   fetchText('text/locations/gen8b/text_bdsp_00000_en.txt').then(names),
   fetchText('text/locations/gen9/text_sv_00000_en.txt').then(names),
+  fetchText('text/locations/gen8a/text_la_00000_en.txt').then(names),
+  fetchText('text/locations/gen8a/text_la_00000_ko.txt').then(names),
+  fetchText('text/locations/gen6/text_xy_00000_ko.txt').then(names),
+  fetchText('text/locations/gen7/text_sm_00000_ko.txt').then(names),
+  fetchText('text/locations/gen7/text_sm_30000_ko.txt').then(names),
+  fetchText('text/locations/gen7/text_gg_00000_ko.txt').then(names),
+  fetchText('text/locations/gen8/text_swsh_00000_ko.txt').then(names),
+  fetchText('text/locations/gen8b/text_bdsp_00000_ko.txt').then(names),
+  fetchText('text/locations/gen9/text_sv_00000_ko.txt').then(names),
   fetchCode('Legality/Encounters/Data/Gen8/Encounters8Nest.cs'),
   fetchCode('Legality/Encounters/Data/Gen6/Encounters6XY.cs'),
   fetchCode('Legality/Encounters/Data/Gen6/Encounters6AO.cs'),
   fetchCode('Legality/Encounters/Templates/Gen6/EncounterArea6XY.cs'),
   fetchCode('Legality/Encounters/Data/Gen8/Encounters8.cs'),
+  fetchCode('Legality/Encounters/Data/Gen7/Encounters7GG.cs'),
+  fetchCode('Legality/Encounters/Data/Gen9/Encounters9.cs'),
+  fetchCode('Legality/Encounters/Data/Gen8/Encounters8a.cs'),
 ])
 const nestLocations = parseNestLocations(nestSource)
 const inaccessibleNests = parseInaccessibleNests(nestSource)
@@ -1087,11 +1560,18 @@ for (const game of ['x', 'y', 'omega-ruby', 'alpha-sapphire']) {
       : game === 'omega-ruby'
         ? [...orasSpecial.shared, ...orasSpecial.omega]
         : [...orasSpecial.shared, ...orasSpecial.alpha]
-  rowsByGame[game] = deduplicate([...parseGen6(wild, gen6Names), ...special])
+  rowsByGame[game] = deduplicate([...parseGen6(wild, gen6Names, game === 'x' || game === 'y' ? 'xy' : 'oras'), ...special])
 }
+const gen7PokeApi = await loadGen7PokeApiRows()
 for (const game of ['sun', 'moon', 'ultra-sun', 'ultra-moon']) {
   const [wild] = await Promise.all(sources[game].map(fetchBytes))
-  rowsByGame[game] = deduplicate(parseGen7(wild, gen7Names, gen7TransferNames))
+  rowsByGame[game] = deduplicate(gen7Rows(game, gen7PokeApi[game], wild, gen7Names, gen7TransferNames))
+}
+const letsGoPokeApi = await loadLetsGoPokeApiRows()
+const letsGoSpecial = await letsGoSpecialRows(letsGoStaticSource)
+for (const game of ['lets-go-pikachu', 'lets-go-eevee']) {
+  const [wild] = await Promise.all(sources[game].map(fetchBytes))
+  rowsByGame[game] = deduplicate(letsGoRows(game, letsGoPokeApi[game], wild, letsGoNames, letsGoSpecial[game], letsGoSpecial.pkhexRows))
 }
 for (const game of ['sword', 'shield']) {
   const [hidden, symbol, raids] = await Promise.all(sources[game].map(fetchBytes))
@@ -1107,12 +1587,19 @@ for (const game of ['sword', 'shield']) {
       ? [row, { ...row, form: 1, area: `${row.area}-female-form` }]
       : [row]))
 }
+rowsByGame['legends-arceus'] = deduplicate([
+  ...parseHisui(await fetchBytes(sources['legends-arceus'][0]), hisuiNames),
+  ...hisuiStarterRows(hisuiStaticSource, hisuiNames),
+])
 for (const game of ['brilliant-diamond', 'shining-pearl']) {
   const buffers = await Promise.all(sources[game].map(fetchBytes))
   rowsByGame[game] = deduplicate(buffers.flatMap((buffer, index) => parseBdsp(buffer, sinnohNames, index === 1)))
 }
 
-const paldeaRows = parsePaldea(await fetchBytes(sources.paldea[0]), paldeaNames)
+const paldeaRows = [
+  ...parsePaldea(await fetchBytes(sources.paldea[0]), paldeaNames),
+  ...parsePaldeaStatics(paldeaStaticSource, paldeaNames),
+]
 for (const game of ['scarlet', 'violet']) {
   rowsByGame[game] = deduplicate(paldeaRows.filter((row) => {
     const versions = paldeaFormExclusive[`${row.species}:${row.form}`] ?? paldeaVersionExclusive[row.species]
@@ -1133,6 +1620,28 @@ for (const entry of staticAcquisitions) {
   ))
 }
 for (const gameId of Object.keys(rowsByGame)) rowsByGame[gameId] = deduplicate(rowsByGame[gameId])
+const namePairsByGame = {
+  x: [[gen6Names, gen6KoreanNames]],
+  y: [[gen6Names, gen6KoreanNames]],
+  'omega-ruby': [[gen6Names, gen6KoreanNames]],
+  'alpha-sapphire': [[gen6Names, gen6KoreanNames]],
+  ...Object.fromEntries(['sun', 'moon', 'ultra-sun', 'ultra-moon'].map((game) => [
+    game, [[gen7Names, gen7KoreanNames], [gen7TransferNames, gen7TransferKoreanNames]],
+  ])),
+  'lets-go-pikachu': [[letsGoNames, letsGoKoreanNames]],
+  'lets-go-eevee': [[letsGoNames, letsGoKoreanNames]],
+  sword: [[galarNames, galarKoreanNames]],
+  shield: [[galarNames, galarKoreanNames]],
+  'brilliant-diamond': [[sinnohNames, sinnohKoreanNames]],
+  'shining-pearl': [[sinnohNames, sinnohKoreanNames]],
+  scarlet: [[paldeaNames, paldeaKoreanNames]],
+  violet: [[paldeaNames, paldeaKoreanNames]],
+  'legends-arceus': [[hisuiNames, hisuiKoreanNames]],
+}
+const locationNames = Object.fromEntries(Object.entries(rowsByGame).map(([gameId, rows]) => [
+  gameId,
+  koreanLocationNames(rows, namePairsByGame[gameId] ?? []),
+]))
 
 await mkdir(new URL('../src/generated/', import.meta.url), { recursive: true })
 await writeFile(
@@ -1181,11 +1690,14 @@ await writeFile(
         ],
       },
       notes: [
-        'X/Y and Omega Ruby/Alpha Sapphire slots preserve form, source-area, slot and disjoint level ranges from separate version resources; PKHeX Standard slots are retained as wild-unspecified because the resource does not distinguish grass, cave, surf and fishing methods.',
+        'X/Y and Omega Ruby/Alpha Sapphire slots preserve form, source-area, slot and disjoint level ranges from separate version resources; Standard areas keep the ROM table order, so methods are decoded with the pk3DS XYWE/RSWE slot layouts (X/Y reproduces 563/566 pinned PokéAPI wild triples, ORAS 78/78 outside Mirage spots).',
+        'ORAS walk slots on water routes 107, 124, 126, 128, 129 and 130 are underwater seaweed encounters; Meteor Falls tables after the first are behind Waterfall; Mirage spots follow the Eon Flute after the primal battle.',
         'X/Y code-defined static, gift, fossil, in-game trade and Friend Safari tables are normalized from the pinned PKHeX source; unresolved fossil origin and calendar or postgame prerequisites remain explicit conditions.',
         'ORAS code-defined static, gift, egg, fossil, in-game trade, Cosplay Pikachu and version-exclusive tables are normalized from the pinned PKHeX source; unresolved Mirage, party, time and event prerequisites remain explicit conditions.',
-        'Sun/Moon and Ultra Sun/Ultra Moon preserve separate version resources, forms, level ranges and SOS identity; ordinary Gen 7 slots are labeled wild-unspecified because the resource does not encode grass, cave, surf or fishing as distinct methods.',
-        'Gen 7 code-defined static, gift, fossil, in-game trade, Island Scan/QR and Ultra Space tables are not included until their story prerequisites can be normalized without inference.',
+        `Sun/Moon and Ultra Sun/Ultra Moon methods come from pinned PokéAPI CSV @ ${pokeapiRevision} with pokemon identifiers mapped to PKHeX form indexes; PKHeX species/forms missing from PokéAPI at a location are added as method-unresolved (Standard) or SOS rows.`,
+        'Gen 7 statics, gifts, trades, Island Scan and Poké Pelago rows without verified prerequisites carry special-prerequisite-unresolved or island-scan-qr and are excluded from planner recommendations; Alola starters, the Paniola Ranch Eevee egg and the Sun/Moon story Solgaleo/Lunala are modelled.',
+        `Let's Go Pikachu/Eevee wild methods come from pinned PokéAPI CSV @ ${pokeapiRevision} (overworld, Sea Skim water, rare spawns and post-champion sky spawns); every PKHeX GP/GE wild location and species is asserted to be present.`,
+        "Let's Go partner, starter, Magikarp salesman, Fighting Dojo, Silph Co., fossil and Alolan trade rows are authored with their catch-count, version-exclusive-catch, choice and requested-species conditions and asserted against PKHeX Encounters7GG species, form, level, location and version.",
         'Sword/Shield weather, method and level ranges are decoded from separate version resources.',
         'Sword/Shield base-game, Isle of Armor and Crown Tundra raid dens preserve den subarea, star rank, badge gate and level range.',
         'Sword/Shield code-defined static, gift, fossil and in-game trade tables are normalized from the pinned PKHeX source with explicit base-game, Isle of Armor 1.2.0 and Crown Tundra 1.3.0 scope.',
@@ -1193,12 +1705,15 @@ await writeFile(
         'Independently authored reachability conditions cover Wedgehurst Slowpoke, Isle of Armor Diglett rewards, Crown Tundra footprints, roaming birds, Spiritomb, Regigigas, Keldeo, Cosmog and Poipole and are cross-checked against the reference-only URLs above.',
         'BDSP overworld and Grand Underground level ranges are decoded from separate version resources; independently authored reachability conditions preserve the exact per-species Explorer Kit, Strength-obtained, Defog, Icicle Badge, Waterfall and National Pokédex milestones cross-checked against the content-hashed Serebii tables, and discard unreachable pre-Elite-Four level bands only for National Pokédex species.',
         'BDSP Feebas retains the pinned PKHeX species, form, location and level range while the special any-rod daily-tile method and Defog, Surf and Strength gates are independently cross-checked against the reference-only URLs above.',
-        'Scarlet/Violet base-Paldea wild slots are decoded from the shared resource and filtered by reviewed version exclusives.',
+        'Legends: Arceus standard and landmark (shaking tree/ore) slots come from the PKHeX LA resource keyed by the parent field area; alpha slots keep an alpha condition, tables limited to Ramanas Island, Holm of Trials or other water-only spots require the Basculegion ride, and space-time distortions, mass outbreaks, requests and non-starter statics are not ingested.',
+        'Scarlet/Violet base-Paldea wild slots are decoded from the shared resource and filtered by reviewed version exclusives; slots that also spawn in normal weather drop their weather flags, and chest Gimmighoul plus the post-game Treasures of Ruin statics come from PKHeX Encounters9. Tera Raids, DLC areas and unverified gifts or trades are not ingested.',
+        'Official Korean location names are joined from the PKHeX ko location text files by line index, keyed by the English slug used in each game snapshot.',
         'Concrete species forms are preserved exactly; PKHeX dynamic form sentinels are normalized to base form with explicit form-region-dependent or form-random conditions.',
         'Snapshot keys are stable planner game IDs, not PokéAPI or PKHeX numeric version identifiers.',
         'DLC rows retain explicit content-update conditions so optional Isle of Armor and Crown Tundra timing is not conflated with the base-game credits path.',
       ],
     },
+    locationNames,
     games: rowsByGame,
   })}\n`,
 )

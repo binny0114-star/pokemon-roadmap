@@ -84,7 +84,7 @@ const boss = (
 
 const kalosChapters = [
   chapter('kal-1', '조아마을 → 백단시티', '첫 파트너와 버그배지', 'Lv.5–12', ['vaniville', 'aquacorde', 'route-2', 'santalune-forest', 'route-3', 'santalune'], ['스타터 선택', '백단체육관 비올라 격파']),
-  chapter('kal-2', '미르시티 → 삼채시티', '화석과 월배지', 'Lv.12–25', ['route-4', 'lumiose', 'route-5', 'camphrier', 'parfum-palace', 'route-6', 'connecting-cave', 'route-7', 'route-8', 'ambrette', 'glittering-cave', 'cyllage'], ['미르시티에서 관동 스타터 받기', '파르팽궁전에서 포켓몬피리 회수', '빛나는동굴에서 플레어단 격퇴', '삼채체육관 자크로 격파'], ['바위깨기', '괴력']),
+  chapter('kal-2', '미르시티 → 삼채시티', '화석과 월배지', 'Lv.12–25', ['route-4', 'lumiose', 'route-5', 'camphrier', 'parfum-palace', 'route-6', 'connecting-cave', 'route-7', 'route-8', 'ambrette', 'glittering-cave', 'cyllage'], ['미르시티에서 관동 스타터 받기', '파르팽궁전에서 포켓몬피리 회수', '빛나는동굴에서 플레어단 격퇴', '삼채체육관 자크로 격파'], ['풀베기', '바위깨기', '괴력']),
   chapter('kal-3', '사라시티', '코스트배지와 메가진화', 'Lv.25–34', ['route-10', 'geosenge', 'route-11', 'reflection-cave', 'shalour', 'tower-of-mastery'], ['사라체육관 코르니 격파', '마스터타워에서 메가링 획득'], ['파도타기', '메가진화']),
   chapter('kal-4', '비익시티', '플랜트배지', 'Lv.30–37', ['route-12', 'azure-bay', 'coumarine'], ['비익체육관 후쿠지 격파'], ['공중날기']),
   chapter('kal-5', '미르시티', '프리즘배지와 발전소', 'Lv.35–42', ['route-13', 'kalos-power-plant', 'lumiose'], ['칼로스발전소 탈환', '미르체육관 시트론 격파']),
@@ -102,7 +102,8 @@ const kalosBosses = [
   boss('clemont', '시트론', '미르 체육관', 5, ['electric'], 'Lv.35–37'),
   boss('valerie', '마슈', '후늬 체육관', 6, ['fairy'], 'Lv.38–42'),
   boss('olympia', '고지카', '향전 체육관', 7, ['psychic'], 'Lv.44–48'),
-  boss('lysandre', '플라드리', '플레어단 최종전', 8, ['dark', 'water'], 'Lv.49–53'),
+  // 비밀기지 두 번째 전투: 비조도 49, 돈크로우 49, 화염레오 51, 메가갸라도스 53
+  boss('lysandre', '플라드리', '플레어단 최종전', 8, ['fighting', 'dark', 'flying', 'fire', 'normal', 'water'], 'Lv.49–53'),
   boss('wulfric', '우르프', '이설 체육관', 9, ['ice'], 'Lv.55–59'),
   boss('malva', '파키라', '사천왕', 9, ['fire'], 'Lv.63–65'),
   boss('siebold', '즈미', '사천왕', 9, ['water'], 'Lv.63–65'),
@@ -113,7 +114,7 @@ const kalosBosses = [
 
 const orasChapters = [
   chapter('or-1', '미로마을 → 금탄시티', '첫 파트너와 스톤배지', 'Lv.5–14', ['littleroot', 'route-101', 'route-102', 'route-103', 'route-104', 'petalburg-woods', 'rustboro', 'route-116', 'rusturf-tunnel'], ['스타터 선택', '금탄체육관 원규 격파', '데봉화물 회수'], ['풀베기']),
-  chapter('or-2', '무로마을 → 잿빛시티', '너클배지와 해양박물관', 'Lv.14–20', ['route-105', 'route-106', 'dewford', 'granite-cave', 'route-107', 'route-108', 'route-109', 'slateport'], ['무로체육관 철구 격파', '성호에게 편지 전달', '해양박물관 사건 해결'], ['플래시']),
+  chapter('or-2', '무로마을 → 잿빛시티', '너클배지와 해양박물관', 'Lv.14–20', ['route-105', 'route-106', 'dewford', 'granite-cave', 'route-107', 'route-108', 'route-109', 'slateport'], ['무로체육관 철구 격파', '성호에게 편지 전달', '해양박물관 사건 해결']),
   chapter('or-3', '보라시티', '다이나모배지', 'Lv.19–25', ['route-110', 'mauville', 'route-117', 'verdanturf'], ['라이벌전 승리', '보라체육관 암페어 격파'], ['바위깨기']),
   chapter('or-4', '굴뚝산 → 용암마을', '히트배지와 운석', 'Lv.24–30', ['route-111', 'route-112', 'fiery-path', 'route-113', 'fallarbor', 'route-114', 'meteor-falls', 'mt-chimney', 'jagged-pass', 'lavaridge'], ['유성폭포에서 악당 조직 추적', '굴뚝산 간부전 승리', '용암체육관 연돌 격파'], ['괴력']),
   chapter('or-5', '등화시티', '밸런스배지와 파도타기', 'Lv.28–33', ['petalburg'], ['등화체육관 종길 격파', '파도타기 획득'], ['파도타기']),
@@ -153,7 +154,8 @@ const alolaChapters = [
 
 const alolaBosses = [
   boss('ilima-trial', '주인 형사구스/레트라', '일리마의 시련', 1, ['normal'], 'Lv.12'),
-  boss('hala', '할라', '멜레멜레 큰 시련', 1, ['fighting'], 'Lv.14–16'),
+  // 멜레멜레 큰 시련: 망키 14, 마크탕 14, 오기지게 15
+  boss('hala', '할라', '멜레멜레 큰 시련', 1, ['fighting'], 'Lv.14–15'),
   boss('lana-trial', '주인 약어리', '수련의 시련', 2, ['water'], 'Lv.20'),
   boss('kiawe-trial', '주인 염뉴트', '키아웨의 시련', 2, ['fire', 'poison'], 'Lv.22'),
   boss('mallow-trial', '주인 라란티스', '마오의 시련', 2, ['grass'], 'Lv.24'),
@@ -164,12 +166,14 @@ const alolaBosses = [
   boss('lusamine-sm', '루자미네', '에테르대표', 5, ['fairy', 'normal', 'fighting', 'grass', 'water', 'ghost'], 'Lv.41'),
   boss('hapu', '하푸', '포니 큰 시련', 6, ['ground'], 'Lv.47–48'),
   boss('kommo-o-trial', '주인 짜랑고우거', '포니대협곡 시련', 6, ['dragon', 'fighting'], 'Lv.45'),
-  boss('lusamine-ultra-space-sm', '루자미네', '울트라스페이스 최종전', 7, ['fairy', 'water'], 'Lv.50'),
+  // 픽시·드레디어·무우마직·밀로틱·이븐곰 모두 Lv.50
+  boss('lusamine-ultra-space-sm', '루자미네', '울트라스페이스 최종전', 7, ['fairy', 'grass', 'ghost', 'water', 'normal', 'fighting'], 'Lv.50'),
   boss('hala-e4', '할라', '사천왕', 8, ['fighting'], 'Lv.54–55'),
   boss('olivia-e4', '라이치', '사천왕', 8, ['rock'], 'Lv.54–55'),
   boss('acerola-e4', '아세로라', '사천왕', 8, ['ghost'], 'Lv.54–55'),
   boss('kahili', '카일리', '사천왕', 8, ['flying'], 'Lv.54–55'),
-  boss('kukui', '쿠쿠이박사', '챔피언 결정전', 8, ['normal'], 'Lv.57–58'),
+  // 루가루암 57, 나인테일(알로라) 56, 워글 56, 자포코일 56, 잠만보 56, 고른 스타터의 약점 스타터 58
+  boss('kukui', '쿠쿠이박사', '챔피언 결정전', 8, ['rock', 'ice', 'fairy', 'normal', 'flying', 'electric', 'steel'], 'Lv.56–58'),
 ]
 
 const ultraChapters = [
@@ -203,15 +207,16 @@ const ultraBosses = [
   boss('olivia-e4-usum', '라이치', '사천왕', 8, ['rock'], 'Lv.56–57'),
   boss('acerola-e4-usum', '아세로라', '사천왕', 8, ['ghost'], 'Lv.56–57'),
   boss('kahili-usum', '카일리', '사천왕', 8, ['flying'], 'Lv.56–57'),
-  boss('hau', '하우', '챔피언 결정전', 8, ['electric'], 'Lv.59–60'),
+  // 라이츄(알로라) 59, 이브이 진화형 58, 켄타로스 58, 음번 58, 모단단게 59, 스타터 60
+  boss('hau', '하우', '챔피언 결정전', 8, ['electric', 'psychic', 'normal', 'flying', 'dragon', 'fighting', 'ice'], 'Lv.58–60'),
 ]
 
 const letsGoChapters = [
   chapter('lg-1', '태초마을 → 회색시티', '파트너와 회색배지', 'Lv.5–12', ['pallet-town', 'route-1', 'viridian-city', 'route-2', 'viridian-forest', 'pewter-city'], ['파트너 피카츄/이브이와 출발', '회색체육관 웅 격파']),
   chapter('lg-2', '달맞이산 → 블루시티', '달맞이산과 블루배지', 'Lv.10–21', ['route-3', 'mt-moon', 'route-4', 'cerulean-city', 'route-24', 'route-25'], ['달맞이산에서 로켓단 격퇴', '블루체육관 이슬 격파', '이수재를 도와 승선티켓 획득']),
-  chapter('lg-3', '갈색시티 → 무지개시티', '오렌지배지와 비전기술', 'Lv.16–34', ['route-5', 'underground-path', 'route-6', 'vermilion-city', 'ss-anne', 'digletts-cave', 'route-9', 'rock-tunnel', 'lavender-town', 'route-8', 'celadon-city'], ['상트앙느호에서 비전기술 풀베기 습득', '갈색체육관 마티스 격파', '비전기술 빛내기 습득', '포켓몬타워의 유령 확인']),
+  chapter('lg-3', '갈색시티 → 무지개시티', '오렌지배지와 비전기술', 'Lv.16–34', ['route-5', 'underground-path', 'route-6', 'vermilion-city', 'ss-anne', 'route-11', 'digletts-cave', 'route-9', 'route-10', 'rock-tunnel', 'lavender-town', 'route-8', 'route-7', 'celadon-city'], ['상트앙느호에서 비전기술 풀베기 습득', '갈색체육관 마티스 격파', '비전기술 빛내기 습득', '포켓몬타워의 유령 확인']),
   chapter('lg-4', '무지개시티 → 포켓몬타워', '레인보우배지와 포켓몬피리', 'Lv.30–36', ['celadon-city', 'rocket-game-corner', 'pokemon-tower', 'lavender-town'], ['무지개체육관 민화 격파', '로켓단 아지트에서 실프스코프 획득', '비전기술 하늘날기 습득', '포켓몬타워 구출과 포켓몬피리 획득']),
-  chapter('lg-5', '연분홍시티', '핑크배지와 물길', 'Lv.34–44', ['route-12', 'route-13', 'route-14', 'route-15', 'fuchsia-city', 'go-park'], ['잠만보를 깨우고 연분홍시티 도착', '비전기술 밀어내기 습득', '비전기술 물결타기 습득', '연분홍체육관 독수 격파']),
+  chapter('lg-5', '연분홍시티', '핑크배지와 물길', 'Lv.34–44', ['route-12', 'route-13', 'route-14', 'route-15', 'route-16', 'route-17', 'route-18', 'fuchsia-city', 'go-park', 'power-plant'], ['잠만보를 깨우고 연분홍시티 도착', '비전기술 밀어내기 습득', '비전기술 물결타기 습득', '연분홍체육관 독수 격파']),
   chapter('lg-6', '노랑시티와 실프주식회사', '로켓단과 골드배지', 'Lv.38–44', ['saffron-city', 'silph-co'], ['실프주식회사에서 로켓단과 비주기 격파', '노랑체육관 초련 격파']),
   chapter('lg-7', '홍련마을 → 상록시티', '크림슨배지와 그린배지', 'Lv.40–50', ['route-19', 'seafoam-islands', 'route-20', 'cinnabar-island', 'pokemon-mansion', 'route-21', 'viridian-city'], ['포켓몬저택에서 비밀의열쇠 획득', '홍련체육관 강연 격파', '상록체육관 비주기 최종전 승리']),
   chapter('lg-8', '챔피언로드 → 포켓몬리그', '사천왕과 라이벌 챔피언', 'Lv.45–57', ['route-22', 'route-23', 'victory-road', 'indigo-plateau'], ['챔피언로드 돌파', '사천왕 격파', '라이벌과 챔피언 결정전 승리']),
@@ -223,14 +228,16 @@ const letsGoBosses = [
   boss('surge-lg', '마티스', '갈색 체육관', 3, ['electric'], 'Lv.25–26'),
   boss('erika-lg', '민화', '무지개 체육관', 4, ['grass'], 'Lv.33–34'),
   boss('koga-lg', '독수', '연분홍 체육관', 5, ['poison'], 'Lv.43–44'),
-  boss('giovanni-silph-lg', '비주기', '실프주식회사', 6, ['ground'], 'Lv.39–41'),
+  // 페르시온·코뿌리·니드퀸 모두 Lv.39
+  boss('giovanni-silph-lg', '비주기', '실프주식회사', 6, ['ground', 'normal', 'poison'], 'Lv.39'),
   boss('sabrina-lg', '초련', '노랑 체육관', 6, ['psychic'], 'Lv.43–44'),
   boss('blaine-lg', '강연', '홍련 체육관', 7, ['fire'], 'Lv.47–48'),
   boss('giovanni-gym-lg', '비주기', '상록 체육관', 7, ['ground'], 'Lv.49–50'),
   boss('lorelei-lg', '칸나', '사천왕', 8, ['ice', 'water'], 'Lv.51–52'),
   boss('bruno-lg', '시바', '사천왕', 8, ['fighting'], 'Lv.52–53'),
-  boss('agatha-lg', '국화', '사천왕', 8, ['ghost', 'poison'], 'Lv.53'),
-  boss('lance-lg', '목호', '사천왕', 8, ['dragon'], 'Lv.54'),
+  // 국화 팬텀 54, 목호 망나뇽 55가 가장 높습니다.
+  boss('agatha-lg', '국화', '사천왕', 8, ['ghost', 'poison'], 'Lv.53–54'),
+  boss('lance-lg', '목호', '사천왕', 8, ['dragon', 'flying'], 'Lv.54–55'),
   boss('trace-lg', '라이벌', '챔피언', 8, ['normal'], 'Lv.56–57'),
 ]
 
@@ -460,9 +467,11 @@ const orasFields: FieldMove[] = [
 export const modernFamilies: Record<ModernFamilyId, ModernFamilyConfig> = {
   kalos6: { id: 'kalos6', generation: 6, region: '칼로스', chapters: kalosChapters, bosses: kalosBosses, fieldMoves: gen6Fields, moveReminder: { chapter: 7, location: '버들비마을', cost: '하트비늘 1개' }, postgame: ['기남시티 배틀하우스', '메가링 강화와 메가스톤', '핸섬 에피소드'] },
   hoenn6: { id: 'hoenn6', generation: 6, region: '호연', chapters: orasChapters, bosses: orasBosses, fieldMoves: orasFields, moveReminder: { chapter: 4, location: '단풍마을', cost: '하트비늘 1개' }, postgame: ['에피소드 델타와 레쿠쟈·테오키스', '배틀리조트', '환상의 장소와 전설 포켓몬'] },
-  alola7: { id: 'alola7', generation: 7, region: '알로라', chapters: alolaChapters, bosses: alolaBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['울트라비스트 포획 임무', '배틀트리', '수호신과 네크로즈마'] },
-  'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '무료' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
-  letsgo7: { id: 'letsgo7', generation: 7, region: '관동', chapters: letsGoChapters, bosses: letsGoBosses, fieldMoves: [], postgame: ['블루와 체육관 관장 재대결', '블루시티동굴의 뮤츠', '마스터 트레이너와 레드'] },
+  // 썬·문의 기술 떠올리기는 울라울라섬 재활용 공장 앞, 울트라썬·울트라문은 라나키라마운틴 포켓몬센터에 있습니다.
+  alola7: { id: 'alola7', generation: 7, region: '알로라', chapters: alolaChapters, bosses: alolaBosses, fieldMoves: [], moveReminder: { chapter: 4, location: '울라울라섬 재활용 공장 앞', cost: '하트비늘 1개' }, postgame: ['울트라비스트 포획 임무', '배틀트리', '수호신과 네크로즈마'] },
+  'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '하트비늘 1개' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
+  // 기술 떠올리기(추억 할머니)는 석영고원 포켓몬리그에 있습니다.
+  letsgo7: { id: 'letsgo7', generation: 7, region: '관동', chapters: letsGoChapters, bosses: letsGoBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '석영고원 포켓몬리그', cost: '하트비늘 1개' }, postgame: ['블루와 체육관 관장 재대결', '블루시티동굴의 뮤츠', '마스터 트레이너와 레드'] },
   galar8: { id: 'galar8', generation: 8, region: '가라르', chapters: galarChapters, bosses: galarBosses, fieldMoves: [], moveReminder: { chapter: 1, location: '모든 포켓몬센터', cost: '무료' }, mainStoryChapterCount: 10, postgame: ['소드·실드 전설 에피소드', '배틀타워', '갑옷섬 마스터 도장', '왕관설원 전설의 메모'] },
   sinnoh8: {
     id: 'sinnoh8',
@@ -528,8 +537,8 @@ const modernGameDefinitions: ModernGameDefinition[] = [
   { id: 'moon', familyId: 'alola7', endpoint: '챔피언 결정전 쿠쿠이', accent: '#4e5da8', starters: [722, 725, 728], fossils: [], notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.'] },
   { id: 'ultra-sun', familyId: 'alola7-ultra', endpoint: '챔피언 결정전 하우', accent: '#e6792b', starters: [722, 725, 728], fossils: [], notes: ['울트라네크로즈마와 마츠리카 시련을 포함한 울트라 버전 전용 순서입니다.'] },
   { id: 'ultra-moon', familyId: 'alola7-ultra', endpoint: '챔피언 결정전 하우', accent: '#5964b7', starters: [722, 725, 728], fossils: [], notes: ['울트라네크로즈마와 마츠리카 시련을 포함한 울트라 버전 전용 순서입니다.'] },
-  { id: 'lets-go-pikachu', familyId: 'letsgo7', endpoint: '라이벌 챔피언', accent: '#f4c430', starters: [25], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '포획 콤보·유인향·공중 출현은 완전성 게이트가 닫혀 있어 추천에 사용하지 않습니다.'] },
-  { id: 'lets-go-eevee', familyId: 'letsgo7', endpoint: '라이벌 챔피언', accent: '#9b6b43', starters: [133], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '포획 콤보·유인향·공중 출현은 완전성 게이트가 닫혀 있어 추천에 사용하지 않습니다.'] },
+  { id: 'lets-go-pikachu', familyId: 'letsgo7', endpoint: '챔피언 결정전 라이벌', accent: '#f4c430', starters: [25], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '하늘 출현은 챔피언 이후로 두고 희귀 출현은 조건부 경로로 표시합니다.'] },
+  { id: 'lets-go-eevee', familyId: 'letsgo7', endpoint: '챔피언 결정전 라이벌', accent: '#9b6b43', starters: [133], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '하늘 출현은 챔피언 이후로 두고 희귀 출현은 조건부 경로로 표시합니다.'] },
   { id: 'sword', familyId: 'galar8', endpoint: '챔피언 단델', accent: '#39a7d7', starters: [810, 813, 816], fossils: [], notes: ['채두·마쿠와가 등장하며, DLC 포켓몬은 본편 엔딩 파티에 필수로 추천하지 않습니다.'] },
   { id: 'shield', familyId: 'galar8', endpoint: '챔피언 단델', accent: '#d84b89', starters: [810, 813, 816], fossils: [], notes: ['어니언·멜론이 등장하며, DLC 포켓몬은 본편 엔딩 파티에 필수로 추천하지 않습니다.'] },
   { id: 'brilliant-diamond', familyId: 'sinnoh8', endpoint: '챔피언 난천', accent: '#5c8eba', starters: [387, 390, 393], fossils: [[408, 410]], notes: ['비전기술은 포켓치의 야생 포켓몬 호출로 사용하며 파티 기술칸을 차지하지 않습니다.'] },
@@ -574,12 +583,14 @@ export const modernBossOverrides: Partial<Record<ModernPlannerGameId, PlannerBos
   }),
   'omega-ruby': [
     ...orasBosses.slice(0, 7),
-    boss('maxie-or', '마적', '마그마단 리더 최종전', 8, ['ground', 'dark'], 'Lv.41–43'),
+    // 해저동굴: 또도가스 41, 크로뱃 41, 그라에나 41, 메가 폭타 43
+    boss('maxie-or', '마적', '마그마단 리더 최종전', 8, ['poison', 'flying', 'dark', 'fire', 'ground'], 'Lv.41–43'),
     ...orasBosses.slice(7),
   ],
   'alpha-sapphire': [
     ...orasBosses.slice(0, 7),
-    boss('archie-as', '아강', '아쿠아단 리더 최종전', 8, ['water', 'dark'], 'Lv.41–43'),
+    // 해저동굴: 질뻐기 41, 크로뱃 41, 그라에나 41, 메가 샤크니아 43
+    boss('archie-as', '아강', '아쿠아단 리더 최종전', 8, ['poison', 'flying', 'dark', 'water'], 'Lv.41–43'),
     ...orasBosses.slice(7),
   ],
   sword: galarBosses.filter((entry) => !entry.gameIds || entry.gameIds.includes('sword')),
@@ -613,6 +624,8 @@ const alolaLocationChapterOverrides = {
   'route-16': 4,
   'route-17': 4,
   'ruins-of-abundance': 4,
+  // 8번도로 서쪽 바다를 라프라스로 건너 도착합니다.
+  'secluded-shore': 3,
   'thrifty-megamart': 4,
   'ulaula-beach': 4,
   'ulaula-meadow': 4,
@@ -648,7 +661,8 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
   },
   alola7: alolaLocationChapterOverrides,
   'alola7-ultra': alolaLocationChapterOverrides,
-  letsgo7: {},
+  // 22번도로 풀숲(Lv.3–4)은 상록시티 바로 옆이라 처음부터 갈 수 있습니다(수면은 물결타기 이후).
+  letsgo7: { 'route-22': 1 },
   galar8: {
     'west-lake-axewell': 1,
     'axews-eye': 7,
@@ -688,7 +702,8 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
     'lake-verity': 1,
     'ramanas-park': 11,
   },
-  hisui8: {},
+  // 바닷가 작은 굴은 군청 해안, 미혹의 동굴은 천관산 기슭 안의 동굴입니다.
+  hisui8: { 'seaside-hollow': 3, 'wayward-cave': 4 },
   paldea9: {
     'inlet-grotto': 1,
     'south-province-area-four': 2,
@@ -708,6 +723,7 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
 }
 
 const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
+  kalos6: ['kiloude-city', 'friend-safari', 'unknown-dungeon', 'sea-spirits-den'],
   hoenn6: ['battle-resort', 'sky-pillar'],
   alola7: [
     'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
@@ -715,7 +731,7 @@ const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
   'alola7-ultra': [
     'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
   ],
-  letsgo7: [],
+  letsgo7: ['cerulean-cave'],
   galar8: [],
   sinnoh8: [
     'route-224', 'route-225', 'route-226', 'route-227', 'route-228', 'route-229', 'route-230',
@@ -723,6 +739,12 @@ const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
   ],
   hisui8: [],
   paldea9: [],
+}
+
+// 같은 장소 안에서도 필드기가 있어야 들어가는 구역은 방식별로 따로 막습니다.
+const gatedAreaMethods: Partial<Record<ModernFamilyId, Record<string, number>>> = {
+  // 22번도로 노란 꽃밭(Lv.25–27)은 파도타기와 폭포오르기로만 들어갑니다.
+  kalos6: { 'route-22:yellow-flowers': 9 },
 }
 
 function tokenMatches(location: string, token: string): boolean {
@@ -752,17 +774,37 @@ export function modernEncounterChapter(
     .find(([token]) => tokenMatches(location, token))
   const methodUnlocks: Partial<Record<ModernFamilyId, Record<string, number>>> = {
     kalos6: { 'old-rod': 2, 'good-rod': 4, 'super-rod': 7, surf: 3, 'rock-smash': 2, 'friend-safari': 10 },
-    hoenn6: { 'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 5, 'rock-smash': 3 },
-    letsgo7: {},
+    hoenn6: { 'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 5, 'rock-smash': 3, seaweed: 8 },
+    // 라프라스 스윔과 낚싯대는 아칼라섬 수련의 시련에서 받습니다.
+    alola7: { fishing: 2, 'fishing-bubbling': 2, surf: 2 },
+    'alola7-ultra': { fishing: 2, 'fishing-bubbling': 2, surf: 2 },
+    // 물결타기는 연분홍시티, 포켓몬피리는 포켓몬타워 구출 뒤에 받습니다.
+    letsgo7: { 'sea-skim': 5, pokeflute: 4 },
     galar8: { surf: 7 },
     sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 11, surf: 5, 'rock-smash': 1 },
     hisui8: {},
+    paldea9: {},
   }
   let prerequisiteChapter = methodUnlocks[familyId]?.[method] ?? 1
+  if (familyId === 'kalos6' && conditions.includes('rock-smash')) {
+    // 기술머신94 바위깨기는 Ambrette Town에서 받습니다.
+    prerequisiteChapter = Math.max(prerequisiteChapter, 2)
+  }
+  if (familyId === 'alola7' || familyId === 'alola7-ultra') {
+    // 방식을 확인하지 못한 PKHeX 행은 라프라스·낚싯대가 필요할 수 있어 2장 이후로 둡니다.
+    if (conditions.includes('method-unresolved') || conditions.includes('fishing')) prerequisiteChapter = Math.max(prerequisiteChapter, 2)
+    // 괴력몬 푸시는 포니섬 태고의 포니길에서 받습니다.
+    if (conditions.includes('machamp-shove')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)
+    if (conditions.includes('story-climax')) prerequisiteChapter = Math.max(prerequisiteChapter, 7)
+  }
+  const gatedMethod = gatedAreaMethods[familyId]?.[`${location}:${method}`]
+  if (gatedMethod) prerequisiteChapter = Math.max(prerequisiteChapter, gatedMethod)
   if (familyId === 'hoenn6') {
     if (conditions.includes('story-progress-go-goggles')) prerequisiteChapter = Math.max(prerequisiteChapter, 4)
     if (conditions.includes('story-progress-eon-gift')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)
     if (conditions.includes('story-progress-primal-defeated')) prerequisiteChapter = Math.max(prerequisiteChapter, 9)
+    if (conditions.includes('devon-scope')) prerequisiteChapter = Math.max(prerequisiteChapter, 6)
+    if (conditions.includes('waterfall')) prerequisiteChapter = Math.max(prerequisiteChapter, 9)
   }
   if (familyId === 'galar8') {
     const isDlcArea = conditions.includes('isle-of-armor') || conditions.includes('crown-tundra')
@@ -797,6 +839,32 @@ export function modernEncounterChapter(
     if (badgeCount) prerequisiteChapter = Math.max(prerequisiteChapter, badgeChapter[badgeCount] ?? 1)
     if (conditions.includes('isle-of-armor')) return prerequisiteChapter
     if (conditions.includes('crown-tundra')) return Math.max(prerequisiteChapter, 10)
+  }
+  if (familyId === 'hisui8') {
+    // 대쓰여너 라이드(3장) 없이는 갈 수 없는 해당화섬·시련의 모래톱 같은 물 위 구역
+    if (conditions.includes('basculegion-ride')) prerequisiteChapter = Math.max(prerequisiteChapter, 3)
+    // 조사단 랭크별로 말을 듣는 레벨(별 2개 Lv.30, 3개 40, 4개 50, 5개 60)과 다음 지역으로 가는 데 필요한 랭크:
+    // 홍련 습지 별 2개, 군청 해안 3개, 천관산 기슭 4개, 순백 동토 5개. 그 이상은 조사 진척에 따라 달라 엔딩 후로 둡니다.
+    const obedienceChapter = minLevel <= 30 ? 1
+      : minLevel <= 40 ? 2
+        : minLevel <= 50 ? 3
+          : minLevel <= 60 ? 4
+            : mainStoryChapterCount + 1
+    prerequisiteChapter = Math.max(prerequisiteChapter, obedienceChapter)
+    if (prerequisiteChapter > mainStoryChapterCount) return prerequisiteChapter
+  }
+  if (familyId === 'paldea9') {
+    // 배지 수에 따라 말을 듣는 레벨(0개 Lv.20, 배지마다 +5, 8개면 제한 없음)을 넘는 야생 포켓몬은
+    // 그 레벨까지 배지를 모으는 장 이후로 둡니다(2장 세르클 1개 … 7장 프리지 6개, 8장 8개).
+    const obedienceChapter = minLevel <= 20 ? 1
+      : minLevel <= 25 ? 2
+        : minLevel <= 30 ? 3
+          : minLevel <= 35 ? 4
+            : minLevel <= 40 ? 5
+              : minLevel <= 45 ? 6
+                : minLevel <= 50 ? 7
+                  : 8
+    prerequisiteChapter = Math.max(prerequisiteChapter, obedienceChapter)
   }
   if (familyId === 'sinnoh8') {
     if (conditions.includes('national-dex') || conditions.includes('postgame')) return 11
