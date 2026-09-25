@@ -284,6 +284,7 @@ const methodKo: Record<string, string> = {
   'wild-unspecified': '야생(방식 미확인)',
   'sea-skim': '물결타기 수면',
   sky: '하늘 비행',
+  landmark: '흔들리는 나무·광석',
 }
 
 export const supportedEncounterMethods = new Set(Object.keys(methodKo))
@@ -436,6 +437,8 @@ const conditionKo: Record<string, string> = {
   'other-caught-zapdos': '썬더 포획 후',
   'other-caught-moltres': '파이어 포획 후',
   'gimmighoul-chest': '보물상자 속 모으령',
+  alpha: '우두머리 개체',
+  'basculegion-ride': '대쓰여너 라이드 필요',
   'ruinous-stakes': '재앙의 말뚝을 모두 뽑은 뒤',
   'mutually-exclusive-starter': '스타터 중 하나만 선택',
 }
@@ -588,6 +591,18 @@ function chainRoot(species: CatalogSpecies): CatalogSpecies {
   return ancestors(species)[0] ?? species
 }
 
+const regionalEvolutionFamilies: Record<string, string[]> = {
+  alola: ['alola7', 'alola7-ultra'],
+  galar: ['galar8'],
+  hisui: ['hisui8'],
+  paldea: ['paldea9'],
+}
+
+function regionalFormRegion(pokemonId: number | null | undefined): string | null {
+  const identifier = pokemonId ? getGen8FormProfileByPokemonId(pokemonId)?.identifier : undefined
+  return identifier ? /-(alola|galar|hisui|paldea)(?:-|$)/.exec(identifier)?.[1] ?? null : null
+}
+
 function isAlolanForm(pokemonId: number | null | undefined): boolean {
   return Boolean(pokemonId && getGen8FormProfileByPokemonId(pokemonId)?.identifier.endsWith('-alola'))
 }
@@ -598,6 +613,31 @@ function letsGoEvolution(method: CatalogEvolutionMethod): CatalogEvolutionMethod
   return method.time ? { ...method, time: null } : method
 }
 
+const heldItemIdentifiers: Record<number, string> = {
+  110: 'oval-stone', 198: 'kings-rock', 203: 'deep-sea-tooth', 204: 'deep-sea-scale', 210: 'metal-coat',
+  212: 'dragon-scale', 229: 'up-grade', 298: 'protector', 299: 'electirizer', 300: 'magmarizer',
+  301: 'dubious-disc', 302: 'reaper-cloth', 303: 'razor-claw', 304: 'razor-fang',
+}
+// PKHeX evos_la 기준으로 LEGENDS 아르세우스는 통신교환 진화를 연결의끈으로, 도구를 지니고 하던 진화를 도구 사용으로 바꾸고,
+// 자기장·이끼 낀 바위·얼음 바위 진화도 천둥·리프·얼음의돌로 할 수 있습니다.
+const hisuiStoneEvolutions: Record<number, string> = { 462: 'thunder-stone', 476: 'thunder-stone', 470: 'leaf-stone', 471: 'ice-stone' }
+
+function hisuiEvolution(
+  species: CatalogSpecies,
+  method: CatalogEvolution | CatalogEvolutionMethod,
+): CatalogEvolution | CatalogEvolutionMethod {
+  const stone = hisuiStoneEvolutions[species.dex]
+  if (stone) return { ...method, trigger: 'use-item', item: stone, minLevel: null, heldItemId: null }
+  if (method.trigger === 'trade' && !method.tradeSpeciesId) {
+    const item = method.heldItemId ? heldItemIdentifiers[method.heldItemId] : 'linking-cord'
+    return item ? { ...method, trigger: 'use-item', item, heldItemId: null } : method
+  }
+  if (method.heldItemId && heldItemIdentifiers[method.heldItemId]) {
+    return { ...method, trigger: 'use-item', item: heldItemIdentifiers[method.heldItemId], heldItemId: null, minLevel: null }
+  }
+  return method
+}
+
 export function evolutionForGame(
   species: CatalogSpecies,
   game: GameConfig,
@@ -605,6 +645,7 @@ export function evolutionForGame(
   baseFormIndex?: number,
 ): CatalogEvolution | CatalogEvolutionMethod | null {
   const result = evolutionMethodForGame(species, game, basePokemonId, baseFormIndex)
+  if (game.familyId === 'hisui8' && result) return hisuiEvolution(species, result)
   return game.familyId === 'letsgo7' && result && 'versionGroupId' in result ? letsGoEvolution(result) : result
 }
 
@@ -635,6 +676,13 @@ function evolutionMethodForGame(
     // 교환으로 받은 알로라 모습만 같은 알로라 모습으로 진화합니다.
     // 스칼렛·바이올렛 본편에는 LEGENDS 아르세우스 전용 진화(흑요석·이탄블록·스타일 기술 등)가 없습니다.
     .filter((method) => game.familyId !== 'paldea9' || method.versionGroupId !== 24)
+    // 알로라·가라르·히스이 땅에서만 일어나는 지역 폼 진화(피카츄 → 알로라 라이츄, 갈모매 → 히스이 워글 등)는
+    // 그 지역 게임에서만 쓰고, 지역 폼끼리의 진화(히스이 가디 → 히스이 윈디)는 어느 게임에서나 씁니다.
+    .filter((method) => {
+      const region = regionalFormRegion(method.evolvedFormId)
+      if (!region || regionalFormRegion(method.baseFormId) === region) return true
+      return regionalEvolutionFamilies[region].includes(game.familyId)
+    })
     .filter((method) => {
       if (game.familyId !== 'letsgo7') return true
       const alolanBase = isAlolanForm(method.baseFormId)
@@ -888,7 +936,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
         'yellow-flowers', 'purple-flowers', 'red-flowers', 'flowers', 'rough-terrain', 'tall-grass',
         'horde', 'ambush', 'fishing', 'fishing-bubbling', 'sos', 'berry-pile',
       ].includes(encounter.method)
-        || (['letsgo7', 'paldea9'].includes(game.familyId) && ['overworld', 'sea-skim'].includes(encounter.method))
+        || (['letsgo7', 'paldea9', 'hisui8'].includes(game.familyId) && ['overworld', 'sea-skim', 'landmark'].includes(encounter.method))
       const conditional = conditions.some((condition) => !informationalConditions.has(condition))
         || conditionalMethods.has(encounter.method)
       return {
@@ -1165,6 +1213,21 @@ const evolutionItemKo: Record<string, string> = {
   'galarica-wreath': '가라두구머리장식',
   'auspicious-armor': '축복받은갑옷',
   'malicious-armor': '저주받은갑옷',
+  'linking-cord': '연결의끈',
+  'black-augurite': '검은휘석',
+  'peat-block': '피트블록',
+  'metal-coat': '금속코트',
+  electirizer: '에레키부스터',
+  magmarizer: '마그마부스터',
+  protector: '프로텍터',
+  'reaper-cloth': '영계의천',
+  'up-grade': '업그레이드',
+  'dubious-disc': '괴상한패치',
+  'razor-claw': '예리한손톱',
+  'razor-fang': '예리한이빨',
+  'oval-stone': '동글동글돌',
+  'kings-rock': '왕의징표석',
+  'dragon-scale': '용의비늘',
 }
 
 const evolutionItemUnlocks: Record<string, Partial<Record<string, number>>> = {
@@ -1240,7 +1303,11 @@ const evolutionItemUnlocks: Record<string, Partial<Record<string, number>>> = {
 const paldeaMoveEvolutionLevels: Record<number, number> = { 887: 32, 888: 32, 889: 35 }
 const paldeaEvolutionMoveKo: Record<number, string> = { 887: '하이퍼드릴', 888: '트윈빔', 889: '분노의주먹' }
 // 동전 999개 모으기와 대장의징표 절각참 3마리 쓰러뜨리기는 시점을 확인하지 못해 마지막 장 추론으로 둡니다.
-const unresolvedPaldeaTriggers = new Set(['gimmighoul-coins', 'three-defeated-bisharp'])
+const unresolvedPaldeaTriggers = new Set([
+  'gimmighoul-coins', 'three-defeated-bisharp',
+  // LEGENDS 아르세우스: 속공·강공 스타일 기술 20회, 반동 피해 294, 보름달 피트블록
+  'agile-style-move', 'strong-style-move', 'recoil-damage',
+])
 
 function chapterForStoryLevel(level: number, game: GameConfig): number {
   const index = getFamily(game).chapters.findIndex((chapter) =>
@@ -1317,6 +1384,7 @@ export function evolutionRequirementChapter(
     return 1
   }
   if (game.familyId === 'sinnoh8' && species.dex === 350) return 3
+  if (game.familyId === 'hisui8' && unresolvedPaldeaTriggers.has(evolution.trigger)) return mainStoryChapterCount
   if (game.familyId === 'paldea9') {
     const method: Partial<CatalogEvolutionMethod> = evolution
     if (unresolvedPaldeaTriggers.has(evolution.trigger)) return mainStoryChapterCount
@@ -1509,6 +1577,9 @@ export function evolutionText(species: CatalogSpecies, game?: GameConfig, formId
   if (evolution.trigger === 'tower-of-darkness') return `갑옷섬 악의 탑 정상에서 ${species.name} 진화`
   if (evolution.trigger === 'tower-of-waters') return `갑옷섬 물의 탑 정상에서 ${species.name} 진화`
   const paldeaMethod: Partial<CatalogEvolutionMethod> = evolution
+  if (evolution.trigger === 'agile-style-move') return `배리어러시를 속공으로 20번 쓴 뒤 레벨업으로 ${species.name} 진화`
+  if (evolution.trigger === 'strong-style-move') return `독침천발을 강공으로 20번 쓴 뒤 레벨업으로 ${species.name} 진화`
+  if (evolution.trigger === 'recoil-damage') return `기절하지 않고 반동 피해를 294 이상 받은 뒤 레벨업으로 ${species.name} 진화`
   if (evolution.trigger === 'gimmighoul-coins') return `모으령의코인 999개를 모은 뒤 레벨업으로 ${species.name} 진화`
   if (evolution.trigger === 'three-defeated-bisharp') return `대장의징표를 지닌 절각참 3마리를 쓰러뜨린 뒤 레벨업으로 ${species.name} 진화`
   if (evolution.trigger === 'use-move' && paldeaMethod.usedMoveId) {
@@ -1532,7 +1603,9 @@ export function evolutionText(species: CatalogSpecies, game?: GameConfig, formId
     const stochastic = game?.familyId === 'galar8' && evolution.item === 'chipped-pot'
       ? ' (래터럴마을 오늘의 특가에서 날짜별 확률 판매)'
       : ''
-    return `${gender ? `${gender}에게 ` : ''}${evolutionItemKo[evolution.item] ?? evolution.item} 사용으로 ${species.name} 진화${stochastic}`
+    const itemTimeKo: Record<string, string> = { day: '낮에 ', night: '밤에 ', 'full-moon': '보름달 밤에 ' }
+    const itemTime = evolution.time ? itemTimeKo[evolution.time] ?? '' : ''
+    return `${gender ? `${gender}에게 ` : ''}${itemTime}${evolutionItemKo[evolution.item] ?? evolution.item} 사용으로 ${species.name} 진화${stochastic}`
   }
   if (species.dex === 292) return '토중몬이 Lv.20에 진화할 때 파티 빈칸과 몬스터볼이 있으면 함께 출현'
   if (species.dex === 350) {

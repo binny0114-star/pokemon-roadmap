@@ -61,10 +61,16 @@ describe('릴리스 레지스트리와 전국도감', () => {
   })
 
   it('Gen 8 완전성 매니페스트도 모든 대상과 차단 근거를 fail-closed로 요구한다', () => {
+    // 차단으로 되돌린 요구사항은 누락 필드와 시도한 대안을 모두 적어야 합니다.
     const malformed = structuredClone(gen8Completeness)
-    const blocked = malformed.families.hisui8.gates.availability.requirements
-      .find((requirement) => requirement.status === 'blocked')!
+    const blocked = malformed.families.hisui8.gates.availability.requirements[0] as {
+      status: string
+      missingFields?: string[]
+      attemptedAlternatives?: string[]
+    }
+    blocked.status = 'blocked'
     blocked.missingFields = []
+    blocked.attemptedAlternatives = ['PKHeX encounter_la']
     expect(() => validateGen8CompletenessManifest(malformed)).toThrow('hisui8/availability')
 
     const missingGame = structuredClone(gen8Completeness)
@@ -174,9 +180,9 @@ describe('릴리스 레지스트리와 전국도감', () => {
   })
 
   it('Gen 8 자원·조건 공백과 unsupported fallback을 구체적으로 고정한다', () => {
-    const requirement = (familyId: keyof typeof gen8Completeness.families, gateId: 'availability' | 'learnsets') =>
-      gen8Completeness.families[familyId].gates[gateId].requirements
-        .find((entry) => entry.status === 'blocked')!
+    // 8세대 계열 7개 버전은 이제 모두 완료 근거로 승격되어 차단 요구사항이 남아 있지 않습니다.
+    expect(Object.values(gen8Completeness.families).flatMap((family) => Object.values(family.gates))
+      .flatMap((gate) => gate.requirements).some((entry) => entry.status === 'blocked')).toBe(false)
 
     const letsGoAvailability = gen8Completeness.families.letsgo7.gates.availability.requirements[0]
     expect(letsGoAvailability.status).toBe('complete')
@@ -192,9 +198,10 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(sinnohAvailability.evidence).toContain('Poké Radar')
     expect(sinnohLearnsets.status).toBe('complete')
     expect(sinnohLearnsets.evidence).toContain('one-copy limits')
-    expect(requirement('hisui8', 'availability').missingFields).toEqual(expect.arrayContaining([
-      'outbreak-unlock', 'space-time-distortion-unlock', 'research-rank-gate',
-    ]))
+    const hisuiAvailability = gen8Completeness.families.hisui8.gates.availability.requirements[0]
+    expect(hisuiAvailability.status).toBe('complete')
+    expect(hisuiAvailability.evidence).toContain('Survey Corps rank')
+    expect(gen8Completeness.families.hisui8.gates.evolutions.requirements[0].evidence).toContain('evos_la')
 
     for (const gameId of Object.values(gen8Completeness.families).flatMap((family) => family.games)) {
       const promoted = registryJson.games.some((entry) =>
@@ -212,8 +219,8 @@ describe('릴리스 레지스트리와 전국도감', () => {
   it('39개 스토리 게임과 지원 경계를 고유하고 상호 참조 가능하게 유지한다', () => {
     expect(gameCatalog).toHaveLength(39)
     expect(new Set(gameCatalog.map((game) => game.id)).size).toBe(39)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(37)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(2)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(38)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(1)
     expect(gameCatalog.some((game) => game.id === ('champions' as string))).toBe(false)
 
     const byId = new Map(gameCatalog.map((game) => [game.id, game]))
@@ -230,7 +237,9 @@ describe('릴리스 레지스트리와 전국도감', () => {
             ? 'sinnoh-underground'
             : game.id === 'lets-go-pikachu' || game.id === 'lets-go-eevee'
               ? 'lets-go'
-              : 'classic'
+              : game.id === 'legends-arceus'
+                ? 'legends'
+                : 'classic'
         expect(game.mechanicsFamily, game.id).toBe(expectedMechanics)
         expect(game.plannerFamilyId, game.id).toBeTruthy()
       } else {
@@ -248,7 +257,7 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(duplicateVersionIds).toEqual([[2, ['blue', 'green']]])
     expect(modernGames.every((game) => gameCatalog.some((entry) => entry.id === game.id))).toBe(true)
     expect(modernGames.filter((game) => game.catalog.plannerSupport.status === 'full').map((game) => game.id).sort())
-      .toEqual(['alpha-sapphire', 'brilliant-diamond', 'lets-go-eevee', 'lets-go-pikachu', 'moon', 'omega-ruby', 'scarlet', 'shield', 'shining-pearl', 'sun', 'sword', 'ultra-moon', 'ultra-sun', 'violet', 'x', 'y'])
+      .toEqual(['alpha-sapphire', 'brilliant-diamond', 'legends-arceus', 'lets-go-eevee', 'lets-go-pikachu', 'moon', 'omega-ruby', 'scarlet', 'shield', 'shining-pearl', 'sun', 'sword', 'ultra-moon', 'ultra-sun', 'violet', 'x', 'y'])
   })
 
   it('전국도감 #001–1025를 누락과 중복 없이 유지한다', () => {

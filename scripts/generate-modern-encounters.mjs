@@ -35,6 +35,7 @@ const sources = {
     'legality/wild/Gen8/encounter_sp_underground.pkl',
   ],
   paldea: ['legality/wild/Gen9/encounter_wild_paldea.pkl'],
+  'legends-arceus': ['legality/wild/Gen8/encounter_la.pkl'],
 }
 const inputFiles = [
   ...Object.values(sources).flat(),
@@ -46,6 +47,8 @@ const inputFiles = [
   'text/locations/gen8/text_swsh_00000_en.txt',
   'text/locations/gen8b/text_bdsp_00000_en.txt',
   'text/locations/gen9/text_sv_00000_en.txt',
+  'text/locations/gen8a/text_la_00000_en.txt',
+  'text/locations/gen8a/text_la_00000_ko.txt',
   'text/locations/gen6/text_xy_00000_ko.txt',
   'text/locations/gen7/text_sm_00000_ko.txt',
   'text/locations/gen7/text_sm_30000_ko.txt',
@@ -60,6 +63,7 @@ const inputFiles = [
   'Legality/Encounters/Data/Gen8/Encounters8.cs',
   'Legality/Encounters/Data/Gen8/Encounters8Nest.cs',
   'Legality/Encounters/Data/Gen8/Encounters8b.cs',
+  'Legality/Encounters/Data/Gen8/Encounters8a.cs',
   'Legality/Encounters/Data/Gen9/Encounters9.cs',
 ]
 
@@ -1404,6 +1408,58 @@ function koreanLocationNames(rows, namePairs) {
   }))
 }
 
+// LEGENDS 아르세우스는 기본(0)·흔들리는 나무/광석(2) 조우만 쓰고, 무작위로 열리는 시공의 뒤틀림(1)과
+// 대량발생(3·4)은 제외합니다. 우두머리 슬롯은 조건으로 남기고, 물 위로만 갈 수 있는 구역은 대쓰여너 라이드 뒤로 둡니다.
+const hisuiWaterOnlySubareas = new Set([
+  'Ramanas Island', 'Holm of Trials', 'Firespit Island', 'Islespy Shore', 'Seagrass Haven', 'Lunker’s Lair',
+])
+
+function parseHisui(buffer, locationNames) {
+  return unpack(buffer).flatMap((area, areaIndex) => {
+    const locationCount = area[0]
+    const locationIds = [...area.subarray(1, 1 + locationCount)]
+    let align = locationCount + 1
+    align += align & 1
+    const data = area.subarray(align)
+    const type = data[0]
+    const count = data[1]
+    if (type !== 0 && type !== 2) return []
+    const main = locationNames[locationIds[0]]
+    if (!main) throw new Error(`Unknown Hisui location: ${locationIds[0]}`)
+    const subareas = locationIds.slice(1).map((id) => locationNames[id]).filter(Boolean)
+    const waterOnly = subareas.length > 0 && subareas.every((name) => hisuiWaterOnlySubareas.has(name))
+    const result = []
+    for (let index = 0; index < count; index += 1) {
+      const offset = 2 + index * 8
+      const conditions = []
+      if (data[offset + 3]) conditions.push('alpha')
+      if (waterOnly) conditions.push('basculegion-ride')
+      result.push(encounter(
+        data.readUInt16LE(offset),
+        data[offset + 2],
+        main,
+        `${main}-${subareas.join('-')}-${areaIndex}`,
+        data[offset + 4],
+        data[offset + 5],
+        type === 2 ? 'landmark' : 'overworld',
+        conditions,
+      ))
+    }
+    return result
+  })
+}
+
+// 스타터 세 마리는 PKHeX StaticLA의 축복마을(6) 선물과 대조합니다. 다른 고정 심볼·선물은 의뢰·전제를 확인하지 않아 제외합니다.
+function hisuiStarterRows(source, locationNames) {
+  const statics = [...source.matchAll(/new\((\d+),\s*(\d+),\s*(\d+)[^)]*\)\s*\{\s*Location\s*=\s*0*(\d+)/g)]
+    .map((match) => ({ species: Number(match[1]), form: Number(match[2]), level: Number(match[3]), locationId: Number(match[4]) }))
+  return [722, 155, 501].map((species) => {
+    const row = statics.find((entry) => entry.species === species && entry.locationId === 6 && entry.level === 5)
+    if (!row) throw new Error(`Hisui starter not found in PKHeX StaticLA: ${species}`)
+    return encounter(species, row.form, locationNames[6], 'starter-gift', 5, 5, 'gift', ['mutually-exclusive-starter'])
+  })
+}
+
 function deduplicate(rows) {
   const byKey = new Map()
   for (const row of rows) {
@@ -1437,6 +1493,8 @@ const [
   galarNames,
   sinnohNames,
   paldeaNames,
+  hisuiNames,
+  hisuiKoreanNames,
   gen6KoreanNames,
   gen7KoreanNames,
   gen7TransferKoreanNames,
@@ -1451,6 +1509,7 @@ const [
   swshStaticSource,
   letsGoStaticSource,
   paldeaStaticSource,
+  hisuiStaticSource,
 ] = await Promise.all([
   fetchText('text/locations/gen6/text_xy_00000_en.txt').then(names),
   fetchText('text/locations/gen7/text_sm_00000_en.txt').then(names),
@@ -1459,6 +1518,8 @@ const [
   fetchText('text/locations/gen8/text_swsh_00000_en.txt').then(names),
   fetchText('text/locations/gen8b/text_bdsp_00000_en.txt').then(names),
   fetchText('text/locations/gen9/text_sv_00000_en.txt').then(names),
+  fetchText('text/locations/gen8a/text_la_00000_en.txt').then(names),
+  fetchText('text/locations/gen8a/text_la_00000_ko.txt').then(names),
   fetchText('text/locations/gen6/text_xy_00000_ko.txt').then(names),
   fetchText('text/locations/gen7/text_sm_00000_ko.txt').then(names),
   fetchText('text/locations/gen7/text_sm_30000_ko.txt').then(names),
@@ -1473,6 +1534,7 @@ const [
   fetchCode('Legality/Encounters/Data/Gen8/Encounters8.cs'),
   fetchCode('Legality/Encounters/Data/Gen7/Encounters7GG.cs'),
   fetchCode('Legality/Encounters/Data/Gen9/Encounters9.cs'),
+  fetchCode('Legality/Encounters/Data/Gen8/Encounters8a.cs'),
 ])
 const nestLocations = parseNestLocations(nestSource)
 const inaccessibleNests = parseInaccessibleNests(nestSource)
@@ -1525,6 +1587,10 @@ for (const game of ['sword', 'shield']) {
       ? [row, { ...row, form: 1, area: `${row.area}-female-form` }]
       : [row]))
 }
+rowsByGame['legends-arceus'] = deduplicate([
+  ...parseHisui(await fetchBytes(sources['legends-arceus'][0]), hisuiNames),
+  ...hisuiStarterRows(hisuiStaticSource, hisuiNames),
+])
 for (const game of ['brilliant-diamond', 'shining-pearl']) {
   const buffers = await Promise.all(sources[game].map(fetchBytes))
   rowsByGame[game] = deduplicate(buffers.flatMap((buffer, index) => parseBdsp(buffer, sinnohNames, index === 1)))
@@ -1570,6 +1636,7 @@ const namePairsByGame = {
   'shining-pearl': [[sinnohNames, sinnohKoreanNames]],
   scarlet: [[paldeaNames, paldeaKoreanNames]],
   violet: [[paldeaNames, paldeaKoreanNames]],
+  'legends-arceus': [[hisuiNames, hisuiKoreanNames]],
 }
 const locationNames = Object.fromEntries(Object.entries(rowsByGame).map(([gameId, rows]) => [
   gameId,
@@ -1638,6 +1705,7 @@ await writeFile(
         'Independently authored reachability conditions cover Wedgehurst Slowpoke, Isle of Armor Diglett rewards, Crown Tundra footprints, roaming birds, Spiritomb, Regigigas, Keldeo, Cosmog and Poipole and are cross-checked against the reference-only URLs above.',
         'BDSP overworld and Grand Underground level ranges are decoded from separate version resources; independently authored reachability conditions preserve the exact per-species Explorer Kit, Strength-obtained, Defog, Icicle Badge, Waterfall and National Pokédex milestones cross-checked against the content-hashed Serebii tables, and discard unreachable pre-Elite-Four level bands only for National Pokédex species.',
         'BDSP Feebas retains the pinned PKHeX species, form, location and level range while the special any-rod daily-tile method and Defog, Surf and Strength gates are independently cross-checked against the reference-only URLs above.',
+        'Legends: Arceus standard and landmark (shaking tree/ore) slots come from the PKHeX LA resource keyed by the parent field area; alpha slots keep an alpha condition, tables limited to Ramanas Island, Holm of Trials or other water-only spots require the Basculegion ride, and space-time distortions, mass outbreaks, requests and non-starter statics are not ingested.',
         'Scarlet/Violet base-Paldea wild slots are decoded from the shared resource and filtered by reviewed version exclusives; slots that also spawn in normal weather drop their weather flags, and chest Gimmighoul plus the post-game Treasures of Ruin statics come from PKHeX Encounters9. Tera Raids, DLC areas and unverified gifts or trades are not ingested.',
         'Official Korean location names are joined from the PKHeX ko location text files by line index, keyed by the English slug used in each game snapshot.',
         'Concrete species forms are preserved exactly; PKHeX dynamic form sentinels are normalized to base form with explicit form-region-dependent or form-random conditions.',

@@ -71,14 +71,12 @@ describe('6–9세대 스토리 패밀리', () => {
     for (const gameId of targetIds) {
       const game = modernGames.find((entry) => entry.id === gameId)!
       const support = game.catalog.plannerSupport
-      const promoted = ['lets-go-pikachu', 'lets-go-eevee', 'sword', 'shield', 'brilliant-diamond', 'shining-pearl'].includes(gameId)
-      expect(support.status, gameId).toBe(promoted ? 'full' : 'catalog-only')
-      expect(game.catalog.supportReview, gameId).toBe(gameId.startsWith('lets-go-') ? '2026-09-25' : '2026-09-12')
+      expect(support.status, gameId).toBe('full')
+      expect(game.catalog.supportReview, gameId).toBe(['lets-go-pikachu', 'lets-go-eevee', 'legends-arceus'].includes(gameId) ? '2026-09-25' : '2026-09-12')
       expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
         'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
       ])
-      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.complete), gameId).toBe(promoted)
-      expect(support.accuracyGates?.mechanics.complete, gameId).toBe(true)
+      expect(Object.values(support.accuracyGates ?? {}).every((gate) => gate.complete), gameId).toBe(true)
     }
     expect(modernGames.find((game) => game.id === 'lets-go-pikachu')?.catalog.mechanicsFamily).toBe('lets-go')
     expect(modernGames.find((game) => game.id === 'sword')?.catalog.mechanicsFamily).toBe('galar-wild-area')
@@ -278,6 +276,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(Object.keys(encounterGames).sort()).toEqual([
       'alpha-sapphire',
       'brilliant-diamond',
+      'legends-arceus',
       'lets-go-eevee',
       'lets-go-pikachu',
       'moon',
@@ -309,6 +308,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(modernGames.filter((game) => encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
       'alpha-sapphire',
       'brilliant-diamond',
+      'legends-arceus',
       'lets-go-eevee',
       'lets-go-pikachu',
       'moon',
@@ -324,9 +324,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'x',
       'y',
     ])
-    expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
-      'legends-arceus',
-    ])
+    expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([])
   })
 
   it('Gen 7 버전별 야생·SOS 자원과 폼을 보존한다', () => {
@@ -584,6 +582,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'ultra-moon': 'alola7-ultra',
       'lets-go-pikachu': 'letsgo7',
       'lets-go-eevee': 'letsgo7',
+      'legends-arceus': 'hisui8',
       sword: 'galar8',
       shield: 'galar8',
       'brilliant-diamond': 'sinnoh8',

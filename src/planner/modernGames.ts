@@ -702,7 +702,8 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
     'lake-verity': 1,
     'ramanas-park': 11,
   },
-  hisui8: {},
+  // 바닷가 작은 굴은 군청 해안, 미혹의 동굴은 천관산 기슭 안의 동굴입니다.
+  hisui8: { 'seaside-hollow': 3, 'wayward-cave': 4 },
   paldea9: {
     'inlet-grotto': 1,
     'south-province-area-four': 2,
@@ -838,6 +839,19 @@ export function modernEncounterChapter(
     if (badgeCount) prerequisiteChapter = Math.max(prerequisiteChapter, badgeChapter[badgeCount] ?? 1)
     if (conditions.includes('isle-of-armor')) return prerequisiteChapter
     if (conditions.includes('crown-tundra')) return Math.max(prerequisiteChapter, 10)
+  }
+  if (familyId === 'hisui8') {
+    // 대쓰여너 라이드(3장) 없이는 갈 수 없는 해당화섬·시련의 모래톱 같은 물 위 구역
+    if (conditions.includes('basculegion-ride')) prerequisiteChapter = Math.max(prerequisiteChapter, 3)
+    // 조사단 랭크별로 말을 듣는 레벨(별 2개 Lv.30, 3개 40, 4개 50, 5개 60)과 다음 지역으로 가는 데 필요한 랭크:
+    // 홍련 습지 별 2개, 군청 해안 3개, 천관산 기슭 4개, 순백 동토 5개. 그 이상은 조사 진척에 따라 달라 엔딩 후로 둡니다.
+    const obedienceChapter = minLevel <= 30 ? 1
+      : minLevel <= 40 ? 2
+        : minLevel <= 50 ? 3
+          : minLevel <= 60 ? 4
+            : mainStoryChapterCount + 1
+    prerequisiteChapter = Math.max(prerequisiteChapter, obedienceChapter)
+    if (prerequisiteChapter > mainStoryChapterCount) return prerequisiteChapter
   }
   if (familyId === 'paldea9') {
     // 배지 수에 따라 말을 듣는 레벨(0개 Lv.20, 배지마다 +5, 8개면 제한 없음)을 넘는 야생 포켓몬은

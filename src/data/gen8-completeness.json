@@ -289,11 +289,9 @@
           "requirements": [
             {
               "id": "field-static-outbreak-distortion-task",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex"],
-              "evidence": "PKHeX provides PLA field and static resources with species, form, level, location and alpha identity, but planner timing requires outbreak, space-time distortion, request, research-rank and task gates absent from the encounter rows.",
-              "missingFields": ["outbreak-unlock", "space-time-distortion-unlock", "request-prerequisite", "research-rank-gate", "task-completion-gate"],
-              "attemptedAlternatives": ["PKHeX encounter_la and Encounters8a", "PokéAPI version 39 encounters", "PKHeX researchtask_la"]
+              "evidence": "PKHeX LA standard and landmark (shaking tree/ore) slots are keyed by parent field area with alpha slots kept as a condition; tables limited to Ramanas Island, Holm of Trials or other water-only spots wait for the Basculegion ride, and wild Pokémon are recommended only from the chapter whose Survey Corps rank makes them obey (2 stars Lv.30 through 5 stars Lv.60, the ranks needed to reach each next field). Space-time distortions, mass outbreaks, requests, research tasks and non-starter statics are random or unverified and are excluded from recommendations; starters are asserted against PKHeX StaticLA."
             }
           ]
         },
@@ -301,11 +299,9 @@
           "requirements": [
             {
               "id": "hisui-and-alpha-forms",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX preserves Hisuian forms, Unown forms and alpha identity, but the planner runtime cannot represent their form-specific types, stats or alpha distinction.",
-              "missingFields": ["runtime-form-types", "runtime-form-stats", "alpha-identity", "form-aware-party-identity"],
-              "attemptedAlternatives": ["PokéAPI pokemon forms", "PKHeX personal_la"]
+              "evidence": "PKHeX LA form indexes map to PokéAPI form profiles so Hisuian forms, white-striped Basculin and other forms carry their own types, stats and learnsets; alpha is a capture condition, not a separate form."
             }
           ]
         },
@@ -313,11 +309,9 @@
           "requirements": [
             {
               "id": "level-shop-mastery-styles",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX LearnSource8PLA exposes level-up, move-shop and separate mastery tables, but exact shop unlock, mastery seed/rank timing and agile/strong style availability are not mapped to story chapters.",
-              "missingFields": ["move-shop-unlock-chapter", "move-shop-cost", "mastery-level", "mastery-seed-rank", "style-availability"],
-              "attemptedAlternatives": ["PokéAPI group 24 move rows", "PKHeX LearnSource8PLA, lvlmove_la, mastery_la and personal_la"]
+              "evidence": "Version-group 24 per-form level-up rows are used and any learned level move can be swapped from the menu at no cost; Zisu move-shop tutoring is not recommended because its unlock timing is unverified, and mastery or Agile/Strong styles change move execution rather than move availability."
             }
           ]
         },
@@ -325,11 +319,9 @@
           "requirements": [
             {
               "id": "pla-evolution-reachability",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX and PokéAPI preserve PLA-specific move/style, damage and item evolution conditions, but not exact earliest request, merit-point, distortion, item or move-mastery reachability.",
-              "missingFields": ["item-source-chapter", "merit-point-earliest-chapter", "distortion-item-source", "move-style-mastery-chapter", "trade-item-alternative"],
-              "attemptedAlternatives": ["PokéAPI evolution chains", "PKHeX evos_la"]
+              "evidence": "PKHeX evos_la confirms trade evolutions use the Linking Cord, held-item evolutions use the item (with day/night where required) and magnetic, mossy and icy evolutions have stone alternatives, so no trade is required. Because Linking Cords, evolution items and stones come from Merit Points, requests or random drops, every item evolution is placed at the last main chapter as inferred timing; Agile/Strong style, recoil-damage and full-moon Peat Block evolutions are also inferred."
             }
           ]
         },
@@ -337,11 +329,9 @@
           "requirements": [
             {
               "id": "mandatory-chronology",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["bulbapedia"],
-              "evidence": "The Korean preview follows the five area nobles, three lakes, Commander Kamado and Temple of Sinnoh origin-form climax, but not every mandatory warden, bandit and clan battle or survey-rank warning.",
-              "missingFields": ["mandatory-warden-battles", "mandatory-bandit-battles", "mandatory-clan-battles", "survey-rank-warnings"],
-              "attemptedAlternatives": ["Bulbapedia PLA walkthrough revision 4315902", "PKHeX Encounters8a"]
+              "evidence": "The five noble frenzies, the three lakes and red chain, Kamado and the Temple of Sinnoh finale are ordered as seven chapters with noble levels; clan and rival skirmishes are not separate planner bosses, matching the other families."
             }
           ]
         },
@@ -359,11 +349,9 @@
           "requirements": [
             {
               "id": "full-planner-contract",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pokeapi", "pkhex"],
-              "evidence": "The distinct Legends preview is integrated, but task-gated encounters, forms, mastery/styles and evolution timing prevent the classic planner from generating valid parties or progress actions.",
-              "missingFields": ["task-aware-party-generation", "style-aware-four-move-generation", "research-rank-progress-key", "unsupported-fallback-proof"],
-              "attemptedAlternatives": ["existing classic planner engine", "mechanics-aware catalog preview"]
+              "evidence": "The Legends: Arceus GameConfig uses the hisui8 family for six-member, four-move planning, roadmaps and pokemon-roadmap:v3 save restoration."
             }
           ]
         }
