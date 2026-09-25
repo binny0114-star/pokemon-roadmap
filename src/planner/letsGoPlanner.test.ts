@@ -122,6 +122,12 @@ describe('레츠고 피카츄·이브이 완전 플래너', () => {
     expect(evolutionRequirementChapter(species(28), game)).toBe(1)
     expect(evolutionRequirementChapter(species(36), game)).toBe(2)
     expect(evolutionRequirementChapter(species(134), game)).toBe(4)
+    // 피츄·흉내내·먹고자 같은 #152 이후 진화 전 포켓몬은 레츠고에 없습니다.
+    for (const dex of [25, 122, 143]) {
+      expect(evolutionForGame(species(dex), game), `#${dex}`).toBeNull()
+      expect(evolutionText(species(dex), game)).toBe('진화 없음 또는 기본 형태')
+      expect(getAvailability(species(dex), game).obtainable).toBe(true)
+    }
   })
 
   it('보스 레벨과 기술 떠올리기 장소를 검증값으로 둔다', () => {

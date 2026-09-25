@@ -126,6 +126,9 @@ const promotedGen67Count = gen67AccuracyEntries.filter((entry) => entry.plannerS
 const promotedGen8Count = gen8AccuracyEntries.filter((entry) => entry.plannerSupport.status === 'full').length
 const fullSupportCount = gameCatalog.filter((entry) => entry.plannerSupport.status === 'full').length
 const catalogOnlyCount = gameCatalog.length - fullSupportCount
+const catalogOnlyNames = gameCatalog
+  .filter((entry) => entry.plannerSupport.status === 'catalog-only')
+  .map((entry) => entry.shortName)
 const mechanicsFamilyKo = {
   classic: '클래식 본편',
   'galar-wild-area': '가라르 와일드에리어·DLC',
@@ -805,7 +808,7 @@ function App() {
                         value={entry.id}
                         disabled={entry.plannerSupport.status !== 'full'}
                       >
-                        {entry.name}{entry.plannerSupport.status === 'catalog-only' ? ' · 데이터 준비 중' : ''}
+                        {entry.name}{entry.plannerSupport.status === 'catalog-only' ? ' · 카탈로그 전용' : ''}
                       </option>
                     ))}
                   </optgroup>
@@ -819,7 +822,7 @@ function App() {
             <div className="game-count">{family.chapters.length}<small>CHAPTERS</small></div>
             <div className="game-count">{bosses.length}<small>BOSSES</small></div>
           </div>
-          <p className="data-note">ⓘ 소드·실드·BDSP는 파티 로드맵을 지원합니다. 나머지 6–9세대 버전은 스토리·입수·버전별 기술 데이터가 모두 완비되기 전까지 아래 미리보기만 제공합니다.</p>
+          <p className="data-note">ⓘ {fullSupportCount}개 버전이 파티 로드맵을 지원합니다. {catalogOnlyNames.join('·')}은(는) 검증할 원본 데이터가 없어 카탈로그로만 제공합니다.</p>
           <p className="generation-promotion-summary">
             Gen 6–7 정확성 승격 <strong>{promotedGen67Count}/{gen67AccuracyEntries.length}</strong>
           </p>
@@ -1290,9 +1293,9 @@ function App() {
           <summary>데이터 및 추천 방법론 <span>DATA / METHODOLOGY</span></summary>
           <div>
             <section><h3>정적 데이터 출처</h3><p>{catalogSource}. {learnsetSource()}. 전국도감 #001–{catalogCoverage?.nationalDex.max ?? 1025}의 종·진화와 조우 장소·세부 구역·방식·조건, 버전별 자력기·TM/HM·기술가르침 호환 데이터를 빌드 전에 정규화했습니다. 브라우저는 외부 API를 호출하지 않습니다.</p></section>
-            <section><h3>현대 미리보기 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료를 소드·실드·BDSP 플래너에, 버전별 공개 워크스루를 스토리 미리보기에 사용합니다. 카탈로그 전용 게임은 입수 데이터를 표시하지 않습니다.</p></section>
+            <section><h3>6–9세대 출처</h3><p><a href={modernEncounterProvenance?.repository} target="_blank" rel="noreferrer">PKHeX</a> 고정 리비전 {modernEncounterProvenance?.revision.slice(0, 8) ?? '로딩 중'}의 폼 보존 입수 자료와 공식 한국어 장소명, 고정 PokéAPI 조우 방식 행을 6–9세대 플래너에, 버전별 공개 워크스루를 스토리·보스에 사용합니다. 카탈로그 전용 게임은 입수 데이터를 표시하지 않습니다.</p></section>
             <section><h3>결정론 점수</h3><p>스토리 합류 시점, 남은 관장·사천왕 상성, 새 공격 타입, 종족값·역할, 공통 약점 감점, 버전별 필드기 기여를 합산합니다. 단일 타입 모드는 해당 타입을 공유하는 진화 계열 안에서만 같은 점수를 적용합니다.</p></section>
-            <section><h3>한계와 품질 표시</h3><p>낚싯대·파도타기·바위깨기·박치기와 엔딩 후 조건은 실제 조우 방식의 해금 시점보다 앞당기지 않습니다. 시간대·계절·대량발생·포켓트레·라디오 같은 조건도 입수 안내에 표시합니다. 특수 심볼의 세부 이벤트나 일반 TM·기술가르침의 지도상 획득 시점을 완전히 확정할 수 없는 경우에는 “시점 추론”으로 구분합니다.</p></section>
+            <section><h3>한계와 품질 표시</h3><p>낚싯대·파도타기·바위깨기·박치기와 엔딩 후 조건은 실제 조우 방식의 해금 시점보다 앞당기지 않습니다. 시간대·계절·대량발생·포켓트레·라디오 같은 조건도 입수 안내에 표시합니다. 특수 심볼의 세부 이벤트나 일반 TM·기술가르침의 지도상 획득 시점을 완전히 확정할 수 없는 경우에는 “시점 추론”으로 구분합니다. 스칼렛·바이올렛과 LEGENDS 아르세우스는 배지·조사단 랭크에 따른 말 듣는 레벨을 넘는 야생 포켓몬을 그 레벨이 허용되는 장부터 추천합니다.</p></section>
           </div>
         </details>
       </main>

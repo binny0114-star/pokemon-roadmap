@@ -644,6 +644,8 @@ export function evolutionForGame(
   basePokemonId?: number,
   baseFormIndex?: number,
 ): CatalogEvolution | CatalogEvolutionMethod | null {
+  // 레츠고에는 #152 이후 진화 전 포켓몬(피츄·흉내내 등)이 없어 피카츄·마임맨 등은 진화로 얻지 않습니다.
+  if (game.familyId === 'letsgo7' && species.evolvesFrom && species.evolvesFrom > 151) return null
   const result = evolutionMethodForGame(species, game, basePokemonId, baseFormIndex)
   if (game.familyId === 'hisui8' && result) return hisuiEvolution(species, result)
   return game.familyId === 'letsgo7' && result && 'versionGroupId' in result ? letsGoEvolution(result) : result
