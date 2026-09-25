@@ -782,6 +782,7 @@ export function modernEncounterChapter(
     galar8: { surf: 7 },
     sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 11, surf: 5, 'rock-smash': 1 },
     hisui8: {},
+    paldea9: {},
   }
   let prerequisiteChapter = methodUnlocks[familyId]?.[method] ?? 1
   if (familyId === 'kalos6' && conditions.includes('rock-smash')) {
@@ -837,6 +838,19 @@ export function modernEncounterChapter(
     if (badgeCount) prerequisiteChapter = Math.max(prerequisiteChapter, badgeChapter[badgeCount] ?? 1)
     if (conditions.includes('isle-of-armor')) return prerequisiteChapter
     if (conditions.includes('crown-tundra')) return Math.max(prerequisiteChapter, 10)
+  }
+  if (familyId === 'paldea9') {
+    // 배지 수에 따라 말을 듣는 레벨(0개 Lv.20, 배지마다 +5, 8개면 제한 없음)을 넘는 야생 포켓몬은
+    // 그 레벨까지 배지를 모으는 장 이후로 둡니다(2장 세르클 1개 … 7장 프리지 6개, 8장 8개).
+    const obedienceChapter = minLevel <= 20 ? 1
+      : minLevel <= 25 ? 2
+        : minLevel <= 30 ? 3
+          : minLevel <= 35 ? 4
+            : minLevel <= 40 ? 5
+              : minLevel <= 45 ? 6
+                : minLevel <= 50 ? 7
+                  : 8
+    prerequisiteChapter = Math.max(prerequisiteChapter, obedienceChapter)
   }
   if (familyId === 'sinnoh8') {
     if (conditions.includes('national-dex') || conditions.includes('postgame')) return 11

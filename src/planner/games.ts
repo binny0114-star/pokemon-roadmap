@@ -235,6 +235,7 @@ export const families: Record<string, FamilyConfig> = {
   letsgo7: { ...modernFamilies.letsgo7, id: 'letsgo7' },
   galar8: { ...modernFamilies.galar8, id: 'galar8' },
   sinnoh8: { ...modernFamilies.sinnoh8, id: 'sinnoh8' },
+  paldea9: { ...modernFamilies.paldea9, id: 'paldea9' },
 }
 
 const game = (
@@ -295,6 +296,8 @@ export const games: GameConfig[] = [
   game('shield', '챔피언 단델', '#d84b89', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
   game('brilliant-diamond', '챔피언 난천', '#5c8eba', [387, 390, 393], [[408]], { familyId: 'sinnoh8', notes: ['포켓치 비전기술은 파티 기술칸을 차지하지 않으며 지하대동굴 풀은 진행 플래그에 따라 확장됩니다.'] }),
   game('shining-pearl', '챔피언 난천', '#c9799d', [387, 390, 393], [[410]], { familyId: 'sinnoh8', notes: ['포켓치 비전기술은 파티 기술칸을 차지하지 않으며 지하대동굴 풀은 진행 플래그에 따라 확장됩니다.'] }),
+  game('scarlet', '낙원방어프로토콜', '#c9483d', [906, 909, 912], [], { familyId: 'paldea9', notes: ['오픈월드라 권장 레벨 순서(체육관·주인·스타단)를 장으로 쓰며, 야생 포켓몬은 배지에 따른 말 듣는 레벨을 넘지 않는 장부터 추천합니다.', '테라레이드·DLC 지역·조건 미확인 선물과 교환은 추천하지 않습니다.', '기술머신은 재료로 만들 수 있지만 입수 시점은 시점 추론으로 표시합니다.'] }),
+  game('violet', '낙원방어프로토콜', '#7657ad', [906, 909, 912], [], { familyId: 'paldea9', notes: ['오픈월드라 권장 레벨 순서(체육관·주인·스타단)를 장으로 쓰며, 야생 포켓몬은 배지에 따른 말 듣는 레벨을 넘지 않는 장부터 추천합니다.', '테라레이드·DLC 지역·조건 미확인 선물과 교환은 추천하지 않습니다.', '기술머신은 재료로 만들 수 있지만 입수 시점은 시점 추론으로 표시합니다.'] }),
 ]
 
 export function getGame(id: string): GameConfig {
@@ -332,6 +335,7 @@ type BossPatch = Partial<Pick<PlannerBoss, 'level' | 'types'>>
 const modernPlannerGameIds = new Set<GameConfig['id']>([
   'x', 'y', 'omega-ruby', 'alpha-sapphire', 'sun', 'moon', 'ultra-sun', 'ultra-moon',
   'lets-go-pikachu', 'lets-go-eevee', 'sword', 'shield', 'brilliant-diamond', 'shining-pearl',
+  'scarlet', 'violet',
 ])
 
 const frlgBossPatches: Record<string, BossPatch> = {

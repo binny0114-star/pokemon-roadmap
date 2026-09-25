@@ -1,6 +1,6 @@
 export type FamilyId =
   | 'kanto1' | 'johto2' | 'hoenn3' | 'kanto3' | 'sinnoh4' | 'johto4' | 'unova5' | 'unova5-2'
-  | 'kalos6' | 'hoenn6' | 'alola7' | 'alola7-ultra' | 'letsgo7' | 'galar8' | 'sinnoh8'
+  | 'kalos6' | 'hoenn6' | 'alola7' | 'alola7-ultra' | 'letsgo7' | 'galar8' | 'sinnoh8' | 'paldea9'
 export type PlannerGameId =
   | 'red' | 'green' | 'blue' | 'yellow'
   | 'gold' | 'silver' | 'crystal'
@@ -9,7 +9,7 @@ export type PlannerGameId =
   | 'black' | 'white' | 'black-2' | 'white-2'
   | 'x' | 'y' | 'omega-ruby' | 'alpha-sapphire'
   | 'sun' | 'moon' | 'ultra-sun' | 'ultra-moon' | 'lets-go-pikachu' | 'lets-go-eevee'
-  | 'sword' | 'shield' | 'brilliant-diamond' | 'shining-pearl'
+  | 'sword' | 'shield' | 'brilliant-diamond' | 'shining-pearl' | 'scarlet' | 'violet'
 
 export interface CatalogEncounter {
   form?: number

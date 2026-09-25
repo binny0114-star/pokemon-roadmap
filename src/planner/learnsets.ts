@@ -76,8 +76,12 @@ interface Gen67LegalitySnapshot {
 
 // 폼별 전체 기술 원본은 크므로 기술 스냅샷과 함께 지연 로드합니다.
 let gen8Legality: Gen8LegalitySnapshot = { moves: {}, learnsets: {} }
+let gen9Legality: Gen8LegalitySnapshot = { moves: {}, learnsets: {} }
 let gen67Legality: Gen67LegalitySnapshot = { learnsets: {} }
 const gen8VersionGroups = new Set([19, 20, 23, 24])
+// 스칼렛·바이올렛 본편(그룹 25)은 폼별 행을 쓰고, DLC에서 추가된 TM172–229는 본편 계획에서 뺍니다.
+const gen9VersionGroups = new Set([25])
+const baseGameMaxTm: Partial<Record<number, number>> = { 25: 171 }
 // 6·7세대 플래너 버전은 PokéAPI 포켓몬 식별자별 행을 씁니다.
 const gen67VersionGroups = new Set([15, 16, 17, 18])
 
@@ -125,12 +129,14 @@ function readSnapshot(value: unknown): Snapshot {
 
 export async function loadLearnsets(): Promise<void> {
   if (snapshot) return
-  const [module, gen8Module, gen67Module] = await Promise.all([
+  const [module, gen8Module, gen67Module, gen9Module] = await Promise.all([
     import('../generated/learnsets.json'),
     import('../generated/gen8-legality.json'),
     import('../generated/gen67-legality.json'),
+    import('../generated/gen9-legality.json'),
   ])
   gen8Legality = gen8Module.default as Gen8LegalitySnapshot
+  gen9Legality = gen9Module.default as Gen8LegalitySnapshot
   gen67Legality = gen67Module.default as Gen67LegalitySnapshot
   snapshot = readSnapshot(module.default)
   learnsetProvenance = snapshot.provenance
@@ -156,13 +162,16 @@ export function getLegalMoves(species: CatalogSpecies, game: GameConfig, formIde
 
 function readLegalMoves(species: CatalogSpecies, game: GameConfig, formIdentifier?: string): LegalMove[] {
   if (!snapshot) return []
-  const useGen8Legality = gen8VersionGroups.has(game.versionGroupId)
+  const useGen9Legality = gen9VersionGroups.has(game.versionGroupId)
+  const useGen8Legality = gen8VersionGroups.has(game.versionGroupId) || useGen9Legality
+  const formLegality = useGen9Legality ? gen9Legality : gen8Legality
   const useGen67Legality = gen67VersionGroups.has(game.versionGroupId)
+  const maxTm = baseGameMaxTm[game.versionGroupId]
   const identifier = formIdentifier
     ? getGen8FormProfileByIdentifier(formIdentifier)?.pokemonIdentifier ?? formIdentifier
     : getGen8DefaultFormProfile(species.dex)?.pokemonIdentifier ?? species.id
   const entries = useGen8Legality
-    ? gen8Legality.learnsets[String(game.versionGroupId)]?.[identifier] ?? []
+    ? formLegality.learnsets[String(game.versionGroupId)]?.[identifier] ?? []
     : useGen67Legality
       ? gen67Legality.learnsets[String(game.versionGroupId)]?.[identifier] ?? []
       : snapshot.learnsets[String(game.versionGroupId)]?.[String(species.dex)] ?? []
@@ -173,8 +182,9 @@ function readLegalMoves(species: CatalogSpecies, game: GameConfig, formIdentifie
       || typeof level !== 'number'
       || (machine !== null && typeof machine !== 'string')
     ) return []
+    if (maxTm && typeof machine === 'string' && /^TM\d+$/.test(machine) && Number(machine.slice(2)) > maxTm) return []
     const move = useGen8Legality
-      ? gen8Legality.moves[String(moveId)]
+      ? formLegality.moves[String(moveId)]
       : snapshot?.moves[String(moveId)]
     const override = useGen8Legality
       ? undefined

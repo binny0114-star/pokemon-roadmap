@@ -46,6 +46,13 @@ const inputFiles = [
   'text/locations/gen8/text_swsh_00000_en.txt',
   'text/locations/gen8b/text_bdsp_00000_en.txt',
   'text/locations/gen9/text_sv_00000_en.txt',
+  'text/locations/gen6/text_xy_00000_ko.txt',
+  'text/locations/gen7/text_sm_00000_ko.txt',
+  'text/locations/gen7/text_sm_30000_ko.txt',
+  'text/locations/gen7/text_gg_00000_ko.txt',
+  'text/locations/gen8/text_swsh_00000_ko.txt',
+  'text/locations/gen8b/text_bdsp_00000_ko.txt',
+  'text/locations/gen9/text_sv_00000_ko.txt',
   'Legality/Encounters/Data/Gen6/Encounters6XY.cs',
   'Legality/Encounters/Data/Gen6/Encounters6AO.cs',
   'Legality/Encounters/Templates/Gen6/EncounterArea6XY.cs',
@@ -1347,7 +1354,9 @@ function parsePaldea(buffer, locationNames) {
       const max = area[offset + 5]
       const blockedTimes = area[offset + 6]
       const weather = area[offset + 7]
-      const conditions = weather9.filter(([flag]) => (weather & flag) !== 0).map(([, label]) => label)
+      const weatherConditions = weather9.filter(([flag]) => (weather & flag) !== 0).map(([, label]) => label)
+      // 평상시 날씨(normal)에도 나오면 날씨와 관계없이 만날 수 있으므로 날씨 조건을 남기지 않습니다.
+      const conditions = weatherConditions.includes('weather-normal') ? [] : weatherConditions
       const times = ['time-day', 'time-night', 'time-evening', 'time-morning']
         .filter((_, index) => (blockedTimes & (1 << index)) === 0)
       if (times.length < 4) conditions.push(...times)
@@ -1356,6 +1365,43 @@ function parsePaldea(buffer, locationNames) {
     }
     return result
   })
+}
+
+// 스칼렛·바이올렛 본편 고정 심볼 중 입수 조건을 확인한 것만 씁니다: 필드 곳곳의 상자 모습 모으령과
+// 엔딩 후 말뚝을 뽑아 여는 재앙의 보물. DLC 지역(장소 번호 132 이상)과 조건 미확인 선물·교환은 제외합니다.
+function parsePaldeaStatics(source, locationNames) {
+  return parseStaticSourceArray(source, 'Encounter_SV', null)
+    .filter((row) => row.locationId < 132 && (row.species === 999 || (row.species >= 1001 && row.species <= 1004)))
+    .map((row) => {
+      const location = locationNames[row.locationId] || `paldea-location-${row.locationId}`
+      return encounter(
+        row.species,
+        row.form,
+        location,
+        `${slug(location)}-pkhex-static-${row.species}`,
+        row.level,
+        row.level,
+        'static',
+        row.species === 999 ? ['gimmighoul-chest'] : ['postgame', 'ruinous-stakes'],
+      )
+    })
+}
+
+// PKHeX 영어·한국어 장소명 파일은 같은 줄 번호를 쓰므로, 영어 이름 슬러그를 공식 한국어 장소명에 잇습니다.
+function koreanLocationNames(rows, namePairs) {
+  const bySlug = new Map()
+  for (const [english, korean] of namePairs) {
+    english.forEach((name, index) => {
+      const key = name ? slug(name) : ''
+      const value = korean[index]?.trim()
+      if (key && value && !bySlug.has(key)) bySlug.set(key, value)
+    })
+  }
+  return Object.fromEntries([...new Set(rows.map((row) => row.location))].sort().flatMap((location) => {
+    // 레츠고 PokéAPI 장소 'sea-route-19'는 PKHeX 'Route 19'(19번수로)와 같은 곳입니다.
+    const value = bySlug.get(location) ?? bySlug.get(location.replace(/^sea-/, ''))
+    return value ? [[location, value]] : []
+  }))
 }
 
 function deduplicate(rows) {
@@ -1391,12 +1437,20 @@ const [
   galarNames,
   sinnohNames,
   paldeaNames,
+  gen6KoreanNames,
+  gen7KoreanNames,
+  gen7TransferKoreanNames,
+  letsGoKoreanNames,
+  galarKoreanNames,
+  sinnohKoreanNames,
+  paldeaKoreanNames,
   nestSource,
   xyStaticSource,
   orasStaticSource,
   xyAreaSource,
   swshStaticSource,
   letsGoStaticSource,
+  paldeaStaticSource,
 ] = await Promise.all([
   fetchText('text/locations/gen6/text_xy_00000_en.txt').then(names),
   fetchText('text/locations/gen7/text_sm_00000_en.txt').then(names),
@@ -1405,12 +1459,20 @@ const [
   fetchText('text/locations/gen8/text_swsh_00000_en.txt').then(names),
   fetchText('text/locations/gen8b/text_bdsp_00000_en.txt').then(names),
   fetchText('text/locations/gen9/text_sv_00000_en.txt').then(names),
+  fetchText('text/locations/gen6/text_xy_00000_ko.txt').then(names),
+  fetchText('text/locations/gen7/text_sm_00000_ko.txt').then(names),
+  fetchText('text/locations/gen7/text_sm_30000_ko.txt').then(names),
+  fetchText('text/locations/gen7/text_gg_00000_ko.txt').then(names),
+  fetchText('text/locations/gen8/text_swsh_00000_ko.txt').then(names),
+  fetchText('text/locations/gen8b/text_bdsp_00000_ko.txt').then(names),
+  fetchText('text/locations/gen9/text_sv_00000_ko.txt').then(names),
   fetchCode('Legality/Encounters/Data/Gen8/Encounters8Nest.cs'),
   fetchCode('Legality/Encounters/Data/Gen6/Encounters6XY.cs'),
   fetchCode('Legality/Encounters/Data/Gen6/Encounters6AO.cs'),
   fetchCode('Legality/Encounters/Templates/Gen6/EncounterArea6XY.cs'),
   fetchCode('Legality/Encounters/Data/Gen8/Encounters8.cs'),
   fetchCode('Legality/Encounters/Data/Gen7/Encounters7GG.cs'),
+  fetchCode('Legality/Encounters/Data/Gen9/Encounters9.cs'),
 ])
 const nestLocations = parseNestLocations(nestSource)
 const inaccessibleNests = parseInaccessibleNests(nestSource)
@@ -1468,7 +1530,10 @@ for (const game of ['brilliant-diamond', 'shining-pearl']) {
   rowsByGame[game] = deduplicate(buffers.flatMap((buffer, index) => parseBdsp(buffer, sinnohNames, index === 1)))
 }
 
-const paldeaRows = parsePaldea(await fetchBytes(sources.paldea[0]), paldeaNames)
+const paldeaRows = [
+  ...parsePaldea(await fetchBytes(sources.paldea[0]), paldeaNames),
+  ...parsePaldeaStatics(paldeaStaticSource, paldeaNames),
+]
 for (const game of ['scarlet', 'violet']) {
   rowsByGame[game] = deduplicate(paldeaRows.filter((row) => {
     const versions = paldeaFormExclusive[`${row.species}:${row.form}`] ?? paldeaVersionExclusive[row.species]
@@ -1489,6 +1554,27 @@ for (const entry of staticAcquisitions) {
   ))
 }
 for (const gameId of Object.keys(rowsByGame)) rowsByGame[gameId] = deduplicate(rowsByGame[gameId])
+const namePairsByGame = {
+  x: [[gen6Names, gen6KoreanNames]],
+  y: [[gen6Names, gen6KoreanNames]],
+  'omega-ruby': [[gen6Names, gen6KoreanNames]],
+  'alpha-sapphire': [[gen6Names, gen6KoreanNames]],
+  ...Object.fromEntries(['sun', 'moon', 'ultra-sun', 'ultra-moon'].map((game) => [
+    game, [[gen7Names, gen7KoreanNames], [gen7TransferNames, gen7TransferKoreanNames]],
+  ])),
+  'lets-go-pikachu': [[letsGoNames, letsGoKoreanNames]],
+  'lets-go-eevee': [[letsGoNames, letsGoKoreanNames]],
+  sword: [[galarNames, galarKoreanNames]],
+  shield: [[galarNames, galarKoreanNames]],
+  'brilliant-diamond': [[sinnohNames, sinnohKoreanNames]],
+  'shining-pearl': [[sinnohNames, sinnohKoreanNames]],
+  scarlet: [[paldeaNames, paldeaKoreanNames]],
+  violet: [[paldeaNames, paldeaKoreanNames]],
+}
+const locationNames = Object.fromEntries(Object.entries(rowsByGame).map(([gameId, rows]) => [
+  gameId,
+  koreanLocationNames(rows, namePairsByGame[gameId] ?? []),
+]))
 
 await mkdir(new URL('../src/generated/', import.meta.url), { recursive: true })
 await writeFile(
@@ -1552,12 +1638,14 @@ await writeFile(
         'Independently authored reachability conditions cover Wedgehurst Slowpoke, Isle of Armor Diglett rewards, Crown Tundra footprints, roaming birds, Spiritomb, Regigigas, Keldeo, Cosmog and Poipole and are cross-checked against the reference-only URLs above.',
         'BDSP overworld and Grand Underground level ranges are decoded from separate version resources; independently authored reachability conditions preserve the exact per-species Explorer Kit, Strength-obtained, Defog, Icicle Badge, Waterfall and National Pokédex milestones cross-checked against the content-hashed Serebii tables, and discard unreachable pre-Elite-Four level bands only for National Pokédex species.',
         'BDSP Feebas retains the pinned PKHeX species, form, location and level range while the special any-rod daily-tile method and Defog, Surf and Strength gates are independently cross-checked against the reference-only URLs above.',
-        'Scarlet/Violet base-Paldea wild slots are decoded from the shared resource and filtered by reviewed version exclusives.',
+        'Scarlet/Violet base-Paldea wild slots are decoded from the shared resource and filtered by reviewed version exclusives; slots that also spawn in normal weather drop their weather flags, and chest Gimmighoul plus the post-game Treasures of Ruin statics come from PKHeX Encounters9. Tera Raids, DLC areas and unverified gifts or trades are not ingested.',
+        'Official Korean location names are joined from the PKHeX ko location text files by line index, keyed by the English slug used in each game snapshot.',
         'Concrete species forms are preserved exactly; PKHeX dynamic form sentinels are normalized to base form with explicit form-region-dependent or form-random conditions.',
         'Snapshot keys are stable planner game IDs, not PokéAPI or PKHeX numeric version identifiers.',
         'DLC rows retain explicit content-update conditions so optional Isle of Armor and Crown Tundra timing is not conflated with the base-game credits path.',
       ],
     },
+    locationNames,
     games: rowsByGame,
   })}\n`,
 )

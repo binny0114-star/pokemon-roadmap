@@ -47,6 +47,8 @@ const maxNationalDex = 1025
 const versionGroups = new Set(catalogVersionGroupIds)
 const completeLegalityVersionGroups = new Set([15, 16, 17, 18])
 const gen8LegalityVersionGroups = new Set([19, 20, 23, 24])
+// 스칼렛·바이올렛 본편(그룹 25)은 폼별 식별자로 따로 보존합니다.
+const gen9LegalityVersionGroups = new Set([25])
 const legacyPlannerVersionGroupIds = [
   ...new Set(
     registry.games
@@ -57,6 +59,7 @@ const legacyPlannerVersionGroupIds = [
 const auditedLegalityVersionGroups = new Set([
   ...completeLegalityVersionGroups,
   ...gen8LegalityVersionGroups,
+  ...gen9LegalityVersionGroups,
 ])
 const completeLegalityMethods = new Map([
   [1, 'level'],
@@ -197,6 +200,7 @@ const learnsets = {}
 const completeLegality = {}
 const usedMoveIds = new Set()
 const gen8LegalityMoveIds = new Set()
+const gen9LegalityMoveIds = new Set()
 for (const row of pokemonMoveRows) {
   const pokemon = pokemonById.get(Number(row.pokemon_id))
   const speciesId = speciesByDefaultPokemon.get(Number(row.pokemon_id))
@@ -222,6 +226,7 @@ for (const row of pokemonMoveRows) {
     const entry = [moveId, source, level, machine ?? null]
     if (!entries.some((current) => current.join(':') === entry.join(':'))) entries.push(entry)
     if (completeLegalityVersionGroups.has(versionGroup)) usedMoveIds.add(moveId)
+    else if (gen9LegalityVersionGroups.has(versionGroup)) gen9LegalityMoveIds.add(moveId)
     else gen8LegalityMoveIds.add(moveId)
   }
 
@@ -352,7 +357,7 @@ const pokemonForms = Object.fromEntries(
 )
 const gen8PokemonForms = Object.fromEntries(
   [...pokemonById.values()]
-    .filter((pokemon) => (speciesGeneration.get(pokemon.speciesId) ?? 99) <= 8)
+    .filter((pokemon) => (speciesGeneration.get(pokemon.speciesId) ?? 99) <= 9)
     .sort((a, b) => a.pokemonId - b.pokemonId)
     .flatMap((pokemon) => (pokemonFormsByPokemonId.get(pokemon.pokemonId) ?? [{
       formId: 0,
@@ -467,6 +472,39 @@ await writeFile(
     ),
     learnsets: Object.fromEntries(
       [...gen8LegalityVersionGroups].map((versionGroup) => [
+        versionGroup,
+        completeLegality[versionGroup] ?? {},
+      ]),
+    ),
+  })}\n`,
+)
+await writeFile(
+  new URL('../src/generated/gen9-legality.json', import.meta.url),
+  `${JSON.stringify({
+    source: `PokéAPI CSV @ ${registry.source.revision} (pokemon, pokemon_moves)`,
+    provenance: provenance([...files, ...gen8FormFiles]),
+    coverage: {
+      versionGroupIds: [...gen9LegalityVersionGroups],
+      pokemonByVersionGroup: Object.fromEntries(
+        [...gen9LegalityVersionGroups].map((versionGroup) => [
+          versionGroup,
+          Object.keys(completeLegality[versionGroup] ?? {}).length,
+        ]),
+      ),
+      methods: [...completeLegalityMethods.values()],
+      policy: {
+        identity: 'pokemon-identifier',
+        rows: 'unfiltered-source-rows',
+        pkhexFormIndexMapping: 'pokeapi-form-order',
+        dlcMachines: 'source rows keep TM172-TM229; the base-game planner ignores them',
+        acquisitionTiming: 'not-ingested',
+      },
+    },
+    moves: Object.fromEntries(
+      [...gen9LegalityMoveIds].sort((a, b) => a - b).map((id) => [id, moves.get(id)]),
+    ),
+    learnsets: Object.fromEntries(
+      [...gen9LegalityVersionGroups].map((versionGroup) => [
         versionGroup,
         completeLegality[versionGroup] ?? {},
       ]),
