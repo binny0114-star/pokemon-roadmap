@@ -90,6 +90,9 @@ describe('스칼렛·바이올렛 완전 플래너', () => {
     expect(getAvailability(species(937), scarlet).tradeRequired).toBe(true)
     expect(getAvailability(species(964), scarlet).tradeRequired).toBe(true)
     expect(evolutionText(species(923), scarlet)).toContain('1000걸음')
+    // 파밀리쥐는 전투 중 레벨업으로만 진화하고, 1% 확률로 세식구가 됩니다.
+    expect(evolutionText(species(925), scarlet)).toMatch(/^전투 중 Lv\.25 이상.*1% 세식구/)
+    expect(evolutionText(species(982), scarlet)).toContain('1% 세마디폼')
     expect(evolutionText(species(981), scarlet)).toContain('트윈빔')
     expect(evolutionText(species(979), scarlet)).toContain('분노의주먹을 20번')
     expect(evolutionRequirementChapter(species(1000), scarlet)).toBe(getFamily(scarlet).chapters.length)

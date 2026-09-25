@@ -73,6 +73,9 @@ describe('썬·문·울트라썬·울트라문 완전 플래너', () => {
     expect(getAvailability(species(26), sun).formIdentifier).toBe('raichu-alola')
     expect(getAvailability(species(105), sun).formIdentifier).toBe('marowak-alola')
     expect(evolutionText(species(105), sun)).toContain('밤')
+    // 알로라 산드·식스테일의 얼음의돌 진화는 썬·문(그룹 17)부터 있습니다.
+    expect(species(28).evolutionMethods.find((method) => method.item === 'ice-stone')?.versionGroupId).toBe(17)
+    expect(evolutionText(species(38), sun, 'ninetales-alola')).toContain('얼음의돌')
   })
 
   it('알로라 장소 진화와 진화의 돌 장을 원작 진행에 맞춘다', () => {

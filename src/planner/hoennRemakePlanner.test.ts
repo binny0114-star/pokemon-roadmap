@@ -76,6 +76,9 @@ describe('오메가루비·알파사파이어 완전 플래너', () => {
     const fieldMoves = Object.fromEntries(getFamily(game).fieldMoves.map((move) => [move.id, move.unlockChapter]))
     expect(fieldMoves).toEqual({ cut: 1, 'rock-smash': 3, strength: 4, surf: 5, fly: 6, dive: 8, waterfall: 9 })
     expect(evolutionRequirementChapter(species(462), game)).toBe(9)
+    // 개무소가 실쿤·카스쿤 중 무엇이 될지는 성격값으로 정해집니다.
+    expect(evolutionText(species(267), game)).not.toContain('50%')
+    expect(evolutionText(species(266), game)).toContain('실쿤·카스쿤 중 하나')
     expect(evolutionRequirementChapter(species(470), game)).toBe(1)
     expect(evolutionRequirementChapter(species(471), game)).toBe(8)
     expect(evolutionText(species(462), game)).toContain('뉴보라')

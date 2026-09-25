@@ -135,7 +135,7 @@ Supabase를 구성하면 이메일 매직 링크 기반 **온라인 동기화**�
 
 | 자료 | 고정 리비전/검수일 | 사용 범위 |
 | --- | --- | --- |
-| [PokéAPI 데이터 저장소](https://github.com/PokeAPI/pokeapi) | `3a588cf66475bd05a34aba29bd538480889829fb` | 버전 레지스트리, 전국도감 #001–1025, 진화, 조우, 버전 그룹별 기술 |
+| [PokéAPI 데이터 저장소](https://github.com/PokeAPI/pokeapi) | `ca0a21b3587af20b52c8a00d33812c47b75fe341` | 버전 레지스트리, 전국도감 #001–1025, 진화, 조우, 버전 그룹별 기술 |
 | [기존 플래너 호환 스냅샷](https://github.com/binny0114-star/pokemon-roadmap/tree/3b0c8754d3dd41f9237e56739cd960a9d18ba677) | `3b0c8754d3dd41f9237e56739cd960a9d18ba677` | 1–5세대 추천 결과와 기존 플랜 ID 보존 |
 | [PKHeX](https://github.com/kwsch/PKHeX) | `77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5` | X/Y·ORAS·SM·USUM·LGPE·SWSH·BDSP·PLA·SV의 폼 보존 입수 스냅샷, 공식 한국어 장소명, 레츠고·PLA 진화표(evos_gg·evos_la) 대조 |
 | [pk3DS](https://github.com/kwsch/pk3DS) | `6daaca934ca2284a73ab743bf89c848c57cd9de1` | X/Y·ORAS 조우표 슬롯 배치 순서(방식 구분). ROM 데이터는 사용하지 않음 |
