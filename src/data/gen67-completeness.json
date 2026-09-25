@@ -3,7 +3,7 @@
   "sources": {
     "pokeapi": {
       "repository": "https://github.com/PokeAPI/pokeapi",
-      "revision": "3a588cf66475bd05a34aba29bd538480889829fb"
+      "revision": "ca0a21b3587af20b52c8a00d33812c47b75fe341"
     },
     "pkhex": {
       "repository": "https://github.com/kwsch/PKHeX",

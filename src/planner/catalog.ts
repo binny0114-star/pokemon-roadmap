@@ -1557,7 +1557,22 @@ function areaEvolutionText(species: CatalogSpecies, game?: GameConfig): string |
   return '이 버전에는 얼음 바위가 없어 다른 버전에서 진화 후 교환'
 }
 
+// 진화 결과가 개체값(성격값·암호화 상수)이나 성격으로 정해지는 진화입니다(PokéAPI·PKHeX 진화표).
+const evolutionOutcomeKo: Record<number, string> = {
+  266: '성격값에 따라 실쿤·카스쿤 중 하나로 정해지며 각 50%',
+  268: '성격값에 따라 실쿤·카스쿤 중 하나로 정해지며 각 50%',
+  849: '성격에 따라 하이한 폼 또는 로우한 폼',
+  925: '99% 네식구, 1% 세식구',
+  982: '99% 두마디폼, 1% 세마디폼',
+}
+
 export function evolutionText(species: CatalogSpecies, game?: GameConfig, formIdentifier?: string): string {
+  const text = baseEvolutionText(species, game, formIdentifier)
+  const outcome = evolutionOutcomeKo[species.dex]
+  return outcome && text !== '진화 없음 또는 기본 형태' ? `${text} (${outcome})` : text
+}
+
+function baseEvolutionText(species: CatalogSpecies, game?: GameConfig, formIdentifier?: string): string {
   if (species.dex === 892 && game) {
     const choice = getAvailability(species, game).formChoices
       ?.find((entry) => entry.formIdentifier === formIdentifier)
@@ -1581,6 +1596,7 @@ export function evolutionText(species: CatalogSpecies, game?: GameConfig, formId
   const paldeaMethod: Partial<CatalogEvolutionMethod> = evolution
   if (evolution.trigger === 'agile-style-move') return `배리어러시를 속공으로 20번 쓴 뒤 레벨업으로 ${species.name} 진화`
   if (evolution.trigger === 'strong-style-move') return `독침천발을 강공으로 20번 쓴 뒤 레벨업으로 ${species.name} 진화`
+  if (evolution.trigger === 'in-battle-level-up') return `전투 중 Lv.${evolution.minLevel ?? 1} 이상으로 레벨업해 ${species.name} 진화`
   if (evolution.trigger === 'recoil-damage') return `기절하지 않고 반동 피해를 294 이상 받은 뒤 레벨업으로 ${species.name} 진화`
   if (evolution.trigger === 'gimmighoul-coins') return `모으령의코인 999개를 모은 뒤 레벨업으로 ${species.name} 진화`
   if (evolution.trigger === 'three-defeated-bisharp') return `대장의징표를 지닌 절각참 3마리를 쓰러뜨린 뒤 레벨업으로 ${species.name} 진화`

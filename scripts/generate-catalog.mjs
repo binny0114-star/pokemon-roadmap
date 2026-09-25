@@ -31,6 +31,7 @@ const files = [
   'encounter_condition_values',
   'version_group_regions',
   'version_groups',
+  'pokemon_forms',
 ]
 const plannerEncounterMethods = new Set([
   'walk', 'surf', 'old-rod', 'good-rod', 'super-rod', 'rock-smash',
@@ -62,6 +63,7 @@ const [
   conditionValueRows,
   versionGroupRegionRows,
   versionGroupRows,
+  pokemonFormRows,
   legacySpeciesSnapshot,
 ] = await Promise.all([
   ...files.map(fetchCsv),
@@ -99,6 +101,15 @@ const typeById = new Map(typeRows.map((row) => [
 ]))
 const itemById = new Map(itemRows.map((row) => [Number(row.id), row.identifier]))
 const triggerById = new Map(evolutionTriggerRows.map((row) => [Number(row.id), row.identifier]))
+// PokéAPI 진화표의 required/evolved_pokemon_form_id는 pokemon_forms ID이므로
+// 앱이 쓰는 pokemon ID(알로라 레트라 10091 등)로 바꿉니다.
+const pokemonIdByFormId = new Map(pokemonFormRows.map((row) => [Number(row.id), Number(row.pokemon_id)]))
+function evolutionPokemonId(formId) {
+  if (!formId) return null
+  const pokemonId = pokemonIdByFormId.get(Number(formId))
+  if (!pokemonId) throw new Error(`Unknown evolution form #${formId}.`)
+  return pokemonId
+}
 const generationByVersionGroup = new Map(
   versionGroupRows.map((row) => [Number(row.id), Number(row.generation_id)]),
 )
@@ -299,12 +310,14 @@ const species = selectedSpecies.map((entry) => {
       turnUpsideDown: method.turn_upside_down === '1',
       needsMultiplayer: method.needs_multiplayer === '1',
       nearSpecialRock: method.near_special_rock === '1',
-      baseFormId: method.base_form_id ? Number(method.base_form_id) : null,
-      evolvedFormId: method.evolved_form_id ? Number(method.evolved_form_id) : null,
+      baseFormId: evolutionPokemonId(method.required_pokemon_form_id),
+      evolvedFormId: evolutionPokemonId(method.evolved_pokemon_form_id),
       usedMoveId: method.used_move_id ? Number(method.used_move_id) : null,
       minMoveCount: method.minimum_move_count ? Number(method.minimum_move_count) : null,
       minSteps: method.minimum_steps ? Number(method.minimum_steps) : null,
       minDamageTaken: method.minimum_damage_taken ? Number(method.minimum_damage_taken) : null,
+      natureBitmask: method.nature_bitmask ? Number(method.nature_bitmask) : null,
+      percentageChance: method.percentage_chance ? Number(method.percentage_chance) : null,
     })),
     evolutionDataStatus: entry.evolves_from_species_id
       ? evolutionMethodsBySpecies.has(speciesId) ? 'available' : 'missing-source'

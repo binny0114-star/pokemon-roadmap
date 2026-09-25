@@ -41,7 +41,7 @@ The normalized facts in `src/generated/species.json`,
 `src/generated/gen8-form-profiles.json`, and the Sun/Moon, Ultra Sun/Ultra Moon
 and Let's Go encounter-method rows in `src/generated/modern-encounters.json`, are
 derived from PokéAPI CSV data pinned at revision
-`3a588cf66475bd05a34aba29bd538480889829fb`. The exact input paths are listed
+`ca0a21b3587af20b52c8a00d33812c47b75fe341`. The exact input paths are listed
 in each artifact's `provenance.files` array.
 
 - Upstream project: [PokéAPI](https://github.com/PokeAPI/pokeapi)

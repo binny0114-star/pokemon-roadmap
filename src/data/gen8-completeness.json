@@ -3,7 +3,7 @@
   "sources": {
     "pokeapi": {
       "repository": "https://github.com/PokeAPI/pokeapi",
-      "revision": "3a588cf66475bd05a34aba29bd538480889829fb",
+      "revision": "ca0a21b3587af20b52c8a00d33812c47b75fe341",
       "license": "BSD-3-Clause",
       "notice": "THIRD_PARTY_NOTICES.md#pokeapi-derived-data-snapshots"
     },
