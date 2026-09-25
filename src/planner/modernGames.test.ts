@@ -71,9 +71,9 @@ describe('6–9세대 스토리 패밀리', () => {
     for (const gameId of targetIds) {
       const game = modernGames.find((entry) => entry.id === gameId)!
       const support = game.catalog.plannerSupport
-      const promoted = ['sword', 'shield', 'brilliant-diamond', 'shining-pearl'].includes(gameId)
+      const promoted = ['lets-go-pikachu', 'lets-go-eevee', 'sword', 'shield', 'brilliant-diamond', 'shining-pearl'].includes(gameId)
       expect(support.status, gameId).toBe(promoted ? 'full' : 'catalog-only')
-      expect(game.catalog.supportReview, gameId).toBe('2026-09-12')
+      expect(game.catalog.supportReview, gameId).toBe(gameId.startsWith('lets-go-') ? '2026-09-25' : '2026-09-12')
       expect(Object.keys(support.accuracyGates ?? {}).sort(), gameId).toEqual([
         'availability', 'evolutions', 'forms', 'integration', 'learnsets', 'mechanics', 'story',
       ])
@@ -265,6 +265,9 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'legality/wild/Gen7/encounter_mn.pkl',
       'legality/wild/Gen7/encounter_us.pkl',
       'legality/wild/Gen7/encounter_um.pkl',
+      'legality/wild/Gen7/encounter_gp.pkl',
+      'legality/wild/Gen7/encounter_ge.pkl',
+      'Legality/Encounters/Data/Gen7/Encounters7GG.cs',
       'Legality/Encounters/Data/Gen8/Encounters8.cs',
       'Legality/Encounters/Data/Gen6/Encounters6XY.cs',
       'Legality/Encounters/Data/Gen6/Encounters6AO.cs',
@@ -275,6 +278,8 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(Object.keys(encounterGames).sort()).toEqual([
       'alpha-sapphire',
       'brilliant-diamond',
+      'lets-go-eevee',
+      'lets-go-pikachu',
       'moon',
       'omega-ruby',
       'scarlet',
@@ -304,6 +309,8 @@ describe('6–9세대 정적 입수 스냅샷', () => {
     expect(modernGames.filter((game) => encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
       'alpha-sapphire',
       'brilliant-diamond',
+      'lets-go-eevee',
+      'lets-go-pikachu',
       'moon',
       'omega-ruby',
       'scarlet',
@@ -318,7 +325,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       'y',
     ])
     expect(modernGames.filter((game) => !encounterGameIds.has(game.id)).map((game) => game.id).sort()).toEqual([
-      'legends-arceus', 'lets-go-eevee', 'lets-go-pikachu',
+      'legends-arceus',
     ])
   })
 
@@ -474,7 +481,7 @@ describe('6–9세대 정적 입수 스냅샷', () => {
           ? 900
           : ['ultra-sun', 'ultra-moon'].includes(gameId)
             ? 1_000
-        : ['brilliant-diamond', 'shining-pearl'].includes(gameId)
+        : ['brilliant-diamond', 'shining-pearl', 'lets-go-pikachu', 'lets-go-eevee'].includes(gameId)
           ? 500
           : 800
       expect(rows.length, gameId).toBeGreaterThan(minimumRows)
@@ -575,6 +582,8 @@ describe('6–9세대 정적 입수 스냅샷', () => {
       moon: 'alola7',
       'ultra-sun': 'alola7-ultra',
       'ultra-moon': 'alola7-ultra',
+      'lets-go-pikachu': 'letsgo7',
+      'lets-go-eevee': 'letsgo7',
       sword: 'galar8',
       shield: 'galar8',
       'brilliant-diamond': 'sinnoh8',

@@ -214,9 +214,9 @@ const ultraBosses = [
 const letsGoChapters = [
   chapter('lg-1', '태초마을 → 회색시티', '파트너와 회색배지', 'Lv.5–12', ['pallet-town', 'route-1', 'viridian-city', 'route-2', 'viridian-forest', 'pewter-city'], ['파트너 피카츄/이브이와 출발', '회색체육관 웅 격파']),
   chapter('lg-2', '달맞이산 → 블루시티', '달맞이산과 블루배지', 'Lv.10–21', ['route-3', 'mt-moon', 'route-4', 'cerulean-city', 'route-24', 'route-25'], ['달맞이산에서 로켓단 격퇴', '블루체육관 이슬 격파', '이수재를 도와 승선티켓 획득']),
-  chapter('lg-3', '갈색시티 → 무지개시티', '오렌지배지와 비전기술', 'Lv.16–34', ['route-5', 'underground-path', 'route-6', 'vermilion-city', 'ss-anne', 'digletts-cave', 'route-9', 'rock-tunnel', 'lavender-town', 'route-8', 'celadon-city'], ['상트앙느호에서 비전기술 풀베기 습득', '갈색체육관 마티스 격파', '비전기술 빛내기 습득', '포켓몬타워의 유령 확인']),
+  chapter('lg-3', '갈색시티 → 무지개시티', '오렌지배지와 비전기술', 'Lv.16–34', ['route-5', 'underground-path', 'route-6', 'vermilion-city', 'ss-anne', 'route-11', 'digletts-cave', 'route-9', 'route-10', 'rock-tunnel', 'lavender-town', 'route-8', 'route-7', 'celadon-city'], ['상트앙느호에서 비전기술 풀베기 습득', '갈색체육관 마티스 격파', '비전기술 빛내기 습득', '포켓몬타워의 유령 확인']),
   chapter('lg-4', '무지개시티 → 포켓몬타워', '레인보우배지와 포켓몬피리', 'Lv.30–36', ['celadon-city', 'rocket-game-corner', 'pokemon-tower', 'lavender-town'], ['무지개체육관 민화 격파', '로켓단 아지트에서 실프스코프 획득', '비전기술 하늘날기 습득', '포켓몬타워 구출과 포켓몬피리 획득']),
-  chapter('lg-5', '연분홍시티', '핑크배지와 물길', 'Lv.34–44', ['route-12', 'route-13', 'route-14', 'route-15', 'fuchsia-city', 'go-park'], ['잠만보를 깨우고 연분홍시티 도착', '비전기술 밀어내기 습득', '비전기술 물결타기 습득', '연분홍체육관 독수 격파']),
+  chapter('lg-5', '연분홍시티', '핑크배지와 물길', 'Lv.34–44', ['route-12', 'route-13', 'route-14', 'route-15', 'route-16', 'route-17', 'route-18', 'fuchsia-city', 'go-park', 'power-plant'], ['잠만보를 깨우고 연분홍시티 도착', '비전기술 밀어내기 습득', '비전기술 물결타기 습득', '연분홍체육관 독수 격파']),
   chapter('lg-6', '노랑시티와 실프주식회사', '로켓단과 골드배지', 'Lv.38–44', ['saffron-city', 'silph-co'], ['실프주식회사에서 로켓단과 비주기 격파', '노랑체육관 초련 격파']),
   chapter('lg-7', '홍련마을 → 상록시티', '크림슨배지와 그린배지', 'Lv.40–50', ['route-19', 'seafoam-islands', 'route-20', 'cinnabar-island', 'pokemon-mansion', 'route-21', 'viridian-city'], ['포켓몬저택에서 비밀의열쇠 획득', '홍련체육관 강연 격파', '상록체육관 비주기 최종전 승리']),
   chapter('lg-8', '챔피언로드 → 포켓몬리그', '사천왕과 라이벌 챔피언', 'Lv.45–57', ['route-22', 'route-23', 'victory-road', 'indigo-plateau'], ['챔피언로드 돌파', '사천왕 격파', '라이벌과 챔피언 결정전 승리']),
@@ -228,14 +228,16 @@ const letsGoBosses = [
   boss('surge-lg', '마티스', '갈색 체육관', 3, ['electric'], 'Lv.25–26'),
   boss('erika-lg', '민화', '무지개 체육관', 4, ['grass'], 'Lv.33–34'),
   boss('koga-lg', '독수', '연분홍 체육관', 5, ['poison'], 'Lv.43–44'),
-  boss('giovanni-silph-lg', '비주기', '실프주식회사', 6, ['ground'], 'Lv.39–41'),
+  // 페르시온·코뿌리·니드퀸 모두 Lv.39
+  boss('giovanni-silph-lg', '비주기', '실프주식회사', 6, ['ground', 'normal', 'poison'], 'Lv.39'),
   boss('sabrina-lg', '초련', '노랑 체육관', 6, ['psychic'], 'Lv.43–44'),
   boss('blaine-lg', '강연', '홍련 체육관', 7, ['fire'], 'Lv.47–48'),
   boss('giovanni-gym-lg', '비주기', '상록 체육관', 7, ['ground'], 'Lv.49–50'),
   boss('lorelei-lg', '칸나', '사천왕', 8, ['ice', 'water'], 'Lv.51–52'),
   boss('bruno-lg', '시바', '사천왕', 8, ['fighting'], 'Lv.52–53'),
-  boss('agatha-lg', '국화', '사천왕', 8, ['ghost', 'poison'], 'Lv.53'),
-  boss('lance-lg', '목호', '사천왕', 8, ['dragon'], 'Lv.54'),
+  // 국화 팬텀 54, 목호 망나뇽 55가 가장 높습니다.
+  boss('agatha-lg', '국화', '사천왕', 8, ['ghost', 'poison'], 'Lv.53–54'),
+  boss('lance-lg', '목호', '사천왕', 8, ['dragon', 'flying'], 'Lv.54–55'),
   boss('trace-lg', '라이벌', '챔피언', 8, ['normal'], 'Lv.56–57'),
 ]
 
@@ -468,7 +470,8 @@ export const modernFamilies: Record<ModernFamilyId, ModernFamilyConfig> = {
   // 썬·문의 기술 떠올리기는 울라울라섬 재활용 공장 앞, 울트라썬·울트라문은 라나키라마운틴 포켓몬센터에 있습니다.
   alola7: { id: 'alola7', generation: 7, region: '알로라', chapters: alolaChapters, bosses: alolaBosses, fieldMoves: [], moveReminder: { chapter: 4, location: '울라울라섬 재활용 공장 앞', cost: '하트비늘 1개' }, postgame: ['울트라비스트 포획 임무', '배틀트리', '수호신과 네크로즈마'] },
   'alola7-ultra': { id: 'alola7-ultra', generation: 7, region: '알로라', chapters: ultraChapters, bosses: ultraBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '라나키라마운틴 포켓몬센터', cost: '하트비늘 1개' }, postgame: ['에피소드 RR', '울트라워프라이드 전설 포켓몬', '배틀트리와 수호신'] },
-  letsgo7: { id: 'letsgo7', generation: 7, region: '관동', chapters: letsGoChapters, bosses: letsGoBosses, fieldMoves: [], postgame: ['블루와 체육관 관장 재대결', '블루시티동굴의 뮤츠', '마스터 트레이너와 레드'] },
+  // 기술 떠올리기(추억 할머니)는 석영고원 포켓몬리그에 있습니다.
+  letsgo7: { id: 'letsgo7', generation: 7, region: '관동', chapters: letsGoChapters, bosses: letsGoBosses, fieldMoves: [], moveReminder: { chapter: 8, location: '석영고원 포켓몬리그', cost: '하트비늘 1개' }, postgame: ['블루와 체육관 관장 재대결', '블루시티동굴의 뮤츠', '마스터 트레이너와 레드'] },
   galar8: { id: 'galar8', generation: 8, region: '가라르', chapters: galarChapters, bosses: galarBosses, fieldMoves: [], moveReminder: { chapter: 1, location: '모든 포켓몬센터', cost: '무료' }, mainStoryChapterCount: 10, postgame: ['소드·실드 전설 에피소드', '배틀타워', '갑옷섬 마스터 도장', '왕관설원 전설의 메모'] },
   sinnoh8: {
     id: 'sinnoh8',
@@ -534,8 +537,8 @@ const modernGameDefinitions: ModernGameDefinition[] = [
   { id: 'moon', familyId: 'alola7', endpoint: '챔피언 결정전 쿠쿠이', accent: '#4e5da8', starters: [722, 725, 728], fossils: [], notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.'] },
   { id: 'ultra-sun', familyId: 'alola7-ultra', endpoint: '챔피언 결정전 하우', accent: '#e6792b', starters: [722, 725, 728], fossils: [], notes: ['울트라네크로즈마와 마츠리카 시련을 포함한 울트라 버전 전용 순서입니다.'] },
   { id: 'ultra-moon', familyId: 'alola7-ultra', endpoint: '챔피언 결정전 하우', accent: '#5964b7', starters: [722, 725, 728], fossils: [], notes: ['울트라네크로즈마와 마츠리카 시련을 포함한 울트라 버전 전용 순서입니다.'] },
-  { id: 'lets-go-pikachu', familyId: 'letsgo7', endpoint: '라이벌 챔피언', accent: '#f4c430', starters: [25], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '포획 콤보·유인향·공중 출현은 완전성 게이트가 닫혀 있어 추천에 사용하지 않습니다.'] },
-  { id: 'lets-go-eevee', familyId: 'letsgo7', endpoint: '라이벌 챔피언', accent: '#9b6b43', starters: [133], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '포획 콤보·유인향·공중 출현은 완전성 게이트가 닫혀 있어 추천에 사용하지 않습니다.'] },
+  { id: 'lets-go-pikachu', familyId: 'letsgo7', endpoint: '챔피언 결정전 라이벌', accent: '#f4c430', starters: [25], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '하늘 출현은 챔피언 이후로 두고 희귀 출현은 조건부 경로로 표시합니다.'] },
+  { id: 'lets-go-eevee', familyId: 'letsgo7', endpoint: '챔피언 결정전 라이벌', accent: '#9b6b43', starters: [133], fossils: [[138, 140]], notes: ['파트너 비전기술이 이동을 맡으며 파티에 HM 기술을 요구하지 않습니다.', '하늘 출현은 챔피언 이후로 두고 희귀 출현은 조건부 경로로 표시합니다.'] },
   { id: 'sword', familyId: 'galar8', endpoint: '챔피언 단델', accent: '#39a7d7', starters: [810, 813, 816], fossils: [], notes: ['채두·마쿠와가 등장하며, DLC 포켓몬은 본편 엔딩 파티에 필수로 추천하지 않습니다.'] },
   { id: 'shield', familyId: 'galar8', endpoint: '챔피언 단델', accent: '#d84b89', starters: [810, 813, 816], fossils: [], notes: ['어니언·멜론이 등장하며, DLC 포켓몬은 본편 엔딩 파티에 필수로 추천하지 않습니다.'] },
   { id: 'brilliant-diamond', familyId: 'sinnoh8', endpoint: '챔피언 난천', accent: '#5c8eba', starters: [387, 390, 393], fossils: [[408, 410]], notes: ['비전기술은 포켓치의 야생 포켓몬 호출로 사용하며 파티 기술칸을 차지하지 않습니다.'] },
@@ -658,7 +661,8 @@ const locationChapterOverrides: Partial<Record<ModernFamilyId, Record<string, nu
   },
   alola7: alolaLocationChapterOverrides,
   'alola7-ultra': alolaLocationChapterOverrides,
-  letsgo7: {},
+  // 22번도로 풀숲(Lv.3–4)은 상록시티 바로 옆이라 처음부터 갈 수 있습니다(수면은 물결타기 이후).
+  letsgo7: { 'route-22': 1 },
   galar8: {
     'west-lake-axewell': 1,
     'axews-eye': 7,
@@ -726,7 +730,7 @@ const postgameLocationTokens: Partial<Record<ModernFamilyId, string[]>> = {
   'alola7-ultra': [
     'poni-coast', 'poni-gauntlet', 'poni-grove', 'poni-meadow', 'poni-plains', 'resolution-cave',
   ],
-  letsgo7: [],
+  letsgo7: ['cerulean-cave'],
   galar8: [],
   sinnoh8: [
     'route-224', 'route-225', 'route-226', 'route-227', 'route-228', 'route-229', 'route-230',
@@ -773,7 +777,8 @@ export function modernEncounterChapter(
     // 라프라스 스윔과 낚싯대는 아칼라섬 수련의 시련에서 받습니다.
     alola7: { fishing: 2, 'fishing-bubbling': 2, surf: 2 },
     'alola7-ultra': { fishing: 2, 'fishing-bubbling': 2, surf: 2 },
-    letsgo7: {},
+    // 물결타기는 연분홍시티, 포켓몬피리는 포켓몬타워 구출 뒤에 받습니다.
+    letsgo7: { 'sea-skim': 5, pokeflute: 4 },
     galar8: { surf: 7 },
     sinnoh8: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 11, surf: 5, 'rock-smash': 1 },
     hisui8: {},

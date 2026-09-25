@@ -178,9 +178,10 @@ describe('릴리스 레지스트리와 전국도감', () => {
       gen8Completeness.families[familyId].gates[gateId].requirements
         .find((entry) => entry.status === 'blocked')!
 
-    expect(requirement('letsgo7', 'learnsets').missingFields).toEqual(expect.arrayContaining([
-      'tm-acquisition-chapter', 'partner-tutor-acquisition-chapter',
-    ]))
+    const letsGoAvailability = gen8Completeness.families.letsgo7.gates.availability.requirements[0]
+    expect(letsGoAvailability.status).toBe('complete')
+    expect(letsGoAvailability.evidence).toContain('Encounters7GG')
+    expect(gen8Completeness.families.letsgo7.gates.evolutions.requirements[0].evidence).toContain('evos_gg')
     const galarLearnsets = gen8Completeness.families.galar8.gates.learnsets.requirements[0]
     expect(galarLearnsets.status).toBe('complete')
     expect(galarLearnsets.evidence).toContain('daily rotation')
@@ -211,8 +212,8 @@ describe('릴리스 레지스트리와 전국도감', () => {
   it('39개 스토리 게임과 지원 경계를 고유하고 상호 참조 가능하게 유지한다', () => {
     expect(gameCatalog).toHaveLength(39)
     expect(new Set(gameCatalog.map((game) => game.id)).size).toBe(39)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(33)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(6)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'full')).toHaveLength(35)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(4)
     expect(gameCatalog.some((game) => game.id === ('champions' as string))).toBe(false)
 
     const byId = new Map(gameCatalog.map((game) => [game.id, game]))
@@ -227,7 +228,9 @@ describe('릴리스 레지스트리와 전국도감', () => {
           ? 'galar-wild-area'
           : game.id === 'brilliant-diamond' || game.id === 'shining-pearl'
             ? 'sinnoh-underground'
-            : 'classic'
+            : game.id === 'lets-go-pikachu' || game.id === 'lets-go-eevee'
+              ? 'lets-go'
+              : 'classic'
         expect(game.mechanicsFamily, game.id).toBe(expectedMechanics)
         expect(game.plannerFamilyId, game.id).toBeTruthy()
       } else {
@@ -245,7 +248,7 @@ describe('릴리스 레지스트리와 전국도감', () => {
     expect(duplicateVersionIds).toEqual([[2, ['blue', 'green']]])
     expect(modernGames.every((game) => gameCatalog.some((entry) => entry.id === game.id))).toBe(true)
     expect(modernGames.filter((game) => game.catalog.plannerSupport.status === 'full').map((game) => game.id).sort())
-      .toEqual(['alpha-sapphire', 'brilliant-diamond', 'moon', 'omega-ruby', 'shield', 'shining-pearl', 'sun', 'sword', 'ultra-moon', 'ultra-sun', 'x', 'y'])
+      .toEqual(['alpha-sapphire', 'brilliant-diamond', 'lets-go-eevee', 'lets-go-pikachu', 'moon', 'omega-ruby', 'shield', 'shining-pearl', 'sun', 'sword', 'ultra-moon', 'ultra-sun', 'x', 'y'])
   })
 
   it('전국도감 #001–1025를 누락과 중복 없이 유지한다', () => {

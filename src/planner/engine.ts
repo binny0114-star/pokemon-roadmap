@@ -113,7 +113,7 @@ function legalMovesForLineage(
   move: LegalMove
   learnedBy: CatalogSpecies
 }[] {
-  const stages = includeAncestors ? generationLineage(species, game.generation) : [species]
+  const stages = includeAncestors ? generationLineage(species, game.generation, game.familyId) : [species]
   const availability = selectedAvailability(species, game, selectedFormIdentifier)
   return stages.flatMap((learnedBy) => {
     const inheritedFormIndex = learnedBy.dex === species.dex
@@ -307,7 +307,7 @@ export function generatedMoves(
     : speciesAvailability.evolutionDlcFinalChapter
       ?? speciesAvailability.dlcFinalChapter
       ?? speciesAvailability.finalChapter
-  const lineage = generationLineage(species, game.generation)
+  const lineage = generationLineage(species, game.generation, game.familyId)
   const evolvedStages = new Set(lineage.slice(1).map((stage) => stage.dex))
   const evolutionLevel = (stage: CatalogSpecies) =>
     stage.evolution?.minLevel

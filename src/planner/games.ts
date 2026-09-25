@@ -232,6 +232,7 @@ export const families: Record<string, FamilyConfig> = {
   hoenn6: { ...modernFamilies.hoenn6, id: 'hoenn6' },
   alola7: { ...modernFamilies.alola7, id: 'alola7' },
   'alola7-ultra': { ...modernFamilies['alola7-ultra'], id: 'alola7-ultra' },
+  letsgo7: { ...modernFamilies.letsgo7, id: 'letsgo7' },
   galar8: { ...modernFamilies.galar8, id: 'galar8' },
   sinnoh8: { ...modernFamilies.sinnoh8, id: 'sinnoh8' },
 }
@@ -288,6 +289,8 @@ export const games: GameConfig[] = [
   game('moon', '챔피언 결정전 쿠쿠이', '#4e5da8', [722, 725, 728], [], { familyId: 'alola7', notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.', '아일랜드 스캔·포켓리조트 방문·조건 미확인 고정 심볼과 교환은 추천하지 않습니다.'] }),
   game('ultra-sun', '챔피언 결정전 하우', '#e6792b', [722, 725, 728], [], { familyId: 'alola7-ultra', notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.', '아일랜드 스캔·포켓리조트 방문·조건 미확인 고정 심볼과 교환은 추천하지 않습니다.'] }),
   game('ultra-moon', '챔피언 결정전 하우', '#5964b7', [722, 725, 728], [], { familyId: 'alola7-ultra', notes: ['포켓라이드가 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다.', '아일랜드 스캔·포켓리조트 방문·조건 미확인 고정 심볼과 교환은 추천하지 않습니다.'] }),
+  game('lets-go-pikachu', '챔피언 결정전 라이벌', '#f4c430', [25], [[138, 140]], { familyId: 'letsgo7', notes: ['파트너 피카츄의 비전기술이 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다. 파트너는 진화하지 않습니다.', '하늘 출현(리자몽·망나뇽·전설의 새)은 챔피언 이후에만 쓰고, 희귀 출현은 조건부 경로로 표시합니다.', '기술머신은 재사용할 수 있지만 입수 장소는 시점 추론으로 표시합니다.'] }),
+  game('lets-go-eevee', '챔피언 결정전 라이벌', '#9b6b43', [133], [[138, 140]], { familyId: 'letsgo7', notes: ['파트너 이브이의 비전기술이 이동을 맡으므로 파티에 비전기술 담당이 필요하지 않습니다. 파트너는 진화하지 않습니다.', '하늘 출현(리자몽·망나뇽·전설의 새)은 챔피언 이후에만 쓰고, 희귀 출현은 조건부 경로로 표시합니다.', '기술머신은 재사용할 수 있지만 입수 장소는 시점 추론으로 표시합니다.'] }),
   game('sword', '챔피언 단델', '#39a7d7', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
   game('shield', '챔피언 단델', '#d84b89', [810, 813, 816], [], { familyId: 'galar8', notes: ['갑옷섬 1.2.0과 왕관설원 1.3.0 범위를 별도 조건으로 표시합니다.'] }),
   game('brilliant-diamond', '챔피언 난천', '#5c8eba', [387, 390, 393], [[408]], { familyId: 'sinnoh8', notes: ['포켓치 비전기술은 파티 기술칸을 차지하지 않으며 지하대동굴 풀은 진행 플래그에 따라 확장됩니다.'] }),
@@ -328,7 +331,7 @@ type BossPatch = Partial<Pick<PlannerBoss, 'level' | 'types'>>
 // 6세대 이후 버전은 modernGames.ts의 버전별 보스표를 그대로 씁니다.
 const modernPlannerGameIds = new Set<GameConfig['id']>([
   'x', 'y', 'omega-ruby', 'alpha-sapphire', 'sun', 'moon', 'ultra-sun', 'ultra-moon',
-  'sword', 'shield', 'brilliant-diamond', 'shining-pearl',
+  'lets-go-pikachu', 'lets-go-eevee', 'sword', 'shield', 'brilliant-diamond', 'shining-pearl',
 ])
 
 const frlgBossPatches: Record<string, BossPatch> = {

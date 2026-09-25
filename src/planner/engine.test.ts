@@ -54,9 +54,9 @@ describe('지원 버전과 정적 카탈로그', () => {
   }, 20_000)
 
   it('기존 플래너 버전에 Sword/Shield와 BDSP를 추가하고 ID를 고유하게 유지한다', () => {
-    expect(games).toHaveLength(33)
-    expect(new Set(games.map((game) => game.id)).size).toBe(33)
-    expect(Object.keys(families)).toHaveLength(14)
+    expect(games).toHaveLength(35)
+    expect(new Set(games.map((game) => game.id)).size).toBe(35)
+    expect(Object.keys(families)).toHaveLength(15)
     for (const game of games) expect(getFamily(game).chapters.length).toBeGreaterThanOrEqual(8)
   })
 
@@ -73,8 +73,8 @@ describe('지원 버전과 정적 카탈로그', () => {
 
   it('39개 본가 버전과 현대 메커니즘 패밀리를 명시적으로 분류한다', () => {
     expect(gameCatalog).toHaveLength(39)
-    expect(plannerGameCatalog).toHaveLength(33)
-    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(6)
+    expect(plannerGameCatalog).toHaveLength(35)
+    expect(gameCatalog.filter((game) => game.plannerSupport.status === 'catalog-only')).toHaveLength(4)
     expect(gameCatalog.find((game) => game.id === 'lets-go-pikachu')?.mechanicsFamily).toBe('lets-go')
     expect(gameCatalog.find((game) => game.id === 'sword')?.mechanicsFamily).toBe('galar-wild-area')
     expect(gameCatalog.find((game) => game.id === 'legends-arceus')?.mechanicsFamily).toBe('legends')

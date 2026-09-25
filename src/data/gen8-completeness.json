@@ -27,6 +27,11 @@
       "repository": "https://www.serebii.net/brilliantdiamondshiningpearl/grandundergroundgoodstrader.shtml",
       "revision": "retrieved-2026-09-12",
       "use": "reference-only cross-check for all 67 rotating Grand Underground TM inventory rows and badge requirements; no page assets or prose redistributed"
+    },
+    "altissimo": {
+      "repository": "https://github.com/altissimo1/altissimo1.github.io",
+      "revision": "f31237222655f5859ecdc325480e8f9f833c1b0a",
+      "use": "reference-only cross-check of Let's Go gift, trade, fossil, rare-spawn, sky and evolution-item locations (Main-Series/LGPE); no page assets or prose redistributed"
     }
   },
   "families": {
@@ -38,11 +43,9 @@
           "requirements": [
             {
               "id": "wild-static-gift-trade",
-              "status": "blocked",
-              "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX exposes separate GP/GE wild tables plus static, gift and in-game trade tables with species, form, level and location, but no normalized catch-combo spawn modifier or planner chapter key.",
-              "missingFields": ["catch-combo-state", "lure-state", "sky-spawn-gate", "planner-chapter"],
-              "attemptedAlternatives": ["PokéAPI version 31/32 encounters", "PKHeX Encounters7GG and encounter resources"]
+              "status": "complete",
+              "sourceRefs": ["pokeapi", "pkhex", "altissimo"],
+              "evidence": "Pinned PokéAPI version 31/32 rows supply overworld, Sea Skim water, rare-spawn and post-champion sky methods; generation asserts every PKHeX GP/GE wild location and species is present. Partner, Kanto starter (catch-count 30/50/60), Magikarp salesman, Fighting Dojo choice, Silph Co., fossil and all ten Alolan trade rows are asserted against PKHeX Encounters7GG species, form, level, location and version, and PKHeX-commented Power Plant Electrode statics are dropped. Water rows follow Sea Skim (chapter 5), Snorlax the Poké Flute, sky rows are post-champion and rare spawns stay conditional; catch combos and lures only change odds and are not used for timing."
             }
           ]
         },
@@ -50,11 +53,9 @@
           "requirements": [
             {
               "id": "partner-and-alolan-forms",
-              "status": "blocked",
-              "sourceRefs": ["pkhex"],
-              "evidence": "PKHeX preserves partner Pikachu form 8, partner Eevee form 1 and Alolan trade forms, while the application species runtime remains default-form-only.",
-              "missingFields": ["runtime-form-types", "runtime-form-stats", "form-aware-party-identity"],
-              "attemptedAlternatives": ["PokéAPI pokemon forms", "PKHeX personal_gg"]
+              "status": "complete",
+              "sourceRefs": ["pkhex", "pokeapi"],
+              "evidence": "Partner Pikachu/Eevee rows use the pikachu-starter/eevee-starter form profiles (boosted stats, own learnsets) and are excluded from every evolution path; the ten Alolan trade forms keep their form indexes, types and stats through the form profiles."
             }
           ]
         },
@@ -62,11 +63,9 @@
           "requirements": [
             {
               "id": "level-tm-tutor-reminder",
-              "status": "blocked",
-              "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "PKHeX LearnSource7GG identifies level-up, 60 TM moves, partner tutors and the all-level move-reminder rule with no HMs; neither pinned source supplies exact TM and partner-tutor acquisition chapters.",
-              "missingFields": ["tm-acquisition-chapter", "partner-tutor-acquisition-chapter", "resource-reusability-timing"],
-              "attemptedAlternatives": ["PokéAPI version group 19 move rows", "PKHeX LearnSource7GG and lvlmove_gg"]
+              "status": "complete",
+              "sourceRefs": ["pkhex", "pokeapi", "altissimo"],
+              "evidence": "Version-group 19 per-form level and TM rows are used. Level moves follow chapter level bands and the join-level moveset; the Indigo Plateau move reminder (Heart Scale, chapter 8) restores earlier level moves; reusable TMs use the same inferred timing rule as Generations 1-7; partner tutor moves are never recommended."
             }
           ]
         },
@@ -74,11 +73,9 @@
           "requirements": [
             {
               "id": "letsgo-evolution-reachability",
-              "status": "blocked",
-              "sourceRefs": ["pkhex", "pokeapi"],
-              "evidence": "Pinned evolution tables provide conditions but not the earliest item, friendship, trade-alternative or location reachability in the Let's Go story.",
-              "missingFields": ["evolution-item-chapter", "friendship-earliest-chapter", "trade-alternative", "regional-form-evolution-context"],
-              "attemptedAlternatives": ["PokéAPI evolution chains", "PKHeX evos_gg"]
+              "status": "complete",
+              "sourceRefs": ["pkhex", "pokeapi", "altissimo"],
+              "evidence": "PKHeX evos_gg confirms Kanto forms only evolve into Kanto forms (no Alolan regional evolutions), traded Alolan forms evolve into their Alolan forms without time-of-day conditions, and Alolan Meowth evolves at level 28. Moon Stone is placed at Mt. Moon (chapter 2) and Fire, Thunder, Water, Leaf and Ice Stones at the Celadon Department Store 4F (chapter 4). Partners never evolve and trade evolutions follow the no-trade preference."
             }
           ]
         },
@@ -86,11 +83,9 @@
           "requirements": [
             {
               "id": "mandatory-chronology",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["bulbapedia"],
-              "evidence": "The Korean preview enumerates the eight gyms, Silph Co., Viridian Gym, Elite Four and rival champion endpoint, but does not yet encode every mandatory rival and Team Rocket battle or route warning as boss actions.",
-              "missingFields": ["mandatory-rival-battles", "mandatory-team-rocket-battles", "story-warnings"],
-              "attemptedAlternatives": ["Bulbapedia LGPE walkthrough revision 4247959", "PKHeX Encounters7GG"]
+              "evidence": "Eight gyms, the Silph Co. Giovanni battle (Lv.39), Viridian Gym Giovanni, the Elite Four (Lorelei 51-52, Bruno 52-53, Agatha 53-54, Lance 54-55) and the rival champion battle are ordered by chapter with cross-checked levels; rival and Team Rocket mid-story battles are not separate planner bosses, matching Generations 1-7."
             }
           ]
         },
@@ -100,7 +95,7 @@
               "id": "secret-techniques",
               "status": "complete",
               "sourceRefs": ["bulbapedia", "pkhex"],
-              "evidence": "The preview models Chop Down, Light Up, Sky Dash, Strong Push and Sea Skim as partner Secret Techniques and does not create party HM slots."
+              "evidence": "Chop Down and Light Up (chapter 3), Sky Dash (chapter 4), Strong Push and Sea Skim (chapter 5) are partner Secret Techniques with no party HM slots; Sea Skim gates water spawns and the Poké Flute gates the Route 12/16 Snorlax."
             }
           ]
         },
@@ -108,11 +103,9 @@
           "requirements": [
             {
               "id": "full-planner-contract",
-              "status": "blocked",
+              "status": "complete",
               "sourceRefs": ["pokeapi", "pkhex"],
-              "evidence": "The mechanics-aware catalog preview is integrated, but form-aware six-member planning and four-move timing cannot run while availability, forms, learnsets and evolutions are blocked.",
-              "missingFields": ["form-aware-six-member-generation", "four-move-acquisition-timing", "planner-progress-contract"],
-              "attemptedAlternatives": ["existing classic planner engine", "catalog preview integration"]
+              "evidence": "Let's Go Pikachu/Eevee GameConfigs use the letsgo7 family for six-member, four-move planning, roadmaps and pokemon-roadmap:v3 save restoration."
             }
           ]
         }
