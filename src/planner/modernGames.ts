@@ -115,7 +115,7 @@ const kalosBosses = [
 const orasChapters = [
   chapter('or-1', '미로마을 → 금탄시티', '첫 파트너와 스톤배지', 'Lv.5–14', ['littleroot', 'route-101', 'route-102', 'route-103', 'route-104', 'petalburg-woods', 'rustboro', 'route-116', 'rusturf-tunnel'], ['스타터 선택', '금탄체육관 원규 격파', '데봉화물 회수'], ['풀베기']),
   chapter('or-2', '무로마을 → 잿빛시티', '너클배지와 해양박물관', 'Lv.14–20', ['route-105', 'route-106', 'dewford', 'granite-cave', 'route-107', 'route-108', 'route-109', 'slateport'], ['무로체육관 철구 격파', '성호에게 편지 전달', '해양박물관 사건 해결']),
-  chapter('or-3', '보라시티', '다이나모배지', 'Lv.19–25', ['route-110', 'mauville', 'route-117', 'verdanturf'], ['라이벌전 승리', '보라체육관 암페어 격파'], ['바위깨기']),
+  chapter('or-3', '보라시티', '다이나모배지', 'Lv.19–25', ['route-110', 'mauville-city', 'route-117', 'verdanturf'], ['라이벌전 승리', '보라체육관 암페어 격파'], ['바위깨기']),
   chapter('or-4', '굴뚝산 → 용암마을', '히트배지와 운석', 'Lv.24–30', ['route-111', 'route-112', 'fiery-path', 'route-113', 'fallarbor', 'route-114', 'meteor-falls', 'mt-chimney', 'jagged-pass', 'lavaridge'], ['유성폭포에서 악당 조직 추적', '굴뚝산 간부전 승리', '용암체육관 연돌 격파'], ['괴력']),
   chapter('or-5', '등화시티', '밸런스배지와 파도타기', 'Lv.28–33', ['petalburg'], ['등화체육관 종길 격파', '파도타기 획득'], ['파도타기']),
   chapter('or-6', '검방울시티', '날씨연구소와 페더배지', 'Lv.30–36', ['route-118', 'route-119', 'weather-institute', 'fortree', 'route-120', 'scorched-slab'], ['날씨연구소 구출', '데봉스코프로 길 확보', '검방울체육관 은송 격파'], ['공중날기']),

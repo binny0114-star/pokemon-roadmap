@@ -75,6 +75,12 @@ const statusMoves = new Set([
   'light-screen', 'thunder-wave', 'will-o-wisp', 'swords-dance', 'bulk-up',
   'calm-mind', 'curse', 'leech-seed', 'recover', 'roost', 'agility',
 ])
+// 비전머신·필드기는 위력과 관계없이 호환 여부가 필드 이동에 필요하므로 항상 싣습니다
+// (플래시·바위깨기·소용돌이·안개제거처럼 위력 50 미만이거나 변화 기술인 경우 포함).
+const fieldMoves = new Set([
+  'cut', 'fly', 'surf', 'strength', 'flash', 'rock-smash', 'waterfall',
+  'dive', 'whirlpool', 'rock-climb', 'defog',
+])
 
 const names = new Map(
   namesRows
@@ -232,7 +238,8 @@ for (const row of pokemonMoveRows) {
 
   if (!speciesId || !versionGroups.has(versionGroup) || ![1, 3, 4].includes(method)) continue
   const machine = method === 4 ? machines.get(`${versionGroup}:${moveId}`) : undefined
-  const usefulMachine = method !== 4 || Boolean(machine) && (move.power >= 50 || statusMoves.has(move.id))
+  const usefulMachine = method !== 4
+    || Boolean(machine) && (move.power >= 50 || statusMoves.has(move.id) || fieldMoves.has(move.id))
   const usefulTutor = method !== 3 || move.power >= 50 || statusMoves.has(move.id)
   if (!usefulMachine || !usefulTutor) continue
 
@@ -327,8 +334,25 @@ for (const versionGroup of catalogVersionGroupIds) {
   versions[versionGroup] = overrides
 }
 for (const versionGroup of legacyPlannerVersionGroupIds) {
-  learnsets[versionGroup] = legacyLearnsetSnapshot.learnsets[versionGroup] ?? {}
-  versions[versionGroup] = legacyLearnsetSnapshot.versions[versionGroup] ?? {}
+  const computed = learnsets[versionGroup] ?? {}
+  const legacy = structuredClone(legacyLearnsetSnapshot.learnsets[versionGroup] ?? {})
+  // 기존 1–5세대 호환 스냅샷은 위력 50 미만 기술머신을 뺐기 때문에 플래시·바위깨기·소용돌이 같은
+  // 비전머신 호환이 빠져 있습니다. 같은 버전 그룹의 PokéAPI 행에서 필드기 호환만 보충합니다.
+  for (const [speciesId, entries] of Object.entries(computed)) {
+    const fieldEntries = entries.filter(([moveId, source]) =>
+      source === 'machine' && fieldMoves.has(moves.get(moveId)?.id))
+    if (!fieldEntries.length) continue
+    const target = legacy[speciesId] ??= []
+    for (const entry of fieldEntries) {
+      if (!target.some((current) => current[0] === entry[0])) target.push(entry)
+    }
+    target.sort((a, b) => a[1].localeCompare(b[1]) || a[2] - b[2] || a[0] - b[0])
+  }
+  learnsets[versionGroup] = legacy
+  const legacyVersions = legacyLearnsetSnapshot.versions[versionGroup] ?? {}
+  const fieldMoveVersions = Object.fromEntries(Object.entries(versions[versionGroup] ?? {})
+    .filter(([moveId]) => fieldMoves.has(moves.get(Number(moveId))?.id) && !(moveId in legacyVersions)))
+  versions[versionGroup] = { ...fieldMoveVersions, ...legacyVersions }
 }
 
 const learnsetSpeciesByVersionGroup = Object.fromEntries(

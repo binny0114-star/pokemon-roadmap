@@ -208,6 +208,8 @@ export interface GeneratedMove {
   type: string
   category: '물리' | '특수' | '변화'
   source: string
+  /** 기술머신·비전머신 번호(예: TM24, HM05). 1회용 TM 중복 배정 안내에 씁니다. */
+  machine?: string
   availableChapter: number
   dlcMilestone?: string
   dlcChapter?: number

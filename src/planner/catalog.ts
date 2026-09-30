@@ -80,6 +80,8 @@ export let modernEncounterProvenance: ModernEncounterSnapshot['provenance'] | nu
 export const speciesCatalog: CatalogSpecies[] = []
 export const speciesByDex = new Map<number, CatalogSpecies>()
 let modernLocationNames: ModernEncounterSnapshot['locationNames'] = {}
+// 1–5세대 장소의 PKHeX 한국어 이름(세대별)
+let legacyLocationNames: Record<string, Record<string, string>> = {}
 let catalogPromise: Promise<void> | null = null
 
 function readSnapshot(value: unknown): Snapshot {
@@ -111,10 +113,16 @@ export function loadCatalog(): Promise<void> {
     catalogPromise = Promise.all([
       import('../generated/species.json'),
       import('../generated/modern-encounters.json'),
+      import('../generated/legacy-location-names.json'),
       loadLearnsets(),
-    ]).then(([module, modernModule]) => {
+    ]).then(([module, modernModule, legacyNamesModule]) => {
       const data = readSnapshot(module.default)
       const modern = modernModule.default as ModernEncounterSnapshot
+      const legacyNames = legacyNamesModule.default as { provenance: { revision: string }, generations: Record<string, Record<string, string>> }
+      if (!/^[a-f0-9]{40}$/.test(legacyNames.provenance.revision) || !legacyNames.generations) {
+        throw new Error('1–5세대 장소 이름 스냅샷 메타데이터가 올바르지 않습니다.')
+      }
+      legacyLocationNames = legacyNames.generations
       if (
         !/^[a-f0-9]{40}$/.test(modern.provenance.revision)
         || modern.provenance.license !== 'GPL-3.0-or-later'
@@ -195,22 +203,34 @@ const locationKo: Record<string, string> = {
   'nuvema-town': '마름꽃마을',
   'castelia-city': '구름시티',
   'victory-road': '챔피언로드',
+  'lost-tower': '로스트타워',
+  'roaming-kanto': '관동 각지 (배회)',
+  'roaming-johto': '성도 각지 (배회)',
+  'roaming-hoenn': '호연 각지 (배회)',
+  'roaming-sinnoh': '신오 각지 (배회)',
 }
+
+// 금·은·크리스탈과 하트골드·소울실버의 관동은 엔딩 후입니다. PokéAPI는 성도의 26·27번도로와
+// 챔피언로드도 kanto-로 시작하므로 'kanto' 대신 관동 도로 번호와 장소를 직접 적습니다.
+const johtoPostgameKanto = [
+  'mt-silver', 'route-1', 'route-2', 'route-3', 'route-4', 'route-5', 'route-6', 'route-7', 'route-8', 'route-9', 'route-10', 'route-11', 'route-12', 'route-13', 'route-14', 'route-15', 'route-16', 'route-17', 'route-18', 'route-19', 'route-20', 'route-21', 'route-22', 'route-23', 'route-24', 'route-25', 'route-28',
+  'pallet-town', 'viridian-city', 'viridian-forest', 'pewter-city', 'mt-moon', 'cerulean-city', 'cerulean-cave', 'vermilion-city', 'digletts-cave', 'rock-tunnel', 'power-plant', 'lavender-town', 'celadon-city', 'saffron-city', 'fuchsia-city', 'cinnabar-island', 'seafoam-islands',
+]
 
 const postgameMarkers: Record<string, string[]> = {
   kanto1: ['cerulean-cave'],
-  johto2: ['kanto', 'mt-silver', 'route-5', 'route-6', 'route-7', 'route-8', 'route-9', 'route-10', 'route-11', 'route-12', 'route-13', 'route-14', 'route-15', 'route-16', 'route-17', 'route-18', 'route-19', 'route-20', 'route-21', 'route-22', 'route-24', 'route-25'],
-  hoenn3: ['sky-pillar', 'battle', 'mirage', 'marine-cave', 'terra-cave'],
+  johto2: johtoPostgameKanto,
+  hoenn3: ['sky-pillar', 'battle', 'mirage-island', 'marine-cave', 'terra-cave', 'artisan-cave', 'desert-underpass'],
   kanto3: [
-    'four-island', 'five-island', 'six-island', 'seven-island', 'icefall-cave', 'rocket-warehouse',
-    'water-labyrinth', 'resort-gorgeous', 'lost-cave', 'memorial-pillar', 'green-path', 'outcast-island',
-    'altering-cave', 'dotted-hole', 'ruin-valley', 'pattern-bush', 'tanoby', 'canyon-entrance',
-    'sevault-canyon', 'trainer-tower', 'cerulean-cave',
+    'four-island', 'five-island', 'five-isle', 'six-island', 'seven-island', 'icefall-cave', 'rocket-warehouse',
+    'water-labyrinth', 'water-path', 'resort-gorgeous', 'lost-cave', 'memorial-pillar', 'green-path', 'outcast-island',
+    'altering-cave', 'dotted-hole', 'ruin-valley', 'pattern-bush', 'tanoby', 'chamber', 'canyon-entrance',
+    'sevault-canyon', 'trainer-tower', 'cerulean-cave', 'roaming-kanto',
   ],
-  sinnoh4: ['fight-area', 'survival-area', 'resort-area', 'stark-mountain', 'route-224', 'route-225', 'route-226', 'route-227', 'route-228', 'route-229', 'route-230'],
-  johto4: ['kanto', 'mt-silver'],
-  unova5: ['route-11', 'route-12', 'route-13', 'route-14', 'route-15', 'undella', 'giant-chasm', 'abundant-shrine'],
-  'unova5-2': ['nature-preserve'],
+  sinnoh4: ['fight-area', 'survival-area', 'resort-area', 'stark-mountain', 'trophy-garden', 'route-224', 'route-225', 'route-226', 'route-227', 'route-228', 'route-229', 'route-230'],
+  johto4: [...johtoPostgameKanto, 'embedded-tower'],
+  unova5: ['route-11', 'route-12', 'route-13', 'route-14', 'route-15', 'undella', 'giant-chasm', 'abundant-shrine', 'village-bridge', 'marvelous-bridge'],
+  'unova5-2': ['nature-preserve', 'nature-sanctuary', 'marvelous-bridge', 'glacier-room', 'iron-room', 'rocky-mountain-room', 'underground-ruins', 'wellspring-cave'],
   kalos6: ['kiloude-city', 'friend-safari', 'unknown-dungeon', 'sea-spirits-den'],
   hoenn6: ['battle-resort', 'sky-pillar'],
 }
@@ -289,20 +309,23 @@ const methodKo: Record<string, string> = {
 
 export const supportedEncounterMethods = new Set(Object.keys(methodKo))
 
+// 1–4세대 비전기술은 배지가 있어야 필드에서 씁니다. 배지를 주는 관장이 그 장의 마지막 상대이므로
+// 해당 비전기술이 필요한 조우는 다음 장부터입니다(예: 관동 파도타기는 독수의 핑크배지 이후 6장).
 const methodUnlocks: Record<string, Partial<Record<string, number>>> = {
-  kanto1: { 'old-rod': 3, 'good-rod': 5, 'super-rod': 5, surf: 5 },
+  kanto1: { 'old-rod': 3, 'good-rod': 5, 'super-rod': 5, surf: 6 },
   johto2: {
-    'old-rod': 2, 'good-rod': 5, 'super-rod': 9, surf: 4, 'rock-smash': 3,
+    'old-rod': 2, 'good-rod': 5, 'super-rod': 9, surf: 5, 'rock-smash': 3,
     headbutt: 2, 'headbutt-low': 2, 'headbutt-normal': 2, 'headbutt-high': 2,
   },
   hoenn3: {
-    'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 5, 'rock-smash': 3,
-    'feebas-tile-fishing': 6, seaweed: 8,
+    'old-rod': 2, 'good-rod': 5, 'super-rod': 8, surf: 6, 'rock-smash': 4,
+    'feebas-tile-fishing': 6, seaweed: 9,
   },
-  kanto3: { 'old-rod': 3, 'good-rod': 5, 'super-rod': 5, surf: 5, 'rock-smash': 7 },
-  sinnoh4: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 9, surf: 5, 'rock-smash': 1 },
+  // 바위깨기는 강연 격파 뒤 1섬 불꽃온천에서 받고 초련의 골드배지로 씁니다.
+  kanto3: { 'old-rod': 3, 'good-rod': 5, 'super-rod': 5, surf: 6, 'rock-smash': 8 },
+  sinnoh4: { 'old-rod': 1, 'good-rod': 3, 'super-rod': 9, surf: 5, 'rock-smash': 2 },
   johto4: {
-    'old-rod': 2, 'good-rod': 5, 'super-rod': 9, surf: 4, 'rock-smash': 3,
+    'old-rod': 2, 'good-rod': 5, 'super-rod': 9, surf: 5, 'rock-smash': 3,
     headbutt: 2, 'headbutt-low': 2, 'headbutt-normal': 2, 'headbutt-high': 2,
   },
   unova5: { 'super-rod': 9, 'super-rod-spots': 9, surf: 6, 'surf-spots': 6, 'bubbling-spots': 6 },
@@ -349,6 +372,8 @@ const unavailableConditions = [
 const informationalConditions = new Set(['magikarp-salesman'])
 
 const eventOnlyLocations = [
+  // 하트골드·소울실버의 unknown-all-* 는 위치가 없는 PokéAPI 보조 항목입니다.
+  'unknown-all',
   'birth-island',
   'navel-rock',
   'faraway-island',
@@ -478,10 +503,33 @@ function conditionUnlockChapter(game: GameConfig, condition: string): number {
   return conditionUnlockChapters[condition] ?? 1
 }
 
+// 1–5세대 선물 중 장소만으로는 받는 시점을 알 수 없는 경우
+function giftUnlockChapter(game: GameConfig, encounter: CatalogEncounter): number {
+  if (!['gift', 'gift-egg'].includes(encounter.method)) return 1
+  // 루비·사파이어·에메랄드 화석은 Go고글을 받은 뒤(연돌 격파 후) 111번도로 사막에서 얻어 금탄시티에서 복원합니다.
+  if (game.familyId === 'hoenn3' && locationMatchesToken(encounter.location, 'rustboro')) return 5
+  // 피카츄 버전의 꼬부기는 마티스를 이긴 뒤 갈색시티의 경찰관에게 받습니다.
+  if (game.familyId === 'kanto1' && locationMatchesToken(encounter.location, 'vermilion')) return 4
+  return 1
+}
+
+// 다이아몬드·펄·플라티나의 유크시·아그놈은 창기둥(플라티나는 깨어진 세계) 사건 뒤에 호수로 돌아옵니다.
+function staticUnlockChapter(game: GameConfig, encounter: CatalogEncounter): number {
+  if (!['only-one', 'static'].includes(encounter.method)) return 1
+  if (game.familyId === 'sinnoh4' && ['lake-valor', 'lake-acuity'].some((location) => locationMatchesToken(encounter.location, location))) return 8
+  return 1
+}
+
 function areaUnlockChapter(game: GameConfig, area: string): number {
   if (game.familyId === 'johto2' || game.familyId === 'johto4') {
     if (area.startsWith('union-cave-b2f')) return 4
+    // 어둠의동굴 검은먹시티 쪽 입구는 45번도로(7장)에서 들어갑니다.
+    if (area.startsWith('dark-cave-blackthorn')) return 7
+    // 로켓단 소굴 위 흙산 윗동굴은 폭포오르기(라이징배지, 7장 관장 이후)가 필요합니다.
+    if (area.startsWith('mt-mortar-upper-cave')) return 8
   }
+  // 블랙·화이트 고대의성 깊은 층(Lv.47–50)은 챔피언로드 무렵의 레벨이라 마지막 장 이전으로 두지 않습니다.
+  if (game.familyId === 'unova5' && /^relic-castle-[cd]$/.test(area)) return 8
   if (game.familyId === 'sinnoh4') {
     if (/^mt-coronet-(?:2f|3f|4f|5f|6f|exterior)/.test(area)) return 7
     if (area === 'mt-coronet-b1f') return 5
@@ -550,8 +598,10 @@ function conditionLabel(condition: string): string {
 }
 
 function humanizeLocation(location: string, game?: GameConfig): string {
-  // 6세대 이후 버전은 PKHeX 공식 한국어 장소명을 먼저 씁니다.
-  const official = game ? modernLocationNames[game.id]?.[location] : undefined
+  // PKHeX 한국어 장소명을 먼저 씁니다(6세대 이후는 버전별, 1–5세대는 세대별).
+  const official = game
+    ? modernLocationNames[game.id]?.[location] ?? (game.generation <= 5 ? legacyLocationNames[String(game.generation)]?.[location] : undefined)
+    : undefined
   if (official) return official
   const translated = Object.entries(locationKo).find(([key]) => location.includes(key))
   if (translated) return translated[1]
@@ -730,7 +780,44 @@ interface RankedEncounter {
   unavailableReason?: string
 }
 
+// 블랙·화이트 꿈터 소녀는 고른 스타팅이 첫 체육관에서 불리한 타입을 보완하는 원숭이 한 마리만 줍니다
+// (주리비얀 → 앗차프, 뚜꾸리 → 야나프, 수댕이 → 바오프).
+const unovaMonkeyGiftStarter: Record<number, number> = { 515: 495, 511: 498, 513: 501 }
+
+function starterDependentGift(game: GameConfig, source: CatalogSpecies, encounter: CatalogEncounter): string | undefined {
+  if (game.familyId !== 'unova5' || encounter.method !== 'gift' || !locationMatchesToken(encounter.location, 'dreamyard')) return undefined
+  const starter = unovaMonkeyGiftStarter[source.dex]
+  return starter ? String(starter) : undefined
+}
+
+// 엔딩 후에만 잡을 수 있는 고정 전설: 에메랄드 하늘기둥 레쿠쟈, 블랙2·화이트2 리버스마운틴 히드런과 용나선탑 레시라무·제크로무
+// 블랙·화이트 용나선탑의 전설은 N의 성에서 잡지 못했을 때 엔딩 후 다시 나타나는 개체입니다.
+const postgameStaticLocations: Partial<Record<GameConfig['familyId'], string[]>> = {
+  hoenn3: ['sky-pillar'],
+  unova5: ['dragonspiral-tower'],
+  'unova5-2': ['reversal-mountain', 'dragonspiral-tower'],
+}
+
+// 금·은·크리스탈·하트골드·소울실버에서 반대 버전의 표지 전설(루기아·칠색조)은 관동에서 날개를 받은 뒤에만 잡습니다.
+const postgameLegendaries: Partial<Record<GameConfig['id'], number[]>> = {
+  gold: [249], silver: [250], crystal: [249], heartgold: [249], soulsilver: [250],
+}
+
+function isPostgameLegendary(game: GameConfig, source: CatalogSpecies, encounter: CatalogEncounter): boolean {
+  return ['only-one', 'static'].includes(encounter.method) && Boolean(postgameLegendaries[game.id]?.includes(source.dex))
+}
+
 function isPostgameEncounter(game: GameConfig, encounter: CatalogEncounter): boolean {
+  // 에메랄드 미로마을의 성도 스타팅은 호연도감을 완성한 뒤 오박사에게 받습니다.
+  if (game.id === 'emerald' && encounter.method === 'gift' && locationMatchesToken(encounter.location, 'littleroot')) return true
+  // 루비·사파이어·에메랄드 이끼시티 성호의 집 메탕은 사천왕을 이긴 뒤 받습니다.
+  if (game.familyId === 'hoenn3' && encounter.method === 'gift' && locationMatchesToken(encounter.location, 'mossdeep')) return true
+  // 블랙2·화이트2 산가지마을의 딥상어동·미뇽은 엔딩 후 블랙시티·화이트포레스트에서 비트를 이긴 뒤 받습니다.
+  if (game.familyId === 'unova5-2' && encounter.method === 'gift' && locationMatchesToken(encounter.location, 'floccesy-town')) return true
+  if (['only-one', 'static'].includes(encounter.method)
+    && postgameStaticLocations[game.familyId]?.some((location) => locationMatchesToken(encounter.location, location))) {
+    return true
+  }
   const markers = [...(postgameMarkers[game.familyId] ?? []), ...(gamePostgameMarkers[game.id] ?? [])].filter(
     (marker) => !(game.id === 'emerald' && marker === 'sky-pillar'),
   )
@@ -770,7 +857,13 @@ function encounterChapter(game: GameConfig, encounter: CatalogEncounter): Pick<R
         : conditionUnlockChapter(game, condition),
     ),
   )
-  const prerequisiteChapter = Math.max(methodChapter, conditionChapter, areaUnlockChapter(game, encounter.area))
+  const prerequisiteChapter = Math.max(
+    methodChapter,
+    conditionChapter,
+    areaUnlockChapter(game, encounter.area),
+    giftUnlockChapter(game, encounter),
+    staticUnlockChapter(game, encounter),
+  )
   if (encounter.location.startsWith('roaming-') && prerequisiteChapter > 1) {
     return {
       chapter: prerequisiteChapter,
@@ -783,6 +876,16 @@ function encounterChapter(game: GameConfig, encounter: CatalogEncounter): Pick<R
     if (tokenIndex >= 0) {
       const locationChapter = chapterIndex + 1
       const chapterNumber = Math.max(locationChapter, prerequisiteChapter)
+      // 1–5세대에서 그 장 권장 레벨보다 10 넘게 높은 야생·고정 조우는 모델링하지 않은 진행 조건
+      // (블랙·화이트 1번도로 강 건너 진한 풀숲, 꿈터 안쪽, 전설 고정 심볼 등) 뒤에 있으므로 마지막 본편 장의 시점 추론으로 둡니다.
+      const chapterMaxLevel = Number(family.chapters[chapterNumber - 1]?.level.match(/\d+/g)?.at(-1) ?? Number.POSITIVE_INFINITY)
+      if (game.generation <= 5 && chapterNumber < mainStoryChapterCount && encounter.minLevel > chapterMaxLevel + 10) {
+        return {
+          chapter: mainStoryChapterCount,
+          storyOrder: mainStoryChapterCount * 1_000 + 900 + encounter.minLevel / 100,
+          quality: 'inferred',
+        }
+      }
       return {
         chapter: chapterNumber,
         storyOrder: chapterNumber * 1_000
@@ -793,15 +896,12 @@ function encounterChapter(game: GameConfig, encounter: CatalogEncounter): Pick<R
     }
   }
 
-  const level = encounter.minLevel
-  const inferredFromLevel = Math.min(
-    mainStoryChapterCount,
-    Math.max(1, Math.ceil(level / (60 / mainStoryChapterCount))),
-  )
-  const inferred = Math.max(inferredFromLevel, prerequisiteChapter)
+  // 스토리 장 목록에 없는 장소는 야생 레벨로 이른 장을 추정하지 않습니다. 레벨이 낮아도
+  // 파도타기 너머(무인발전소)나 늦게 열리는 장소일 수 있으므로 마지막 본편 장의 시점 추론으로 둡니다.
+  const inferred = Math.max(mainStoryChapterCount, prerequisiteChapter)
   return {
     chapter: inferred,
-    storyOrder: inferred * 1_000 + 900 + level / 100,
+    storyOrder: inferred * 1_000 + 900 + encounter.minLevel / 100,
     quality: 'inferred',
   }
 }
@@ -944,7 +1044,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
       return {
         encounter,
         source,
-        postgame: isPostgameEncounter(game, encounter),
+        postgame: isPostgameEncounter(game, encounter) || isPostgameLegendary(game, source, encounter),
         tradeRequired,
         readyChapter,
         evolutionSteps: evolutionLine.length,
@@ -964,7 +1064,20 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
           : encounter.conditions.some((condition) => unavailableConditions.includes(condition))
           ? '이벤트 또는 별도 배포 조건이 필요한 입수 경로입니다.'
           : encounter.conditions.some((condition) => condition.startsWith('johto-safari-blocks-'))
+            || (game.familyId === 'johto4' && locationMatchesToken(encounter.location, 'johto-safari-zone'))
             ? '사파리존 블록 배치와 대기 일수의 정확한 해금 시점이 모델링되지 않았습니다.'
+          // 블랙·화이트 구름시티의 조로아는 영화 배포 세레비를, 미혹의숲 조로아크는 배포 색이 다른
+          // 라이코·앤테이·스이쿤을 데려가야 만나는 이벤트 전용입니다.
+          : game.familyId === 'unova5' && encounter.method === 'gift' && locationMatchesToken(encounter.location, 'castelia')
+            ? '영화 배포 세레비를 데려가야 받는 이벤트 전용 선물입니다.'
+          : game.familyId === 'unova5' && encounter.method === 'only-one' && locationMatchesToken(encounter.location, 'lostlorn-forest')
+            ? '배포된 색이 다른 라이코·앤테이·스이쿤을 데려가야 만나는 이벤트 전용 조우입니다.'
+          // 크리스탈 34번도로 키우미집의 이상한 알은 아기 포켓몬 7종 중 하나가 무작위로 태어납니다.
+          : game.id === 'crystal' && encounter.method === 'gift-egg' && locationMatchesToken(encounter.location, 'route-34')
+            ? '이상한 알은 7종 중 하나가 무작위로 태어나 원하는 포켓몬을 확정할 수 없습니다.'
+          // 루비·사파이어·에메랄드의 130번수로 풀숲은 파티 포켓몬의 성격값이 그날의 값과 맞을 때만 나타나는 환상의 섬입니다.
+          : game.familyId === 'hoenn3' && encounter.method === 'walk' && locationMatchesToken(encounter.location, 'route-130')
+            ? '환상의 섬은 파티 포켓몬의 성격값이 그날의 값과 맞을 때만 나타납니다.'
           : eventOnlyLocations.some((location) => locationMatchesToken(encounter.location, location))
             // ORAS 남쪽 외딴섬의 라티오스/라티아스 선물은 본편 스토리 이벤트입니다.
             && !encounter.conditions.includes('story-progress-eon-gift')
@@ -1116,6 +1229,7 @@ function computeAvailability(species: CatalogSpecies, game: GameConfig, desiredS
   const requiredStarterDex = first.encounter.conditions
     .map((condition) => /^requires-galar-starter-(\d+)$/.exec(condition)?.[1])
     .find((value) => value !== undefined)
+    ?? starterDependentGift(game, first.source, first.encounter)
   const encounterDlcMilestone = first.encounter.conditions
     .filter((condition) => condition.startsWith('dlc-milestone-'))
     .sort((a, b) => (galarDlcMilestoneChapters[b] ?? 0) - (galarDlcMilestoneChapters[a] ?? 0))[0]
@@ -1568,8 +1682,14 @@ const evolutionOutcomeKo: Record<number, string> = {
 
 export function evolutionText(species: CatalogSpecies, game?: GameConfig, formIdentifier?: string): string {
   const text = baseEvolutionText(species, game, formIdentifier)
+  if (text === '진화 없음 또는 기본 형태') return text
+  // 파이어레드의 피츄·에레키드처럼 이 버전에서 진화 전 단계를 얻을 수 없으면 그 진화 조건을 안내하지 않습니다.
+  const preEvolution = game && species.evolvesFrom ? speciesByDex.get(species.evolvesFrom) : undefined
+  if (game && preEvolution && !getAvailability(preEvolution, game).obtainable) {
+    return `진화 전 단계(${preEvolution.name})를 이 버전에서 얻을 수 없음`
+  }
   const outcome = evolutionOutcomeKo[species.dex]
-  return outcome && text !== '진화 없음 또는 기본 형태' ? `${text} (${outcome})` : text
+  return outcome ? `${text} (${outcome})` : text
 }
 
 function baseEvolutionText(species: CatalogSpecies, game?: GameConfig, formIdentifier?: string): string {

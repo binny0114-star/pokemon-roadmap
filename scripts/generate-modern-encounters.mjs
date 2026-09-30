@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { fetchCsv, revision as pokeapiRevision } from './pokeapi-source.mjs'
+import { fetchCsv, registry, revision as pokeapiRevision } from './pokeapi-source.mjs'
 
 const pkhexRevision = '77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5'
 const pkhexCodeRoot = `https://raw.githubusercontent.com/kwsch/PKHeX/${pkhexRevision}/PKHeX.Core`
@@ -1719,3 +1719,98 @@ await writeFile(
 )
 
 console.log(Object.entries(rowsByGame).map(([game, rows]) => `${game}:${rows.length}`).join(' '))
+
+// 1–5세대 플래너의 장소 이름도 PKHeX 한국어 장소 텍스트(같은 줄 번호의 영어 이름)로 바꿉니다.
+// 적·녹·청·피카츄는 한국어판이 없어 같은 관동 장소를 쓰는 파이어레드·리프그린 표기를 먼저 씁니다.
+// 한국어판이 있는 리메이크·후속작 표기(레츠고 관동, ORAS 호연, BDSP 신오)를 먼저 쓰고 없으면 당시 세대 텍스트를 씁니다.
+const legacyLocationTextFiles = {
+  gsc: 'text/locations/gen2/text_gsc_00000',
+  rsefrlg: 'text/locations/gen3/text_rsefrlg_00000',
+  hgss: 'text/locations/gen4/text_hgss_00000',
+  bw2: 'text/locations/gen5/text_bw2_00000',
+  xy: 'text/locations/gen6/text_xy_00000',
+  gg: 'text/locations/gen7/text_gg_00000',
+  bdsp: 'text/locations/gen8b/text_bdsp_00000',
+}
+const legacyLocationFileOrder = {
+  1: ['gg', 'rsefrlg', 'gsc', 'hgss'],
+  2: ['gsc', 'hgss', 'gg', 'rsefrlg'],
+  3: ['gg', 'xy', 'rsefrlg', 'hgss', 'gsc'],
+  4: ['bdsp', 'hgss', 'rsefrlg', 'gsc'],
+  5: ['bw2'],
+}
+// PokéAPI와 PKHeX 영어 이름이 다른 장소
+const legacyLocationAliases = {
+  'nature-sanctuary': 'nature-preserve',
+  'viapos-chamber': 'viapois-chamber',
+  'team-aqua-hideout': 'aqua-hideout',
+  'team-magma-hideout': 'magma-hideout',
+  'glacier-room': 'iceberg-chamber',
+  'iron-room': 'iron-chamber',
+  'rocky-mountain-room': 'rock-peak-chamber',
+}
+const legacyNamePairs = Object.fromEntries(await Promise.all(Object.entries(legacyLocationTextFiles).map(async ([generation, file]) => [
+  generation,
+  await Promise.all([fetchText(`${file}_en.txt`).then(names), fetchText(`${file}_ko.txt`).then(names)]),
+])))
+function legacySlugMap(generation) {
+  const bySlug = new Map()
+  for (const fileGeneration of legacyLocationFileOrder[generation]) {
+    const [english, korean] = legacyNamePairs[fileGeneration]
+    english.forEach((name, index) => {
+      const value = korean[index]?.trim()
+      if (!name?.trim() || !value) return
+      // 'Victory Road (Kanto)'·'S.S. Anne' 같은 이름은 괄호를 뺀 이름과 마침표를 뺀 이름도 함께 찾습니다.
+      const withoutParenthetical = name.replace(/\s*\([^)]*\)/g, '')
+      const koreanWithoutParenthetical = value.replace(/\s*\([^)]*\)/g, '')
+      for (const [key, koreanName] of [
+        [slug(name), value],
+        [slug(name.replace(/\./g, '')), value],
+        [slug(withoutParenthetical), koreanWithoutParenthetical],
+        [slug(withoutParenthetical.replace(/\./g, '')), koreanWithoutParenthetical],
+      ]) {
+        if (key && koreanName && !bySlug.has(key)) bySlug.set(key, koreanName)
+      }
+    })
+  }
+  return bySlug
+}
+const legacySpeciesSnapshot = JSON.parse(await readFile(new URL('../src/generated/species.json', import.meta.url), 'utf8'))
+const legacyGames = registry.games.filter((game) => game.generation <= 5 && game.plannerSupport.status === 'full')
+const legacyLocationNames = Object.fromEntries([1, 2, 3, 4, 5].map((generation) => {
+  const versionIds = new Set(legacyGames
+    .filter((game) => game.generation === generation)
+    .flatMap((game) => (game.sourceVersionIds ?? [game.versionId]).map(String)))
+  const locations = new Set(legacySpeciesSnapshot.species.flatMap((species) =>
+    Object.entries(species.encounters)
+      .filter(([versionId]) => versionIds.has(versionId))
+      .flatMap(([, rows]) => rows.map((row) => row.location))))
+  const bySlug = legacySlugMap(generation)
+  return [generation, Object.fromEntries([...locations].sort().flatMap((location) => {
+    const regional = location.replace(/^(?:kanto|johto|hoenn|sinnoh|unova)-/, '')
+    const candidates = [
+      location, regional, regional.replace(/^sea-/, ''), regional.replace(/-\d+$/, ''),
+      legacyLocationAliases[location],
+    ].filter(Boolean)
+    const value = candidates.map((candidate) => bySlug.get(candidate)).find(Boolean)
+    return value ? [[location, value]] : []
+  }))]
+}))
+await writeFile(
+  new URL('../src/generated/legacy-location-names.json', import.meta.url),
+  `${JSON.stringify({
+    provenance: {
+      source: 'PKHeX location text resources',
+      repository: 'https://github.com/kwsch/PKHeX',
+      revision: pkhexRevision,
+      license: 'GPL-3.0-or-later',
+      files: Object.values(legacyLocationTextFiles).flatMap((file) => [`${file}_en.txt`, `${file}_ko.txt`]).sort(),
+      notes: [
+        'Korean names are joined to the English line with the same index and keyed by the location identifiers used in the Gen 1-5 planner snapshot.',
+        'Red/Green/Blue/Yellow had no Korean release, so their Kanto locations use the FireRed/LeafGreen names first.',
+      ],
+    },
+    generations: legacyLocationNames,
+  })}\n`,
+)
+console.log(Object.entries(legacyLocationNames).map(([generation, entries]) => `gen${generation}-names:${Object.keys(entries).length}`).join(' '))

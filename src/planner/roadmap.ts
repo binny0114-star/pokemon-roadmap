@@ -126,14 +126,16 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
           return memberChapter <= number
             && stageAtChapter(member, game, number)
             && member.moves.some((move) =>
-              Math.max(memberChapter, move.dlcChapter ?? move.availableChapter) <= number
+              move.category !== '변화'
+              && Math.max(memberChapter, move.dlcChapter ?? move.availableChapter) <= number
               && types.some((bossType) => isStrongAgainst(move.type, bossType)))
         })
         const text = counters.length
           ? counters.map((member) => {
               const memberChapter = member.availability.dlcChapter ?? member.availability.chapter
               const move = member.moves.find((entry) =>
-                Math.max(memberChapter, entry.dlcChapter ?? entry.availableChapter) <= number
+                entry.category !== '변화'
+                && Math.max(memberChapter, entry.dlcChapter ?? entry.availableChapter) <= number
                 && types.some((type) => isStrongAgainst(entry.type, type)))
               const stage = stageAtChapter(member, game, number)
               return `${stage?.name ?? member.species.name}${move ? `의 ${move.name}` : ''}`
@@ -162,15 +164,23 @@ export function composeRoadmap(game: GameConfig, plan: GeneratedPlan): DynamicRo
       })
     }
 
-    if (game.generation <= 4) {
-      const duplicateMoves = plan.members.flatMap((member) => member.moves.map((move) => move.name))
-        .filter((move, index, all) => all.indexOf(move) !== index)
-      if (number === family.chapters.length && duplicateMoves.length) {
+    if (game.generation <= 4 && number === family.chapters.length) {
+      // 자력기·비전머신은 소모되지 않으므로 같은 1회용 TM을 두 마리 이상에게 배정한 경우만 안내합니다.
+      const tmOwners = new Map<string, string[]>()
+      for (const member of plan.members) {
+        for (const move of member.moves) {
+          if (!move.machine?.startsWith('TM')) continue
+          const key = `${move.name}(${move.machine})`
+          tmOwners.set(key, [...(tmOwners.get(key) ?? []), member.species.name])
+        }
+      }
+      const duplicates = [...tmOwners].filter(([, owners]) => owners.length > 1)
+      if (duplicates.length) {
         actions.push({
           id: `${chapter.id}:warning:tm-conflict`,
           kind: 'warning',
           quality: 'inferred',
-          text: `1회용 TM 충돌 가능성: ${[...new Set(duplicateMoves)].join(', ')}. 실제 TM 수량과 자력 습득 여부를 확인하세요.`,
+          text: `1회용 TM 중복 배정: ${duplicates.map(([move, owners]) => `${move} — ${owners.join('·')}`).join(', ')}. 추가 입수처가 없으면 한 마리만 배울 수 있습니다.`,
         })
       }
     }
