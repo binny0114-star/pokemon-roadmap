@@ -2,18 +2,19 @@
 
 ## PKHeX-derived encounter snapshot
 
-The scope of this notice is limited to `src/generated/modern-encounters.json`
-and the PKHeX resource-decoding portions of
-`scripts/generate-modern-encounters.mjs`. It does not relicense unrelated
-Poké Route application code.
+The scope of this notice is limited to `src/generated/modern-encounters.json`,
+`src/generated/legacy-location-names.json` and the PKHeX resource-decoding
+portions of `scripts/generate-modern-encounters.mjs`. It does not relicense
+unrelated Poké Route application code.
 
 - Upstream project: [PKHeX](https://github.com/kwsch/PKHeX)
 - Copyright: PKHeX contributors, including kwsch
 - License: GNU General Public License v3.0 or later
 - Pinned revision: `77dcd3a7895bceaafbbff12d25bdf77c1acd8ca5`
 - License text: [`LICENSES/GPL-3.0-or-later.txt`](LICENSES/GPL-3.0-or-later.txt)
-- Exact upstream inputs: the `provenance.files` array in
-  `src/generated/modern-encounters.json`
+- Exact upstream inputs: the `provenance.files` arrays in
+  `src/generated/modern-encounters.json` and
+  `src/generated/legacy-location-names.json`
 
 The snapshot is a modified, normalized representation generated on
 2026-09-25. The generator decodes selected encounter resources, replaces
@@ -28,6 +29,10 @@ follow the encounter layouts of [pk3DS](https://github.com/kwsch/pk3DS)
 (GPL-3.0, revision `6daaca934ca2284a73ab743bf89c848c57cd9de1`); no ROM data
 is used. Sun/Moon, Ultra Sun/Ultra Moon and Let's Go encounter methods in the
 same snapshot come from the PokéAPI CSV data described below.
+
+`src/generated/legacy-location-names.json` joins the PKHeX Gen 2-7 and BDSP
+Korean location text to the English line with the same index and keys it by
+the Gen 1-5 location identifiers used in the planner snapshot.
 
 PKHeX and this covered derivative are provided without warranty under the
 GNU General Public License v3.0 or later. Pokémon names and related trademarks

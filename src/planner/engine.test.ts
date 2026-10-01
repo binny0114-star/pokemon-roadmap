@@ -23,27 +23,27 @@ beforeAll(async () => {
 describe('지원 버전과 정적 카탈로그', () => {
   it('기존 21개 기본 입력의 자동 파티와 플랜 ID를 그대로 유지한다', () => {
     const expected = new Map([
-      ['red', 'red:balanced:1-20-26-64-75-130:n:h'],
-      ['green', 'green:balanced:1-20-26-64-75-130:n:h'],
-      ['blue', 'blue:balanced:1-20-26-64-75-130:n:h'],
-      ['yellow', 'yellow:balanced:20-25-31-47-57-130:n:h'],
-      ['gold', 'gold:balanced:75-93-152-176-181-214:n:h'],
-      ['silver', 'silver:balanced:75-93-152-176-181-214:n:h'],
-      ['crystal', 'crystal:balanced:93-95-99-152-176-214:n:h'],
-      ['ruby', 'ruby:balanced:73-252-289-292-297-306:n:h'],
-      ['sapphire', 'sapphire:balanced:73-252-289-292-297-306:n:h'],
-      ['emerald', 'emerald:balanced:160-181-252-289-297-348:n:h'],
+      ['red', 'red:balanced:1-26-36-64-75-130:n:h'],
+      ['green', 'green:balanced:1-26-36-64-75-130:n:h'],
+      ['blue', 'blue:balanced:1-26-36-64-75-130:n:h'],
+      ['yellow', 'yellow:balanced:12-25-31-36-57-121:n:h'],
+      ['gold', 'gold:balanced:75-80-152-176-181-214:n:h'],
+      ['silver', 'silver:balanced:75-80-152-176-181-214:n:h'],
+      ['crystal', 'crystal:balanced:80-93-95-152-176-214:n:h'],
+      ['ruby', 'ruby:balanced:130-252-289-292-297-306:n:h'],
+      ['sapphire', 'sapphire:balanced:130-252-289-297-302-306:n:h'],
+      ['emerald', 'emerald:balanced:130-252-289-297-302-310:n:h'],
       ['firered', 'firered:balanced:1-26-57-64-75-130:n:h'],
       ['leafgreen', 'leafgreen:balanced:1-26-57-64-75-130:n:h'],
       ['diamond', 'diamond:balanced:93-95-130-387-400-405:n:h'],
       ['pearl', 'pearl:balanced:93-95-130-387-400-405:n:h'],
       ['platinum', 'platinum:balanced:95-130-387-400-454-479:n:h'],
-      ['heartgold', 'heartgold:balanced:26-62-75-152-164-200:n:h'],
-      ['soulsilver', 'soulsilver:balanced:26-62-75-152-164-200:n:h'],
-      ['black', 'black:balanced:130-495-508-518-560-637:n:h'],
-      ['white', 'white:balanced:130-495-508-518-560-637:n:h'],
-      ['black-2', 'black-2:balanced:130-445-462-495-508-545:n:h'],
-      ['white-2', 'white-2:balanced:149-184-462-495-508-545:n:h'],
+      ['heartgold', 'heartgold:balanced:62-75-93-135-152-176:n:h'],
+      ['soulsilver', 'soulsilver:balanced:62-75-93-135-152-176:n:h'],
+      ['black', 'black:balanced:495-508-516-518-558-560:n:h'],
+      ['white', 'white:balanced:495-508-516-518-558-560:n:h'],
+      ['black-2', 'black-2:balanced:184-330-462-495-508-545:n:h'],
+      ['white-2', 'white-2:balanced:184-330-462-495-508-545:n:h'],
     ])
     for (const game of games.filter((entry) => expected.has(entry.id))) {
       expect(
@@ -238,8 +238,9 @@ describe('획득 제약', () => {
       chapter: 2,
       method: '낡은낚싯대',
     })
+    // 바위깨기는 보라시티에서 받지만 암페어의 다이나모배지가 있어야 필드에서 쓰므로 다음 장부터입니다.
     expect(getAvailability(speciesByDex.get(299)!, getGame('ruby'))).toMatchObject({
-      chapter: 3,
+      chapter: 4,
       method: '바위깨기',
     })
   })
@@ -430,11 +431,11 @@ describe('결정론 추천 엔진', () => {
     }
   })
 
-  it('파이어레드 갸라도스의 난동부리기는 2섬 이후에만 안내한다', () => {
+  it('파이어레드 갸라도스의 난동부리기는 2의 섬 이후에만 안내한다', () => {
     const thrash = generatedMoves(speciesByDex.get(130)!, getGame('firered'))
       .find((move) => move.name === '난동부리기')
     expect(thrash?.availableChapter).toBe(7)
-    expect(thrash?.source).toBe('2섬 기술 떠올리기 · 작은버섯 2개 또는 큰버섯 1개')
+    expect(thrash?.source).toBe('2의 섬 기술 떠올리기 · 작은버섯 2개 또는 큰버섯 1개')
   })
 
   it('기술 떠올리기가 없는 1·2세대에는 떠올리기 전용 기술을 제안하지 않는다', () => {
@@ -445,7 +446,9 @@ describe('결정론 추천 엔진', () => {
     }
     expect(generatedMoves(speciesByDex.get(25)!, getGame('red')).some((move) => move.name === '전기쇼크')).toBe(true)
     expect(generatedMoves(speciesByDex.get(169)!, getGame('crystal')).some((move) => move.name === '싫은소리')).toBe(false)
-    expect(generatedMoves(speciesByDex.get(51)!, getGame('crystal')).some((move) => move.name === '트라이어택')).toBe(true)
+    // 크리스탈 디그다의굴은 엔딩 후 관동이라 디그다(Lv.2)를 잡아 Lv.26에 진화시키는 경로가 되고,
+    // 기술 떠올리기가 없는 2세대에는 닥트리오의 Lv.1 트라이어택을 배울 수 없습니다.
+    expect(generatedMoves(speciesByDex.get(51)!, getGame('crystal')).some((move) => move.name === '트라이어택')).toBe(false)
   })
 
   it('자연 습득과 개조 스타팅의 Lv.1 기술을 기술 떠올리기로 오인하지 않는다', () => {
@@ -519,7 +522,7 @@ describe('결정론 추천 엔진', () => {
     expect(families.kanto1.moveReminder).toBeUndefined()
     expect(families.johto2.moveReminder).toBeUndefined()
     expect(families.hoenn3.moveReminder).toEqual({ chapter: 4, location: '단풍마을', cost: '하트비늘 1개' })
-    expect(families.kanto3.moveReminder).toEqual({ chapter: 7, location: '2섬', cost: '작은버섯 2개 또는 큰버섯 1개' })
+    expect(families.kanto3.moveReminder).toEqual({ chapter: 7, location: '2의 섬', cost: '작은버섯 2개 또는 큰버섯 1개' })
     expect(families.sinnoh4.moveReminder).toEqual({ chapter: 4, location: '들판시티', cost: '하트비늘 1개' })
     expect(families.johto4.moveReminder).toEqual({ chapter: 7, location: '검은먹시티', cost: '하트비늘 1개' })
     expect(families.unova5.moveReminder).toEqual({ chapter: 5, location: '궐수시티', cost: '하트비늘 1개' })
@@ -681,7 +684,10 @@ describe('동적 로드맵과 저장 격리', () => {
     const roadmapText = composeRoadmap(game, plan)
       .flatMap((chapter) => chapter.actions.map((action) => action.text))
       .join('\n')
-    expect(roadmapText).toContain('릴링(')
+    // 릴링 화석은 Go고글을 받은 뒤(5장)에만 복원할 수 있으므로 1장 원규전의 임시 카운터로 권하지 않습니다.
+    expect(roadmapText).not.toContain('릴링(금탄')
+    // 개조 스타팅(아노딥스)은 원래 화석 선택을 소비하지 않으므로 릴링을 함께 고를 수 있습니다.
+    expect(validateRequired([347, 345], game, defaults, 'rock').errors).toEqual([])
     for (const starterDex of game.starters) {
       expect(roadmapText).not.toContain(`${speciesByDex.get(starterDex)!.name}(`)
     }

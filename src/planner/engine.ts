@@ -235,9 +235,15 @@ export function validateRequired(
   for (const species of chosen) {
     const requiredStarterDex = getAvailability(species, game).requiredStarterDex
     if (requiredStarterDex) {
-      if (!selectedStarter) {
+      const requiredStarter = speciesByDex.get(requiredStarterDex)
+      if (game.familyId !== 'galar8') {
+        // 블랙·화이트 꿈터의 원숭이 선물처럼 고른 스타팅에 따라 한 마리만 받는 선물입니다.
+        if (!selectedStarter || selectedStarter.chainId !== requiredStarter?.chainId) {
+          errors.push(`${species.name}: 스타팅으로 ${requiredStarter?.name ?? `#${requiredStarterDex}`}을(를) 고른 경우에만 받는 선물입니다.`)
+        }
+      } else if (!selectedStarter) {
         errors.push(`${species.name}: 디그다 보상에 대응하는 가라르 스타팅을 함께 선택해야 합니다.`)
-      } else if (selectedStarter.chainId !== speciesByDex.get(requiredStarterDex)?.chainId) {
+      } else if (selectedStarter.chainId !== requiredStarter?.chainId) {
         errors.push(`${species.name}: 선택한 가라르 스타팅 ${selectedStarter.name}의 디그다 보상과 일치하지 않습니다.`)
       }
     }
@@ -308,7 +314,14 @@ export function generatedMoves(
       ?? speciesAvailability.dlcFinalChapter
       ?? speciesAvailability.finalChapter
   const lineage = generationLineage(species, game.generation, game.familyId)
-  const evolvedStages = new Set(lineage.slice(1).map((stage) => stage.dex))
+  // 실제로 잡은 단계부터의 계열만 씁니다. 에레브를 바로 잡으면 에레키드의 기술을,
+  // 야생 피카츄를 잡아 라이츄로 키우면 피츄의 기술을 배울 수 없습니다.
+  const sourceIndex = lineage.findIndex((stage) =>
+    stage.dex === (directlyAcquired ? species.dex : speciesAvailability.sourceSpeciesDex))
+  const acquiredLineage = sourceIndex >= 0 ? lineage.slice(sourceIndex) : lineage
+  const acquiredStages = new Set(acquiredLineage.map((stage) => stage.dex))
+  const sourceSpecies = acquiredLineage[0] ?? species
+  const evolvedStages = new Set(acquiredLineage.slice(1).map((stage) => stage.dex))
   const evolutionLevel = (stage: CatalogSpecies) =>
     stage.evolution?.minLevel
     ?? (stage.evolution?.trigger === 'shed'
@@ -317,50 +330,58 @@ export function generatedMoves(
           && candidate.evolution?.trigger === 'level-up',
         )?.evolution?.minLevel
       : null)
-  const requiresDelayedEvolution = (move: LegalMove, learnedBy: CatalogSpecies) => {
+  // 진화 전 단계의 자력기는 다음 단계로 진화하기 전에 배워야 합니다. 레벨 진화는 진화 레벨,
+  // 돌·교환·친밀도 진화는 로드맵이 안내하는 진화 장을 넘겨 배우는 기술을 유지한다고 하지 않습니다.
+  const learnedAfterEvolution = (move: LegalMove, learnedBy: CatalogSpecies) => {
     if (!includeAncestors || move.method !== 'level' || learnedBy.dex === species.dex) return false
-    const nextStage = lineage[lineage.findIndex((stage) => stage.dex === learnedBy.dex) + 1]
-    const nextEvolutionLevel = nextStage ? evolutionLevel(nextStage) : null
-    return Boolean(nextEvolutionLevel) && move.level > nextEvolutionLevel!
+    const nextStage = acquiredLineage[acquiredLineage.findIndex((stage) => stage.dex === learnedBy.dex) + 1]
+    if (!nextStage) return false
+    const nextEvolutionLevel = evolutionLevel(nextStage)
+    return nextEvolutionLevel
+      ? move.level > nextEvolutionLevel
+      : chapterForLevel(move.level, game) > effectiveChapter(nextStage, game)
   }
-  // 합류 레벨까지 배운 자력기 중 마지막 4개만 처음부터 알고 있습니다. 같은 레벨 기술의 게임 내 순서는
-  // 원본에 없으므로, 4칸 경계에 걸친 레벨의 기술은 모두 기술 떠올리기가 필요한 것으로 보수적으로 둡니다.
-  const joinLevel = Number(/\d+/.exec(speciesAvailability.level)?.[0] ?? 1)
-  const knownAtJoin = modernClassicFamilies.has(game.familyId) && directlyAcquired
-    ? (() => {
-        const byLevel = new Map<number, Set<string>>()
-        for (const move of getLegalMoves(species, game, speciesAvailability.formIdentifier)) {
-          if (move.method !== 'level' || move.level > joinLevel) continue
-          const level = Math.max(1, move.level)
-          byLevel.set(level, (byLevel.get(level) ?? new Set()).add(move.id))
-        }
-        const known = new Set<string>()
-        for (const level of [...byLevel.keys()].sort((a, b) => b - a)) {
-          const ids = [...byLevel.get(level)!].filter((id) => !known.has(id))
-          if (known.size + ids.length > 4) break
-          for (const id of ids) known.add(id)
-        }
-        return known
-      })()
-    : null
+  // 합류 레벨까지 배운 자력기 중 마지막 4개만 처음부터 알고 있습니다(모든 세대 공통). 같은 레벨 기술의
+  // 게임 내 순서는 원본에 없으므로, 4칸 경계에 걸친 레벨의 기술은 모두 기술 떠올리기가 필요한 것으로 보수적으로 둡니다.
+  // includeAncestors=false는 데이터 수정으로 배정한 Lv.5 스타팅입니다.
+  const joinLevel = includeAncestors ? Number(/\d+/.exec(speciesAvailability.level)?.[0] ?? 1) : 5
+  const knownAtJoin = (() => {
+    const sourceFormIdentifier = directlyAcquired
+      ? speciesAvailability.formIdentifier
+      : speciesAvailability.sourceFormIdentifier
+    const byLevel = new Map<number, Set<string>>()
+    for (const move of getLegalMoves(sourceSpecies, game, sourceFormIdentifier)) {
+      if (move.method !== 'level' || move.level > joinLevel) continue
+      const level = Math.max(1, move.level)
+      byLevel.set(level, (byLevel.get(level) ?? new Set()).add(move.id))
+    }
+    const known = new Set<string>()
+    for (const level of [...byLevel.keys()].sort((a, b) => b - a)) {
+      const ids = [...byLevel.get(level)!].filter((id) => !known.has(id))
+      if (known.size + ids.length > 4) break
+      for (const id of ids) known.add(id)
+    }
+    return known
+  })()
+  // 진화한 단계가 된 레벨. 돌·교환 진화는 잡은 레벨 이상에서 일어나므로 그보다 낮은 자력기는 배울 수 없습니다.
+  const stageEntryLevel = new Map<number, number>()
+  acquiredLineage.reduce((level, stage, index) => {
+    const entry = index === 0 ? joinLevel : Math.max(level, evolutionLevel(stage) ?? 0)
+    stageEntryLevel.set(stage.dex, entry)
+    return entry
+  }, joinLevel)
   const isReminderOnly = (move: LegalMove, learnedBy: CatalogSpecies) =>
-    (
-      knownAtJoin !== null
-      && move.method === 'level'
-      && learnedBy.dex === species.dex
-      && move.level <= joinLevel
-      && !knownAtJoin.has(move.id)
-    )
-    || (
-      includeAncestors
-      && move.method === 'level'
-      && evolvedStages.has(learnedBy.dex)
-      && !(directlyAcquired && learnedBy.dex === species.dex)
-      && (
-        move.level <= 1
-        || (
-          Boolean(evolutionLevel(learnedBy))
-          && move.level < evolutionLevel(learnedBy)!
+    move.method === 'level'
+    && (
+      (learnedBy.dex === sourceSpecies.dex && move.level <= joinLevel && !knownAtJoin.has(move.id))
+      || (
+        includeAncestors
+        && evolvedStages.has(learnedBy.dex)
+        && (
+          move.level <= 1
+          || move.level < stageEntryLevel.get(learnedBy.dex)!
+          // 레벨 진화는 진화한 레벨의 기술을 바로 배우지만, 돌·교환 진화는 같은 레벨 기술을 배우지 않습니다.
+          || (!evolutionLevel(learnedBy) && move.level <= stageEntryLevel.get(learnedBy.dex)!)
         )
       )
     )
@@ -397,8 +418,9 @@ export function generatedMoves(
       const reminderOnly = isReminderOnly(move, learnedBy)
       const acquisition = getMoveAcquisition(game, move)
       return move.generation <= game.generation
+        && acquiredStages.has(learnedBy.dex)
         && !excludedStoryMoves.has(move.id)
-        && !requiresDelayedEvolution(move, learnedBy)
+        && !learnedAfterEvolution(move, learnedBy)
         && (!reminderOnly || Boolean(family.moveReminder))
         && (move.method !== 'egg' || Boolean(eggParentTiming(move)))
         // 입수 장소를 모델링하지 않은 기술가르침은 추천하지 않습니다.
@@ -492,8 +514,10 @@ export function generatedMoves(
       id: move.id,
       name: move.name,
       type: move.type,
-      category: game.generation >= 4 ? move.category : typeCategory(move.type, game.generation),
+      // 3세대까지는 타입으로 물리·특수가 갈리지만, 빛의장막·전기자석파 같은 변화 기술은 어느 세대든 변화입니다.
+      category: move.category === '변화' || game.generation >= 4 ? move.category : typeCategory(move.type, game.generation),
       source,
+      machine: move.method === 'machine' ? move.machine ?? undefined : undefined,
       availableChapter,
       resourceId: acquisition?.resourceId,
       dlcMilestone: acquisition?.dlcMilestone,
@@ -579,8 +603,11 @@ function assignFieldMoves(members: GeneratedMember[], game: GameConfig, enabled:
       name: move.name,
       type: move.type,
       // 4세대부터는 기술마다 물리·특수가 정해져 있습니다(예: 폭포오르기는 물리).
-      category: game.generation >= 4 && legalFieldMove ? legalFieldMove.category : typeCategory(move.type, game.generation),
+      category: legalFieldMove && (legalFieldMove.category === '변화' || game.generation >= 4)
+        ? legalFieldMove.category
+        : typeCategory(move.type, game.generation),
       source: `${legalFieldMove?.machine ?? fieldMoveKo[move.id]} · ${family.chapters[move.unlockChapter - 1]?.title ?? `${move.unlockChapter}장`}에서 획득`,
+      machine: legalFieldMove?.machine ?? undefined,
       availableChapter: Math.max(move.unlockChapter, owner.availability.chapter),
       quality: 'verified',
     }
@@ -895,7 +922,9 @@ export function generateParty(game: GameConfig, preferences: PlannerPreferences,
   }
   const shared = Object.entries(summary.weaknesses).filter(([, count]) => count >= 3)
   if (shared.length) warnings.push(`공통 약점 주의: ${shared.map(([type, count]) => `${typeKo[type]} ${count}마리`).join(', ')}`)
-  if (game.generation <= 4) warnings.push('이 세대의 기술머신은 대부분 1회용입니다. 동일 TM을 여러 멤버에게 배정하기 전 저장 데이터를 확인하세요.')
+  if (game.generation <= 4 && members.some((member) => member.moves.some((move) => move.machine?.startsWith('TM')))) {
+    warnings.push('이 세대의 기술머신은 1회용입니다. 같은 TM을 여러 멤버에게 배정하기 전 남은 수량을 확인하세요.')
+  }
   const consumableResources = new Map<string, GeneratedMove[]>()
   for (const move of members.flatMap((member) => member.moves)) {
     if (!move.resourceId || move.reusable !== false) continue
